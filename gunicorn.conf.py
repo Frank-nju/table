@@ -1,0 +1,10 @@
+bind = "127.0.0.1:8080"
+workers = 2
+worker_class = "sync"
+threads = 4
+timeout = 60
+graceful_timeout = 30
+keepalive = 5
+accesslog = "-"
+errorlog = "-"
+capture_output = True

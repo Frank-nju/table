@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NJU 报名表</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --card: #ffffff;
+      --text: #102a43;
+      --sub: #486581;
+      --line: #d9e2ec;
+      --ok: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --primary: #0b7285;
+      --primary-hover: #095c6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, #dff4ff 0%, transparent 60%),
+        radial-gradient(1000px 500px at 90% 120%, #e9f7ef 0%, transparent 55%),
+        var(--bg);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 820px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 8px 28px rgba(16, 42, 67, 0.08);
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .desc {
+      margin: 0;
+      color: var(--sub);
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #f8fbfd;
+    }
+
+    .stat-title {
+      font-size: 13px;
+      color: var(--sub);
+    }
+
+    .stat-value {
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .state-open { color: var(--ok); }
+    .state-full { color: var(--bad); }
+
+    form {
+      display: grid;
+      gap: 12px;
+    }
+
+    label {
+      font-size: 14px;
+      color: var(--sub);
+      display: grid;
+      gap: 6px;
+    }
+
+    input, select, button {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 15px;
+      background: #fff;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid #bae6fd;
+      border-color: #38bdf8;
+    }
+
+    button {
+      border: 0;
+      color: white;
+      background: var(--primary);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s ease;
+    }
+
+    button:hover { background: var(--primary-hover); }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    .msg {
+      min-height: 20px;
+      font-size: 14px;
+    }
+
+    .msg-ok { color: var(--ok); }
+    .msg-err { color: var(--bad); }
+
+    @media (max-width: 640px) {
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1>活动报名</h1>
+      <p class="desc">填写姓名与学号后选择子项。每个子项上限 {{ limit }} 人，满员后自动停止。</p>
+
+      <div class="stats" id="stats"></div>
+    </section>
+
+    <section class="card">
+      <form id="signup-form">
+        <label>
+          姓名
+          <input name="name" maxlength="30" required />
+        </label>
+
+        <label>
+          学号
+          <input name="student_id" maxlength="30" required />
+        </label>
+
+        <label>
+          子项
+          <select name="item" id="item-select" required>
+            <option value="">请选择</option>
+            {% for item in items %}
+            <option value="{{ item }}">{{ item }}</option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <button id="submit-btn" type="submit">提交报名</button>
+        <div class="msg" id="msg"></div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const statsEl = document.getElementById('stats');
+    const formEl = document.getElementById('signup-form');
+    const msgEl = document.getElementById('msg');
+    const itemSelect = document.getElementById('item-select');
+    const submitBtn = document.getElementById('submit-btn');
+    const STORAGE_KEY = 'table_signup_submitted';
+
+    function setMsg(text, ok) {
+      msgEl.textContent = text || '';
+      msgEl.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+    }
+
+    function checkSubmitted() {
+      const submitted = localStorage.getItem(STORAGE_KEY);
+      if (submitted) {
+        formEl.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+        setMsg('您已经提交过报名，不能重复提交', false);
+        return true;
+      }
+      return false;
+    }
+
+    function markSubmitted(studentId) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        submitted: true,
+        studentId: studentId,
+        timestamp: Date.now()
+      }));
+    }
+
+    function renderStats(data) {
+      const items = Object.keys(data.counts || {});
+      statsEl.innerHTML = items.map((item) => {
+        const count = data.counts[item] || 0;
+        const full = !!data.closed[item];
+        return `
+          <article class="stat">
+            <div class="stat-title">${item} 已报名</div>
+            <div class="stat-value">${count} / ${data.limit}</div>
+            <div class="${full ? 'state-full' : 'state-open'}">${full ? '已满，停止报名' : '可报名'}</div>
+          </article>
+        `;
+      }).join('');
+
+      Array.from(itemSelect.options).forEach((opt) => {
+        if (!opt.value) return;
+        const full = !!data.closed[opt.value];
+        opt.disabled = full;
+        opt.textContent = full ? `${opt.value}（已满）` : opt.value;
+      });
+
+      const selected = itemSelect.value;
+      if (selected && data.closed[selected]) {
+        itemSelect.value = '';
+      }
+
+      submitBtn.disabled = Object.values(data.closed).every(Boolean);
+    }
+
+    async function fetchStats() {
+      const res = await fetch('/api/stats', { cache: 'no-store' });
+      const data = await res.json();
+      if (data.ok) renderStats(data);
+    }
+
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setMsg('提交中...', true);
+
+      const fd = new FormData(formEl);
+      const payload = {
+        name: (fd.get('name') || '').trim(),
+        student_id: (fd.get('student_id') || '').trim(),
+        item: (fd.get('item') || '').trim(),
+      };
+
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (data.ok) {
+        setMsg(data.message || '报名成功', true);
+        markSubmitted(payload.student_id);
+        formEl.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+      } else {
+        setMsg(data.message || '提交失败', false);
+      }
+
+      await fetchStats();
+    });
+
+    if (!checkSubmitted()) {
+      fetchStats();
+      setInterval(fetchStats, 5000);
+    }
+  </script>
+</body>
+</html>
