@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>分享会活动管理 - CAC</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --card: #ffffff;
+      --text: #102a43;
+      --sub: #486581;
+      --line: #d9e2ec;
+      --ok: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --primary: #0b7285;
+      --primary-hover: #095c6b;
+      --secondary: #7c3aed;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, #dff4ff 0%, transparent 60%),
+        radial-gradient(1000px 500px at 90% 120%, #e9f7ef 0%, transparent 55%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      color: var(--primary);
+    }
+
+    .logout-btn {
+      padding: 8px 16px;
+      background: var(--bad);
+      color: white;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .logout-btn:hover {
+      background: #991b1b;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--line);
+    }
+
+    .tab-btn {
+      padding: 12px 20px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--sub);
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 8px 28px rgba(16, 42, 67, 0.08);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--sub);
+      font-size: 14px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid #bae6fd;
+      border-color: #38bdf8;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .form-full {
+      grid-column: 1 / -1;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #6d28d9;
+    }
+
+    .btn-danger {
+      background: var(--bad);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #991b1b;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .activity-item {
+      background: #f8fbfd;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .activity-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .activity-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .meta-item {
+      padding: 8px 12px;
+      background: white;
+      border-radius: 8px;
+    }
+
+    .meta-label {
+      color: var(--sub);
+      font-weight: 500;
+    }
+
+    .meta-value {
+      color: var(--text);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .activity-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .activity-actions button {
+      padding: 8px 12px;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .msg {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .msg.success {
+      background: #d1fae5;
+      color: var(--ok);
+    }
+
+    .msg.error {
+      background: #fee2e2;
+      color: var(--bad);
+    }
+
+    .msg.info {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 40px;
+      color: var(--sub);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .login-form {
+      max-width: 400px;
+      margin: 60px auto;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--sub);
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    @media (max-width: 900px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-meta {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 登录界面 -->
+    <div id="login-section" class="login-form" style="display: block;">
+      <div class="card">
+        <h2>🎤 分享会活动管理系统</h2>
+        <p style="color: var(--sub); margin: 8px 0 24px;">分享者专用管理界面</p>
+        
+        <div class="form-group">
+          <label>您的学号</label>
+          <input type="text" id="login-student-id" placeholder="如：PB20112233" maxlength="20" />
+        </div>
+        
+        <button class="btn-primary" onclick="handleLogin()" style="width: 100%;">进入管理系统</button>
+        
+        <div id="login-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+      </div>
+    </div>
+
+    <!-- 管理界面 -->
+    <div id="main-section" style="display: none;">
+      <div class="header">
+        <div>
+          <h1>🎤 我的分享活动</h1>
+          <p style="color: var(--sub); margin: 4px 0 0;">学号: <strong id="current-student-id"></strong></p>
+        </div>
+        <button class="logout-btn" onclick="handleLogout()">退出登录</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('list')">📋 我的活动</button>
+        <button class="tab-btn" onclick="switchTab('create')">➕ 创建活动</button>
+      </div>
+
+      <!-- 活动列表标签页 -->
+      <div id="list-tab" class="tab-content active">
+        <div id="activities-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <div>加载中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 创建活动标签页 -->
+      <div id="create-tab" class="tab-content">
+        <div class="card">
+          <h3 style="margin-top: 0;">创建新的分享活动</h3>
+          
+          <form id="create-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>活动日期 *</label>
+                <input type="date" id="form-date" required />
+              </div>
+              
+              <div class="form-group">
+                <label>活动时间 *</label>
+                <select id="form-time" required>
+                  <option value="">请选择</option>
+                  <option value="09:00-10:00">09:00-10:00</option>
+                  <option value="10:00-11:00">10:00-11:00</option>
+                  <option value="11:00-12:00">11:00-12:00</option>
+                  <option value="12:00-13:00">12:00-13:00</option>
+                  <option value="13:00-14:00">13:00-14:00</option>
+                  <option value="14:00-15:00">14:00-15:00</option>
+                  <option value="15:00-16:00">15:00-16:00</option>
+                  <option value="16:00-17:00">16:00-17:00</option>
+                  <option value="17:00-18:00">17:00-18:00</option>
+                  <option value="18:00-19:00">18:00-19:00</option>
+                  <option value="19:00-20:00">19:00-20:00</option>
+                  <option value="20:00-21:00">20:00-21:00</option>
+                </select>
+              </div>
+              
+              <div class="form-group form-full">
+                <label>分享者姓名 * (多人用逗号分隔)</label>
+                <input type="text" id="form-speakers" placeholder="如：张三, 李四" required />
+              </div>
+              
+              <div class="form-group form-full">
+                <label>活动主题 *</label>
+                <input type="text" id="form-topic" placeholder="如：Python 异步编程" required />
+              </div>
+              
+              <div class="form-group form-full">
+                <label>活动教室</label>
+                <input type="text" id="form-classroom" placeholder="如：理科楼404（可后续更新）" />
+              </div>
+              
+              <div class="form-group form-full">
+                <label>线上视频号（可选）</label>
+                <input type="text" id="form-videourl" placeholder="如：https://meeting.tencent.com/..." />
+              </div>
+            </div>
+            
+            <button type="submit" class="btn-primary" style="width: 100%;">创建活动</button>
+            <div id="create-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑活动模态框 -->
+  <div id="edit-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>编辑活动</h2>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+      
+      <form id="edit-form">
+        <input type="hidden" id="edit-activity-id" />
+        
+        <div class="form-group">
+          <label>活动日期</label>
+          <input type="date" id="edit-date" />
+        </div>
+        
+        <div class="form-group">
+          <label>活动时间</label>
+          <select id="edit-time">
+            <option value="">请选择</option>
+            <option value="09:00-10:00">09:00-10:00</option>
+            <option value="10:00-11:00">10:00-11:00</option>
+            <option value="11:00-12:00">11:00-12:00</option>
+            <option value="12:00-13:00">12:00-13:00</option>
+            <option value="13:00-14:00">13:00-14:00</option>
+            <option value="14:00-15:00">14:00-15:00</option>
+            <option value="15:00-16:00">15:00-16:00</option>
+            <option value="16:00-17:00">16:00-17:00</option>
+            <option value="17:00-18:00">17:00-18:00</option>
+            <option value="18:00-19:00">18:00-19:00</option>
+            <option value="19:00-20:00">19:00-20:00</option>
+            <option value="20:00-21:00">20:00-21:00</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>分享者姓名 (逗号分隔)</label>
+          <input type="text" id="edit-speakers" />
+        </div>
+        
+        <div class="form-group">
+          <label>活动主题</label>
+          <input type="text" id="edit-topic" />
+        </div>
+        
+        <div class="form-group">
+          <label>活动教室</label>
+          <input type="text" id="edit-classroom" />
+        </div>
+        
+        <div class="form-group">
+          <label>线上视频号</label>
+          <input type="text" id="edit-videourl" />
+        </div>
+        
+        <div class="btn-group" style="margin-top: 24px;">
+          <button type="submit" class="btn-primary">保存更改</button>
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">取消</button>
+        </div>
+        
+        <div id="edit-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentStudentId = null;
+
+    function showMsg(elementId, text, type) {
+      const el = document.getElementById(elementId);
+      el.textContent = text;
+      el.className = `msg ${type}`;
+      el.style.display = 'block';
+    }
+
+    function hideMsg(elementId) {
+      const el = document.getElementById(elementId);
+      el.style.display = 'none';
+    }
+
+    function handleLogin() {
+      const studentId = document.getElementById('login-student-id').value.trim();
+      if (!studentId) {
+        showMsg('login-msg', '❌ 请输入学号', 'error');
+        return;
+      }
+      
+      currentStudentId = studentId;
+      document.getElementById('current-student-id').textContent = studentId;
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('main-section').style.display = 'block';
+      
+      loadMyActivities();
+    }
+
+    function handleLogout() {
+      if (confirm('确认退出登录？')) {
+        currentStudentId = null;
+        document.getElementById('login-student-id').value = '';
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('main-section').style.display = 'none';
+        hideMsg('login-msg');
+      }
+    }
+
+    function switchTab(tab) {
+      // 隐藏所有标签页
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('active');
+      });
+      
+      // 显示选中的标签页
+      document.getElementById(tab + '-tab').classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    async function loadMyActivities() {
+      const container = document.getElementById('activities-container');
+      
+      try {
+        const res = await fetch(`/api/my-activities/${currentStudentId}`);
+        const data = await res.json();
+        
+        if (!data.ok) {
+          container.innerHTML = `<div class="msg error">${data.message}</div>`;
+          return;
+        }
+        
+        const activities = data.activities || [];
+        
+        if (activities.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📭</div>
+              <div>还没有创建任何活动，点击"创建活动"开始吧！</div>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = activities.map(activity => `
+          <div class="activity-item">
+            <div class="activity-header">
+              <div>
+                <h4 style="margin: 0 0 4px;">${activity.topic || '(未设置主题)'}</h4>
+                <p style="margin: 0; color: var(--sub); font-size: 13px;">${activity.speakers || '(未设置分享者)'}</p>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 12px; color: ${activity.reviewers >= 3 ? 'var(--ok)' : 'var(--warn)'};">
+                  评议员 ${activity.reviewers || 0}/3
+                </div>
+              </div>
+            </div>
+            
+            <div class="activity-meta">
+              <div class="meta-item">
+                <div class="meta-label">📅 日期</div>
+                <div class="meta-value">${activity.date || '未设置'}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">⏰ 时间</div>
+                <div class="meta-value">${activity.time || '未设置'}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">🏢 教室</div>
+                <div class="meta-value">${activity.classroom || '待定'}</div>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 12px; padding: 8px 12px; background: white; border-radius: 8px; font-size: 13px;">
+              <div style="color: var(--sub);">📊 拟参加人数</div>
+              <div style="font-weight: 600; color: var(--primary);">${activity.expected_attendance || 0}</div>
+            </div>
+            
+            <div class="activity-actions">
+              <button class="btn-secondary" onclick="openEditModal('${activity.id}')">编辑</button>
+              <button class="btn-danger" onclick="deleteActivity('${activity.id}')">删除</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<div class="msg error">❌ 加载失败：${err.message}</div>`;
+      }
+    }
+
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const payload = {
+        date: document.getElementById('form-date').value,
+        time: document.getElementById('form-time').value,
+        speakers: document.getElementById('form-speakers').value.trim(),
+        topic: document.getElementById('form-topic').value.trim(),
+        classroom: document.getElementById('form-classroom').value.trim(),
+        videourl: document.getElementById('form-videourl').value.trim(),
+        creator_student_id: currentStudentId,
+      };
+      
+      if (!payload.date || !payload.time || !payload.speakers || !payload.topic) {
+        showMsg('create-msg', '❌ 请完整填写必填字段', 'error');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/activity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+          showMsg('create-msg', '✅ ' + data.message, 'success');
+          document.getElementById('create-form').reset();
+          
+          // 清除消息并刷新列表
+          setTimeout(() => {
+            hideMsg('create-msg');
+            loadMyActivities();
+            // 切换回列表标签页
+            document.getElementById('list-tab').classList.add('active');
+            document.getElementById('create-tab').classList.remove('active');
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+          }, 1500);
+        } else {
+          showMsg('create-msg', '❌ ' + data.message, 'error');
+        }
+      } catch (err) {
+        showMsg('create-msg', '❌ 网络错误：' + err.message, 'error');
+      }
+    });
+
+    function openEditModal(activityId) {
+      const activity = document.baseElement = null; // 清空缓存
+      
+      // 从已加载的列表中找到活动信息（简单实现）
+      // 实际应该发送 API 请求获取详情
+      document.getElementById('edit-activity-id').value = activityId;
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('active');
+      hideMsg('edit-msg');
+    }
+
+    document.getElementById('edit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const activityId = document.getElementById('edit-activity-id').value;
+      const payload = {
+        creator_student_id: currentStudentId,
+        date: document.getElementById('edit-date').value || undefined,
+        time: document.getElementById('edit-time').value || undefined,
+        speakers: document.getElementById('edit-speakers').value.trim() || undefined,
+        topic: document.getElementById('edit-topic').value.trim() || undefined,
+        classroom: document.getElementById('edit-classroom').value.trim() || undefined,
+        videourl: document.getElementById('edit-videourl').value.trim() || undefined,
+      };
+      
+      // 移除 undefined 值
+      Object.keys(payload).forEach(key => payload[key] === undefined && delete payload[key]);
+      
+      try {
+        const res = await fetch(`/api/activity/${activityId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+          showMsg('edit-msg', '✅ ' + data.message, 'success');
+          setTimeout(() => {
+            closeEditModal();
+            loadMyActivities();
+          }, 1000);
+        } else {
+          showMsg('edit-msg', '❌ ' + data.message, 'error');
+        }
+      } catch (err) {
+        showMsg('edit-msg', '❌ ' + err.message, 'error');
+      }
+    });
+
+    async function deleteActivity(activityId) {
+      if (!confirm('确定要删除此活动吗？删除后无法恢复。')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/activity/${activityId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creator_student_id: currentStudentId }),
+        });
+        
+        const data = await res.json();
+        if (data.ok) {
+          alert('✅ ' + data.message);
+          loadMyActivities();
+        } else {
+          alert('❌ ' + data.message);
+        }
+      } catch (err) {
+        alert('❌ 删除失败：' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

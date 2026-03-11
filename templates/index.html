@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CAC 分享会报名系统</title>
+  <style>
+    :root {
+      --bg: #f6f8fc;
+      --card: #ffffff;
+      --text: #102a43;
+      --sub: #486581;
+      --line: #d9e2ec;
+      --ok: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --primary: #0b7285;
+      --primary-hover: #095c6b;
+      --secondary: #7c3aed;
+      --secondary-hover: #6d28d9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 20% -10%, #dff4ff 0%, transparent 60%),
+        radial-gradient(1000px 500px at 90% 120%, #e9f7ef 0%, transparent 55%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.2;
+      color: var(--primary);
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--sub);
+      font-size: 15px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 8px 28px rgba(16, 42, 67, 0.08);
+      padding: 24px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 16px;
+      color: var(--primary);
+    }
+
+    .activity-list {
+      display: grid;
+      gap: 12px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .activity-item {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #f8fbfd;
+    }
+
+    .activity-item:hover {
+      border-color: var(--primary);
+      background: var(--card);
+      box-shadow: 0 4px 12px rgba(11, 114, 133, 0.1);
+    }
+
+    .activity-item.selected {
+      border-color: var(--primary);
+      background: #e0f2ff;
+      font-weight: 500;
+    }
+
+    .activity-date {
+      font-size: 12px;
+      color: var(--sub);
+      margin-bottom: 4px;
+    }
+
+    .activity-time {
+      font-size: 13px;
+      color: var(--warn);
+      font-weight: 600;
+    }
+
+    .activity-speakers {
+      font-size: 13px;
+      color: var(--text);
+      margin-top: 4px;
+    }
+
+    .activity-topic {
+      font-size: 13px;
+      color: var(--primary);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      font-size: 14px;
+      color: var(--sub);
+      display: grid;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    input, select, textarea {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 15px;
+      background: #fff;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #bae6fd;
+      border-color: #38bdf8;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .role-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .role-radio {
+      display: none;
+    }
+
+    .role-label {
+      padding: 12px;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      margin: 0;
+      background: #f8fbfd;
+    }
+
+    .role-radio:checked + .role-label {
+      border-color: var(--primary);
+      background: #e0f2ff;
+      color: var(--primary);
+    }
+
+    button {
+      border: 0;
+      color: white;
+      background: var(--primary);
+      font-weight: 700;
+      cursor: pointer;
+      padding: 12px;
+      border-radius: 10px;
+      transition: background .2s ease;
+      font-size: 15px;
+    }
+
+    button:hover { background: var(--primary-hover); }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    .msg {
+      min-height: 20px;
+      font-size: 14px;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .msg-ok {
+      color: var(--ok);
+      background: #d1fae5;
+    }
+
+    .msg-err {
+      color: var(--bad);
+      background: #fee2e2;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--sub);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #f8fbfd;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--sub);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-status {
+      font-size: 12px;
+      margin-top: 4px;
+      color: var(--warn);
+    }
+
+    .stat-status.full {
+      color: var(--bad);
+    }
+
+    .warnings {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 16px;
+      font-size: 13px;
+    }
+
+    .warning-item {
+      margin-bottom: 8px;
+    }
+
+    .warning-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .error-message {
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 12px;
+      color: var(--bad);
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .role-group {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎤 CAC 分享会报名系统</h1>
+      <p class="subtitle">选择您感兴趣的分享活动，报名成为评议员或旁听者</p>
+      <div style="margin-top: 16px;">
+        <a href="/organizer" style="color: var(--primary); text-decoration: none; font-weight: 600; border: 2px solid var(--primary); padding: 8px 16px; border-radius: 8px; display: inline-block;">
+          📝 分享者管理 (生成活动)
+        </a>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <!-- 左侧：活动列表 -->
+      <div class="card">
+        <div class="card-title">📅 正在进行的分享会</div>
+        <div class="activity-list" id="activity-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <div>加载活动中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：报名表单 -->
+      <div class="card">
+        <div class="card-title">📝 活动报名</div>
+        
+        <div id="form-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">👈</div>
+            <div>请先选择一个分享活动</div>
+          </div>
+        </div>
+
+        <!-- 活动统计面板 -->
+        <div id="stats-panel" style="display: none;">
+          <div class="card-title" style="margin-top: 0; margin-bottom: 12px; font-size: 14px;">报名统计</div>
+          <div class="stats-grid" id="activity-stats"></div>
+          <div id="warnings"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 全局预警 -->
+    <div class="card" id="global-warnings" style="display: none;">
+      <div class="card-title">⚠️ 系统预警与统计</div>
+      <div id="global-warnings-content"></div>
+    </div>
+  </div>
+
+  <script>
+    const activityListEl = document.getElementById('activity-list');
+    const formContainerEl = document.getElementById('form-container');
+    const statsPanelEl = document.getElementById('stats-panel');
+    const globalWarningsEl = document.getElementById('global-warnings');
+    const globalWarningsContentEl = document.getElementById('global-warnings-content');
+
+    let activities = [];
+    let selectedActivity = null;
+
+    async function loadActivities() {
+      try {
+        const res = await fetch('/api/activities', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.ok) {
+          activities = data.activities || [];
+          renderActivityList();
+          loadWarnings();
+        }
+      } catch (e) {
+        console.error('Load activities failed:', e);
+      }
+    }
+
+    function renderActivityList() {
+      if (activities.length === 0) {
+        activityListEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div>暂无进行中的分享活动</div>
+            <p style="font-size: 12px; margin-top: 8px;">请联系 CAC 了解如何发布分享会</p>
+          </div>
+        `;
+        return;
+      }
+
+      activityListEl.innerHTML = activities.map((activity) => `
+        <div class="activity-item ${selectedActivity && selectedActivity.id === activity.id ? 'selected' : ''}" 
+             onclick="selectActivity('${activity.id}')">
+          <div class="activity-date">${activity.date || '日期未定'}</div>
+          <div class="activity-time">⏰ ${activity.time || '时间未定'}</div>
+          <div class="activity-speakers">👤 ${activity.speakers || '分享者未定'}</div>
+          <div class="activity-topic">📌 ${activity.topic || '主题未定'}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectActivity(activityId) {
+      selectedActivity = activities.find(a => a.id === activityId);
+      if (!selectedActivity) return;
+
+      renderActivityList();
+      renderSignupForm();
+      renderActivityStats();
+    }
+
+    function renderSignupForm() {
+      if (!selectedActivity) return;
+
+      const formHTML = `
+        <form id="signup-form">
+          <input type="hidden" name="activity_id" value="${selectedActivity.id}">
+          
+          <label>
+            姓名
+            <input type="text" name="name" maxlength="30" required />
+          </label>
+
+          <label>
+            学号
+            <input type="text" name="student_id" maxlength="30" required />
+          </label>
+
+          <label>
+            联系电话
+            <input type="tel" name="phone" maxlength="20" placeholder="选填" />
+          </label>
+
+          <label>
+            我的角色
+            <div class="role-group">
+              <input type="radio" id="role-reviewer" name="role" value="评议员" class="role-radio" required>
+              <label for="role-reviewer" class="role-label">👨‍⚖️ 评议员</label>
+              
+              <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
+              <label for="role-listener" class="role-label">👂 旁听</label>
+            </div>
+          </label>
+
+          <button type="submit">提交报名</button>
+          <div class="msg" id="form-msg"></div>
+        </form>
+      `;
+
+      formContainerEl.innerHTML = formHTML;
+      statsPanelEl.style.display = 'block';
+
+      document.getElementById('signup-form').addEventListener('submit', handleSubmit);
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const msgEl = document.getElementById('form-msg');
+      msgEl.textContent = '提交中...';
+      msgEl.className = 'msg msg-ok';
+
+      const fd = new FormData(e.target);
+      const payload = {
+        name: (fd.get('name') || '').trim(),
+        student_id: (fd.get('student_id') || '').trim(),
+        activity_id: selectedActivity.id,
+        role: (fd.get('role') || '').trim(),
+        phone: (fd.get('phone') || '').trim(),
+      };
+
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          msgEl.textContent = data.message || '报名成功！';
+          msgEl.className = 'msg msg-ok';
+          e.target.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+          
+          // 刷新统计
+          await loadActivities();
+        } else {
+          msgEl.textContent = data.message || '报名失败';
+          msgEl.className = 'msg msg-err';
+        }
+      } catch (err) {
+        msgEl.textContent = '提交失败: ' + err.message;
+        msgEl.className = 'msg msg-err';
+      }
+    }
+
+    function renderActivityStats() {
+      if (!selectedActivity) return;
+
+      const stats = selectedActivity;
+      const reviewerStatus = stats.reviewers >= stats.reviewer_full ? '已满' : `还需 ${stats.reviewer_full ? 0 : 3 - stats.reviewers} 人`;
+
+      const statsHTML = `
+        <article class="stat">
+          <div class="stat-label">拟参加人数</div>
+          <div class="stat-value">${stats.expected_attendance || 0}</div>
+          <div class="stat-status">分享 + 旁听 + 评议</div>
+        </article>
+        <article class="stat">
+          <div class="stat-label">评议员</div>
+          <div class="stat-value">${stats.reviewers || 0}/3</div>
+          <div class="stat-status ${stats.reviewer_full ? 'full' : ''}">${reviewerStatus}</div>
+        </article>
+        <article class="stat">
+          <div class="stat-label">旁听人数</div>
+          <div class="stat-value">${stats.listeners || 0}</div>
+          <div class="stat-status">无限制</div>
+        </article>
+      `;
+      
+      document.getElementById('activity-stats').innerHTML = statsHTML;
+
+      // 显示评议员满员警告
+      const warningsEl = document.getElementById('warnings');
+      if (stats.reviewer_full) {
+        warningsEl.innerHTML = `
+          <div class="warnings">
+            <div class="warning-item">⚠️ 该分享会评议员已满，如果报名评议员可能会被驳回</div>
+          </div>
+        `;
+      } else {
+        warningsEl.innerHTML = '';
+      }
+    }
+
+    async function loadWarnings() {
+      try {
+        const res = await fetch('/api/stats', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.ok) {
+          const inactive = data.inactive_groups || {};
+          const violations = data.boundary_violations || {};
+
+          let warningHTML = '';
+
+          if (violations.count > 0) {
+            warningHTML += `
+              <div class="warnings" style="background: #fecaca; border-color: #fca5a5;">
+                <strong>⚠️ 参与度过高警告（可能接近违规）</strong><br/>
+                共 ${violations.count} 位社员的参与次数超过 ${violations.warning_threshold} 次：<br/>
+            `;
+            Object.entries(violations.potential_violations || {}).forEach(([name, count]) => {
+              warningHTML += `<div class="warning-item">• ${name}: ${count} 次</div>`;
+            });
+            warningHTML += '</div>';
+          }
+
+          if (inactive.total_active_speakers > 0) {
+            warningHTML += `
+              <div class="warnings">
+                <div class="warning-item">📊 当前有 ${inactive.total_active_speakers} 个活跃分享者/兴趣组</div>
+              </div>
+            `;
+          }
+
+          if (warningHTML) {
+            globalWarningsEl.style.display = 'block';
+            globalWarningsContentEl.innerHTML = warningHTML;
+          }
+        }
+      } catch (e) {
+        console.error('Load warnings failed:', e);
+      }
+    }
+
+    // 初始加载
+    loadActivities();
+    
+    // 每30秒刷新一次活动列表
+    setInterval(loadActivities, 30000);
+  </script>
+</body>
+</html>
