@@ -1,0 +1,77 @@
+name: CI — standalone-yuque-fetcher
+
+on:
+  push:
+    paths:
+      - "standalone-yuque-fetcher/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "standalone-yuque-fetcher/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r standalone-yuque-fetcher/scripts/requirements.txt
+
+      # Quick-check mode: run with no arguments.
+      # The script fetches the default public Yuque URL and prints the first
+      # 1000 characters.  Network access is available in GitHub-hosted runners,
+      # so this acts as a lightweight integration smoke-test.
+      #
+      # Exit code 0  → success (content extracted)
+      # Exit code 3  → content selectors didn't match (page may use JS rendering)
+      #
+      # We allow exit code 3 here so the CI still passes when the remote page
+      # structure changes.  Only hard failures (network errors, import errors,
+      # etc.) will fail the job.
+      - name: Run fetch_yuque.py (quick-check / smoke-test)
+        run: |
+          set +e
+          python standalone-yuque-fetcher/scripts/fetch_yuque.py --verbose
+          EXIT=$?
+          set -e
+          if [ "$EXIT" -eq 3 ]; then
+            echo "WARNING: content selectors did not match (exit 3). Page may require --render."
+            exit 0
+          fi
+          exit "$EXIT"
+        shell: bash
+
+      # -----------------------------------------------------------------------
+      # Playwright (OPTIONAL — disabled by default to keep CI runs fast)
+      # -----------------------------------------------------------------------
+      # To enable Playwright browser rendering in CI, uncomment the steps below.
+      # Note: `playwright install` downloads ~200 MB of browser binaries;
+      # consider caching them with actions/cache.
+      #
+      # - name: Install Playwright
+      #   run: |
+      #     pip install playwright
+      #     playwright install chromium
+      #
+      # - name: Run with --render
+      #   run: |
+      #     python standalone-yuque-fetcher/scripts/fetch_yuque.py --render --verbose

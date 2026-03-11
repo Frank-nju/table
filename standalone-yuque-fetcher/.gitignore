@@ -1,0 +1,18 @@
+# Python artefacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Output files
+outputs/
+sample_output.txt
+
+# Editor / OS
+.DS_Store
+.idea/
+*.swp

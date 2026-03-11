@@ -1,0 +1,9 @@
+requests>=2.25.1
+beautifulsoup4>=4.9.3
+
+# playwright is optional — only needed when using the --render flag.
+# To install:
+#   pip install playwright
+#   playwright install   # downloads Chromium/Firefox/WebKit binaries (~200 MB)
+#
+# playwright>=1.30.0
