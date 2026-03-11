@@ -1,0 +1,44 @@
+Sample run (no arguments):
+
+  python3 standalone-yuque-fetcher/scripts/fetch_yuque.py
+
+--- log output (stderr) ---
+2026-03-11T09:49:52 [INFO] Fetching URL with requests: https://nova.yuque.com/wg5tth/nuumlq/ky1ofwicugp9f5hq?singleDoc
+2026-03-11T09:49:53 [INFO] Received HTTP 200, content-length=98432
+2026-03-11T09:49:53 [INFO] Done.
+
+--- stdout (first 1 000 characters of extracted text) ---
+置顶-活动信息登记报名表-0311更新
+
+本表格用于活动信息登记与报名，欢迎所有感兴趣的朋友填写。
+
+活动名称：[活动名称示例]
+活动时间：2026年3月11日（周三）19:00 - 21:00
+活动地点：线上/线下（请以最终通知为准）
+报名截止：2026年3月10日 23:59
+
+---
+
+报名方式
+请在本页面表格中填写以下信息：
+1. 姓名（必填）
+2. 联系方式（邮箱或微信，必填）
+3. 所在城市（选填）
+4. 参与方式：线上 / 线下（必填）
+5. 备注（选填）
+
+---
+
+注意事项
+- 报名成功后，将通过您填写的联系方式发送确认通知。
+- 如需取消报名，请提前 24 小时联系主办方。
+- 本活动免费参与，欢迎转发给感兴趣的朋友。
+
+---
+
+（以上为示例占位文本，不含任何真实个人信息或敏感数据。）
+
+NOTE: This file is a representative placeholder showing what the script
+outputs when run against the default URL.  Actual page content may differ
+depending on when the document was last updated.  No private tokens or
+cookies were used to generate this output.

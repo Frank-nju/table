@@ -1,0 +1,22 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Output files
+outputs/
+*.txt.out
+
+# Environment / secrets — never commit tokens or cookies
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/

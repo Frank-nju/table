@@ -1,0 +1,81 @@
+name: CI – standalone-yuque-fetcher
+
+on:
+  push:
+    paths:
+      - "standalone-yuque-fetcher/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "standalone-yuque-fetcher/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  lint-and-test:
+    name: Lint & self-check (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install core dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r standalone-yuque-fetcher/scripts/requirements.txt
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Lint with flake8
+        run: |
+          flake8 standalone-yuque-fetcher/scripts/fetch_yuque.py \
+            --max-line-length=99 \
+            --extend-ignore=E203
+
+      - name: Self-check (no-args run, assert exit 0)
+        run: |
+          python3 standalone-yuque-fetcher/scripts/fetch_yuque.py
+          echo "Exit code: $?"
+
+  playwright-optional:
+    name: Playwright render test (optional)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # This job is informational only; failures do NOT block the PR.
+    continue-on-error: true
+    # Only run when the label "test-playwright" is added, or on manual dispatch.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'test-playwright'))
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (including Playwright)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r standalone-yuque-fetcher/scripts/requirements.txt
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Run with --render flag
+        run: |
+          python3 standalone-yuque-fetcher/scripts/fetch_yuque.py --render --timeout 30
