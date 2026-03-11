@@ -133,4 +133,38 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log
 - 不要把真实 `SEATABLE_API_TOKEN` 写入 Git 仓库。
 - 只在服务器的 `/etc/table-signup.env` 或本地 `.env` 中保存 token。
 - 对外网开放时建议配置 HTTPS（可用 `certbot`）。
-- 如果多人高并发提交，建议加 Redis 分布式锁，避免多实例下抢占导致超额。
+- 多进程（gunicorn workers > 1）或多实例部署时，**必须**配置 `REDIS_URL` 以启用分布式锁，否则并发提交可能导致超额。
+
+## 7. Redis 分布式锁（多进程部署必读）
+
+默认情况下，应用使用 `threading.Lock()` 保护提交逻辑，**仅在单进程内有效**。
+
+生产环境推荐使用 gunicorn 多 worker（`gunicorn.conf.py` 默认 `workers = 2`），此时必须启用 Redis 分布式锁：
+
+### 7.1 安装并启动 Redis
+
+```bash
+sudo apt-get install -y redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+
+### 7.2 配置 REDIS_URL
+
+在 `/etc/table-signup.env`（或本地 `.env`）中添加：
+
+```
+REDIS_URL=redis://127.0.0.1:6379/0
+REDIS_LOCK_KEY=table_signup_lock
+REDIS_LOCK_TIMEOUT=10
+```
+
+重启服务后生效：
+
+```bash
+sudo systemctl restart table-signup
+```
+
+### 7.3 验证
+
+启动日志中若无 "Redis 连接失败" 警告，则说明分布式锁已生效。若 Redis 不可用，应用会自动回退到本地锁，并在日志中打印警告。

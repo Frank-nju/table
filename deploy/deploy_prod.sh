@@ -13,7 +13,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 apt-get update
-apt-get install -y python3 python3-venv python3-pip nginx
+apt-get install -y python3 python3-venv python3-pip nginx redis-server
 
 mkdir -p "${APP_DIR}"
 rsync -av --delete --exclude '.git' --exclude '.venv' /workspaces/table/ "${APP_DIR}/"
@@ -29,6 +29,8 @@ ln -sf /etc/nginx/sites-available/table-signup.conf /etc/nginx/sites-enabled/tab
 rm -f /etc/nginx/sites-enabled/default
 
 systemctl daemon-reload
+systemctl enable redis-server
+systemctl start redis-server
 systemctl enable table-signup
 systemctl restart table-signup
 nginx -t
