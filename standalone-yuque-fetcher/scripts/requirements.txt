@@ -1,0 +1,5 @@
+requests>=2.28.0
+beautifulsoup4>=4.11.0
+# playwright is optional — only needed when using --render
+# Install with: pip install playwright && playwright install chromium
+# playwright>=1.40.0

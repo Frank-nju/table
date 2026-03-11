@@ -1,0 +1,28 @@
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Output files
+*.txt.out
+output/
+out/
+
+# OS / editor artefacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets — never commit tokens or cookies
+.env
+.env.*
+secrets.*
