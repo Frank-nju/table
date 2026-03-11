@@ -4,7 +4,8 @@
 
 set -euo pipefail
 
-cd /workspaces/table
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+cd "${SCRIPT_DIR}"
 
 if ! command -v ngrok &> /dev/null; then
     echo "ngrok 未安装，正在安装..."

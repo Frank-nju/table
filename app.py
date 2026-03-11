@@ -40,6 +40,12 @@ LISTENER_UNLIMITED = os.getenv("LISTENER_UNLIMITED", "true").lower() == "true"
 # ===== 时间槽配置 =====
 TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,10:00,11:00,12:00,13:00,14:00,15:00,16:00,17:00,18:00,19:00,20:00,21:00,22:00").split(",") if x.strip()]
 
+# ===== CAC有约冲突检测配置 =====
+# CAC有约固定在哪一天（0=周一, 1=周二, ..., 4=周五, 6=周日），默认周五
+CAC_FIXED_WEEKDAY = int(os.getenv("CAC_FIXED_WEEKDAY", "4"))
+# CAC有约固定时间段（格式 HH:MM-HH:MM）
+CAC_FIXED_TIME = os.getenv("CAC_FIXED_TIME", "18:00-19:00")
+
 if not API_TOKEN:
     raise RuntimeError("SEATABLE_API_TOKEN is required. Please set it in .env.")
 
@@ -150,6 +156,76 @@ def _get_signup_stats(activity_id):
 
 
 # ===== 统计和预警函数 =====
+def _parse_time_range(time_str):
+    """解析时间区间字符串（如 '10:00-11:00'），返回 (start_minutes, end_minutes) 或 None"""
+    if not time_str:
+        return None
+    parts = str(time_str).strip().split('-')
+    if len(parts) != 2:
+        return None
+    try:
+        def to_minutes(t):
+            h, m = t.strip().split(':')
+            return int(h) * 60 + int(m)
+        return (to_minutes(parts[0]), to_minutes(parts[1]))
+    except Exception:
+        return None
+
+
+def _times_overlap(range1, range2):
+    """检查两个时间区间是否重叠（不含端点相接）"""
+    if not range1 or not range2:
+        return False
+    return range1[0] < range2[1] and range2[0] < range1[1]
+
+
+def _detect_time_conflicts(activities_details):
+    """检测活动之间的时间冲突，返回冲突列表"""
+    conflicts = []
+    acts = [a for a in activities_details if a.get('date') and a.get('time')]
+    for i, act1 in enumerate(acts):
+        for act2 in acts[i + 1:]:
+            if str(act1.get('date', '')) != str(act2.get('date', '')):
+                continue
+            range1 = _parse_time_range(act1.get('time'))
+            range2 = _parse_time_range(act2.get('time'))
+            if _times_overlap(range1, range2):
+                conflicts.append({
+                    'activity1_id': act1.get('id'),
+                    'activity1_topic': act1.get('topic', ''),
+                    'activity2_id': act2.get('id'),
+                    'activity2_topic': act2.get('topic', ''),
+                    'date': act1.get('date'),
+                    'time1': act1.get('time'),
+                    'time2': act2.get('time'),
+                })
+    return conflicts
+
+
+def _check_cac_conflict(date_str, time_str):
+    """检查活动是否与 CAC有约 时间冲突，返回 (has_conflict, message)"""
+    try:
+        date = datetime.strptime(str(date_str).strip(), '%Y-%m-%d')
+        if date.weekday() == CAC_FIXED_WEEKDAY:
+            cac_range = _parse_time_range(CAC_FIXED_TIME)
+            act_range = _parse_time_range(time_str)
+            if cac_range and act_range and _times_overlap(act_range, cac_range):
+                weekday_names = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+                day_name = weekday_names[CAC_FIXED_WEEKDAY]
+                return True, f"该活动时间与 CAC有约（{day_name} {CAC_FIXED_TIME}）冲突，请注意避开"
+    except Exception:
+        pass
+    return False, None
+
+
+def _get_time_slot_pairs():
+    """根据 TIME_SLOTS 配置生成时间槽区间列表"""
+    pairs = []
+    for i in range(len(TIME_SLOTS) - 1):
+        pairs.append(f"{TIME_SLOTS[i]}-{TIME_SLOTS[i + 1]}")
+    return pairs
+
+
 def _detect_inactive_members():
     """检测消亡的兴趣组（无活动记录）"""
     activities = _list_activities()
@@ -195,7 +271,7 @@ def index():
 @app.get("/organizer")
 def organizer():
     """分享者管理页面"""
-    return render_template("organizer.html")
+    return render_template("organizer.html", time_slot_pairs=_get_time_slot_pairs())
 
 
 @app.get("/healthz")
@@ -300,11 +376,19 @@ def api_stats():
     """获取全局统计信息和预警"""
     inactive = _detect_inactive_members()
     violations = _detect_boundary_violations()
-    
+
+    activities = _list_activities()
+    activities_details = [_get_activity_details(a) for a in activities]
+    time_conflicts = _detect_time_conflicts(activities_details)
+
     return jsonify({
         "ok": True,
         "inactive_groups": inactive,
         "boundary_violations": violations,
+        "time_conflicts": {
+            "count": len(time_conflicts),
+            "conflicts": time_conflicts,
+        },
     })
 
 
@@ -355,7 +439,23 @@ def api_create_activity():
             "ok": False, 
             "message": "请完整填写日期、时间、分享者、主题和学号"
         }), 400
-    
+
+    # 检测冲突（仅提示，不拦截创建）
+    warnings = []
+    cac_conflict, cac_msg = _check_cac_conflict(date, time)
+    if cac_conflict:
+        warnings.append(cac_msg)
+
+    existing_activities = _list_activities()
+    new_range = _parse_time_range(time)
+    if new_range:
+        for act in existing_activities:
+            if str(act.get(ACTIVITY_COL_DATE, '')) == date:
+                existing_range = _parse_time_range(act.get(ACTIVITY_COL_TIME, ''))
+                if existing_range and _times_overlap(new_range, existing_range):
+                    existing_topic = str(act.get(ACTIVITY_COL_TOPIC, '')).strip()
+                    warnings.append(f"与已有活动「{existing_topic}」时间重叠，请确认是否继续")
+
     # 创建活动记录
     row_data = {
         ACTIVITY_COL_DATE: date,
@@ -369,7 +469,10 @@ def api_create_activity():
     
     try:
         base.append_row(ACTIVITY_TABLE_NAME, row_data)
-        return jsonify({"ok": True, "message": "活动创建成功"}), 201
+        response = {"ok": True, "message": "活动创建成功"}
+        if warnings:
+            response["warnings"] = warnings
+        return jsonify(response), 201
     except Exception as e:
         return jsonify({"ok": False, "message": f"创建失败: {str(e)}"}), 500
 
