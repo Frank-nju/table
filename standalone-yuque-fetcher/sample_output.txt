@@ -1,0 +1,26 @@
+Sample output — first 1000 characters (placeholder)
+----------------------------------------------------------------
+This file shows what the script outputs when run without arguments.
+Actual content depends on the live document at the default URL.
+
+Run the script yourself to generate real output:
+
+    python3 scripts/fetch_yuque.py
+
+Example (illustrative, not real content):
+----------------------------------------------------------------
+置顶-活动信息登记报名表-0311更新
+
+活动信息
+
+活动名称：...
+活动时间：2026-03-11
+报名截止：...
+
+报名表
+
+姓名 | 联系方式 | 单位 | 备注
+...
+
+（以上为示意内容，实际内容请运行脚本获取）
+----------------------------------------------------------------

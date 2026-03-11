@@ -1,0 +1,8 @@
+requests>=2.25.1
+beautifulsoup4>=4.9.3
+
+# Playwright is optional — only needed when using the --render flag.
+# Install with:
+#   pip install playwright
+#   playwright install
+# playwright>=1.30.0
