@@ -2,4 +2,3 @@ Flask==3.1.0
 seatable-api==2.8.2
 python-dotenv==1.0.1
 gunicorn==23.0.0
-redis==5.2.1
