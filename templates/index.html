@@ -300,6 +300,203 @@
       font-size: 13px;
     }
 
+    .manage-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .signup-record {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      background: #f8fbfd;
+      margin-bottom: 12px;
+    }
+
+    .signup-record:last-child {
+      margin-bottom: 0;
+    }
+
+    .signup-record-title {
+      margin: 0 0 6px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .signup-record-meta {
+      font-size: 13px;
+      color: var(--sub);
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .signup-record-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-danger-lite {
+      background: var(--bad);
+    }
+
+    .btn-danger-lite:hover {
+      background: #991b1b;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .leaderboard-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fbfd;
+      font-size: 14px;
+    }
+
+    .leaderboard-rank {
+      color: var(--sub);
+      min-width: 48px;
+    }
+
+    .leaderboard-name {
+      flex: 1;
+      font-weight: 600;
+    }
+
+    .leaderboard-value {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #e0f2ff;
+      color: var(--primary);
+    }
+
+    .tag.warn {
+      background: #fef3c7;
+      color: var(--warn);
+    }
+
+    .tag.bad {
+      background: #fee2e2;
+      color: var(--bad);
+    }
+
+    .review-docs {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .review-doc-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #f8fbfd;
+    }
+
+    .inline-form {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .inline-form input {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .review-upload {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .name-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .onboarding-banner {
+      margin-bottom: 24px;
+      border: 2px solid #0b7285;
+      background:
+        linear-gradient(120deg, rgba(11, 114, 133, 0.08), rgba(124, 58, 237, 0.06)),
+        #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 26px rgba(11, 114, 133, 0.1);
+    }
+
+    .onboarding-title {
+      margin: 0 0 10px;
+      font-size: 20px;
+      font-weight: 800;
+      color: #0b7285;
+      letter-spacing: 0.2px;
+    }
+
+    .onboarding-sub {
+      margin: 0 0 14px;
+      color: var(--sub);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .onboarding-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .onboarding-item {
+      border: 1px solid var(--line);
+      background: #f8fbfd;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .onboarding-item strong {
+      color: var(--primary);
+    }
+
+    .onboarding-rules {
+      border: 1px dashed #7aa7b0;
+      border-radius: 12px;
+      padding: 12px;
+      background: #f5fbfd;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #234;
+    }
+
     @media (max-width: 900px) {
       .main-grid {
         grid-template-columns: 1fr;
@@ -309,7 +506,19 @@
         grid-template-columns: 1fr 1fr;
       }
 
+      .manage-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+
       .role-group {
+        grid-template-columns: 1fr;
+      }
+
+      .onboarding-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -324,6 +533,27 @@
         <a href="/organizer" style="color: var(--primary); text-decoration: none; font-weight: 600; border: 2px solid var(--primary); padding: 8px 16px; border-radius: 8px; display: inline-block;">
           📝 分享者管理 (生成活动)
         </a>
+        <a href="/profile" style="color: var(--primary); text-decoration: none; font-weight: 600; border: 2px solid var(--primary); padding: 8px 16px; border-radius: 8px; display: inline-block; margin-left: 8px;">
+          🧭 个人主页（二期）
+        </a>
+      </div>
+    </div>
+
+    <div class="onboarding-banner">
+      <h2 class="onboarding-title">🚀 新手必看：30 秒上手</h2>
+      <p class="onboarding-sub">先看规则再操作。按下面 3 步做，基本不会走错：先选活动，再选角色报名，最后去「我的报名」管理与补评议文档。</p>
+      <div class="onboarding-grid">
+        <div class="onboarding-item"><strong>第 1 步：</strong>在「正在进行的分享会」选择活动，右侧会出现报名表单与名额统计。</div>
+        <div class="onboarding-item"><strong>第 2 步：</strong>normal 活动可选「评议员/旁听」；cac有约活动可选「参与者/旁听」。</div>
+        <div class="onboarding-item"><strong>第 3 步：</strong>报名后到「我的报名」查看、取消、上传评议文档；若收到邀请，可在「我的邀请」一键跳转报名。</div>
+        <div class="onboarding-item"><strong>进阶入口：</strong>发布活动请进「分享者管理」；查看个人任务与推荐活动请进「个人主页」。</div>
+      </div>
+      <div class="onboarding-rules">
+        <strong>规则与注意事项</strong><br />
+        1. 一个活动内同一姓名不可重复报名同一角色。<br />
+        2. 评议员名额有限，满员后不能再选评议员。<br />
+        3. 评议员需在活动结项后补交评议语雀链接，才会进入评分流程。<br />
+        4. 边界预警与榜单基于近期输出统计，建议定期参与分享或评议。
       </div>
     </div>
 
@@ -355,7 +585,49 @@
           <div class="card-title" style="margin-top: 0; margin-bottom: 12px; font-size: 14px;">报名统计</div>
           <div class="stats-grid" id="activity-stats"></div>
           <div id="warnings"></div>
+          <div id="review-docs"></div>
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔎 我的报名</div>
+      <div class="manage-grid">
+        <div>
+          <label>
+            报名姓名
+            <input type="text" id="manage-name" maxlength="30" placeholder="输入姓名查看已报名项目" />
+          </label>
+          <button id="manage-load-btn" style="margin-top: 10px; width: 100%;">查看我已报名的项目</button>
+          <div class="msg" id="manage-msg" style="margin-top: 12px;"></div>
+        </div>
+        <div id="my-signups">
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">🧾</div>
+            <div>输入姓名后可查看并取消自己的报名</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 16px;">
+        <div class="card-title" style="font-size: 16px;">📨 我的邀请</div>
+        <div id="my-invites">
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">✉️</div>
+            <div>输入姓名后可查看收到的评议邀请</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title">🏆 活跃榜单</div>
+        <div id="leaderboards"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📣 边界与成员预警</div>
+        <div id="boundary-watch"></div>
       </div>
     </div>
 
@@ -372,6 +644,14 @@
     const statsPanelEl = document.getElementById('stats-panel');
     const globalWarningsEl = document.getElementById('global-warnings');
     const globalWarningsContentEl = document.getElementById('global-warnings-content');
+    const reviewDocsEl = document.getElementById('review-docs');
+    const manageNameEl = document.getElementById('manage-name');
+    const manageLoadBtnEl = document.getElementById('manage-load-btn');
+    const manageMsgEl = document.getElementById('manage-msg');
+    const mySignupsEl = document.getElementById('my-signups');
+    const myInvitesEl = document.getElementById('my-invites');
+    const leaderboardsEl = document.getElementById('leaderboards');
+    const boundaryWatchEl = document.getElementById('boundary-watch');
 
     let activities = [];
     let selectedActivity = null;
@@ -382,8 +662,16 @@
         const data = await res.json();
         if (data.ok) {
           activities = data.activities || [];
+          if (selectedActivity) {
+            selectedActivity = activities.find((activity) => activity.id === selectedActivity.id) || null;
+          }
           renderActivityList();
+          if (selectedActivity) {
+            renderSignupForm();
+            renderActivityStats();
+          }
           loadWarnings();
+          loadLeaderboards();
         }
       } catch (e) {
         console.error('Load activities failed:', e);
@@ -409,6 +697,7 @@
           <div class="activity-time">⏰ ${activity.time || '时间未定'}</div>
           <div class="activity-speakers">👤 ${activity.speakers || '分享者未定'}</div>
           <div class="activity-topic">📌 ${activity.topic || '主题未定'}</div>
+          <div class="activity-date" style="margin-top: 4px;">🏷️ ${(activity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}${activity.group_name ? ` · ${activity.group_name}` : ''}</div>
         </div>
       `).join('');
     }
@@ -425,9 +714,30 @@
     function renderSignupForm() {
       if (!selectedActivity) return;
 
+      const isCacActivity = (selectedActivity.activity_type || 'normal') === 'cac有约';
+      const roleOptions = isCacActivity
+        ? `
+            <input type="radio" id="role-participant" name="role" value="参与者" class="role-radio" required>
+            <label for="role-participant" class="role-label">🤝 参与者</label>
+
+            <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
+            <label for="role-listener" class="role-label">👂 旁听</label>
+          `
+        : `
+            <input type="radio" id="role-reviewer" name="role" value="评议员" class="role-radio" required>
+            <label for="role-reviewer" class="role-label">👨‍⚖️ 评议员</label>
+
+            <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
+            <label for="role-listener" class="role-label">👂 旁听</label>
+          `;
+
       const formHTML = `
         <form id="signup-form">
           <input type="hidden" name="activity_id" value="${selectedActivity.id}">
+
+          <div class="tag" style="margin-bottom: 6px; display: inline-block;">
+            ${(selectedActivity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}${selectedActivity.group_name ? ` · ${selectedActivity.group_name}` : ''}
+          </div>
           
           <label>
             姓名
@@ -435,8 +745,8 @@
           </label>
 
           <label>
-            学号
-            <input type="text" name="student_id" maxlength="30" required />
+            邮箱
+            <input type="email" name="email" maxlength="120" placeholder="选填，用于接收提醒" />
           </label>
 
           <label>
@@ -447,11 +757,7 @@
           <label>
             我的角色
             <div class="role-group">
-              <input type="radio" id="role-reviewer" name="role" value="评议员" class="role-radio" required>
-              <label for="role-reviewer" class="role-label">👨‍⚖️ 评议员</label>
-              
-              <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
-              <label for="role-listener" class="role-label">👂 旁听</label>
+              ${roleOptions}
             </div>
           </label>
 
@@ -475,7 +781,7 @@
       const fd = new FormData(e.target);
       const payload = {
         name: (fd.get('name') || '').trim(),
-        student_id: (fd.get('student_id') || '').trim(),
+        email: (fd.get('email') || '').trim(),
         activity_id: selectedActivity.id,
         role: (fd.get('role') || '').trim(),
         phone: (fd.get('phone') || '').trim(),
@@ -493,9 +799,11 @@
           msgEl.textContent = data.message || '报名成功！';
           msgEl.className = 'msg msg-ok';
           e.target.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+          manageNameEl.value = payload.name;
           
           // 刷新统计
           await loadActivities();
+          await loadMySignups(payload.name);
         } else {
           msgEl.textContent = data.message || '报名失败';
           msgEl.className = 'msg msg-err';
@@ -506,11 +814,276 @@
       }
     }
 
+    function setManageMessage(text, type) {
+      manageMsgEl.textContent = text || '';
+      const normalizedType = (type || '').replace(/^msg\s+/, '').trim();
+      manageMsgEl.className = normalizedType ? `msg ${normalizedType}` : 'msg';
+    }
+
+    function renderMySignups(signups, currentName) {
+      if (!signups.length) {
+        mySignupsEl.innerHTML = `
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">📭</div>
+            <div>${currentName} 当前还没有报名任何活动</div>
+          </div>
+        `;
+        return;
+      }
+
+      mySignupsEl.innerHTML = signups.map((signup) => {
+        const activity = signup.activity || {};
+        const canUploadReview = signup.role === '评议员' && signup.activity_state === '已结项';
+        const reviewUploadHTML = canUploadReview ? `
+          <div class="review-upload">
+            <div style="font-size: 13px; color: var(--sub); margin-bottom: 6px;">评议语雀链接</div>
+            ${signup.review_doc_url ? `<div><a href="${signup.review_doc_url}" target="_blank" rel="noopener">已提交文档，点击查看</a></div>` : ''}
+            <div class="inline-form">
+              <input type="url" id="review-url-${signup.id}" placeholder="粘贴语雀文档链接" value="${signup.review_doc_url || ''}" />
+              <button type="button" onclick="submitReviewDoc('${signup.id}')">上传/更新</button>
+            </div>
+            <div style="font-size: 12px; color: var(--sub); margin-top: 6px;">当前均分：${signup.average_score || 0}，评分数：${signup.rating_count || 0}</div>
+          </div>
+        ` : '';
+        return `
+          <div class="signup-record">
+            <div class="signup-record-title">${activity.topic || '未命名活动'}</div>
+            <div class="signup-record-meta">
+              <div>📅 ${activity.date || '日期待定'} ${activity.time || ''}</div>
+              <div>👤 分享者：${activity.speakers || '待定'}</div>
+              <div>🏷️ 您的角色：${signup.role || '未设置'}</div>
+              <div>🏢 教室：${activity.classroom || '待定'}</div>
+              <div>📌 状态：${signup.activity_state || '进行中'}</div>
+            </div>
+            <div class="signup-record-actions">
+              <button class="btn-danger-lite" onclick="cancelSignup('${signup.id}')">取消报名</button>
+            </div>
+            ${reviewUploadHTML}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderMyInvites(invites, currentName) {
+      if (!invites.length) {
+        myInvitesEl.innerHTML = `
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">📭</div>
+            <div>${currentName} 当前没有收到邀请</div>
+          </div>
+        `;
+        return;
+      }
+
+      myInvitesEl.innerHTML = invites.map((invite) => `
+        <div class="signup-record">
+          <div class="signup-record-title">${invite.activity_topic || '未命名活动'}</div>
+          <div class="signup-record-meta">
+            <div>👤 邀请人：${invite.inviter_name || '-'}</div>
+            <div>🏷️ 邀请来源：${invite.source_type || '分享者指定'}</div>
+            <div>📌 状态：<span class="tag ${((invite.status || '已发送') === '已发送') ? 'warn' : (((invite.status || '已发送') === '已拒绝' || (invite.status || '已发送') === '已撤回') ? 'bad' : '')}">${invite.status || '已发送'}</span></div>
+            <div>🕒 邀请时间：${invite.created_at || '未知'}</div>
+          </div>
+          <div class="signup-record-actions">
+            <button onclick="jumpToInviteActivity('${invite.activity_id}')">去报名</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function jumpToInviteActivity(activityId) {
+      if (!activityId) return;
+      selectActivity(activityId);
+      setManageMessage('已为您定位到被邀请活动，请在右侧填写报名。', 'msg-ok');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function loadMyInvites(nameArg) {
+      const name = (nameArg || manageNameEl.value || '').trim();
+      if (!name) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/my-invites/${encodeURIComponent(name)}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          let okMsg = data.message || '报名成功！';
+          if ((Number(data.accepted_invites) || 0) > 0) {
+            okMsg += '（邀请状态已自动更新）';
+          }
+          msgEl.textContent = okMsg;
+          return;
+        }
+        renderMyInvites(data.invites || [], name);
+      } catch (err) {
+        myInvitesEl.innerHTML = `<div class="msg msg-err">邀请查询失败: ${err.message}</div>`;
+      }
+    }
+
+    async function loadMySignups(nameArg) {
+      const name = (nameArg || manageNameEl.value || '').trim();
+      if (!name) {
+        setManageMessage('请输入姓名后再查询', 'msg-err');
+        return;
+      }
+
+      setManageMessage('查询中...', 'msg-ok');
+      try {
+        const res = await fetch(`/api/my-signups/${encodeURIComponent(name)}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '查询失败', 'msg-err');
+          return;
+        }
+
+        renderMySignups(data.signups || [], name);
+        await loadMyInvites(name);
+        setManageMessage(`已加载 ${name} 的报名记录`, 'msg-ok');
+      } catch (err) {
+        setManageMessage('查询失败: ' + err.message, 'msg-err');
+      }
+    }
+
+    async function cancelSignup(signupId) {
+      const name = (manageNameEl.value || '').trim();
+      if (!name) {
+        setManageMessage('请先输入姓名再取消报名', 'msg-err');
+        return;
+      }
+
+      if (!confirm('确定要取消这条报名记录吗？')) {
+        return;
+      }
+
+      setManageMessage('正在取消报名...', 'msg-ok');
+      try {
+        const res = await fetch(`/api/signup/${signupId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '取消失败', 'msg-err');
+          return;
+        }
+
+        setManageMessage(data.message || '报名已取消', 'msg-ok');
+        await loadActivities();
+        await loadMySignups(name);
+      } catch (err) {
+        setManageMessage('取消失败: ' + err.message, 'msg-err');
+      }
+    }
+
+    async function submitReviewDoc(signupId) {
+      const name = (manageNameEl.value || '').trim();
+      const reviewDocUrl = (document.getElementById(`review-url-${signupId}`)?.value || '').trim();
+      if (!name || !reviewDocUrl) {
+        setManageMessage('请先填写姓名和评议文档链接', 'msg-err');
+        return;
+      }
+
+      setManageMessage('正在提交评议文档...', 'msg-ok');
+      try {
+        const res = await fetch(`/api/signup/${signupId}/review-doc`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, review_doc_url: reviewDocUrl }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '提交失败', 'msg-err');
+          return;
+        }
+        setManageMessage(data.message || '评议文档已提交', 'msg-ok');
+        await loadMySignups(name);
+        await loadActivities();
+      } catch (err) {
+        setManageMessage('提交失败: ' + err.message, 'msg-err');
+      }
+    }
+
+    function renderReviewDocuments(documents) {
+      if (!documents || !documents.length) {
+        reviewDocsEl.innerHTML = '';
+        return;
+      }
+
+      reviewDocsEl.innerHTML = `
+        <div class="card-title" style="margin-top: 16px; margin-bottom: 12px; font-size: 14px;">评议文档与评分</div>
+        <div class="review-docs">
+          ${documents.map((doc) => `
+            <div class="review-doc-item">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center;">
+                <div>
+                  <div style="font-weight: 700; color: var(--primary);">${doc.reviewer_name}</div>
+                  <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">
+                    ${doc.review_doc_url ? `<a href="${doc.review_doc_url}" target="_blank" rel="noopener">查看语雀文档</a>` : '尚未提交文档'}
+                  </div>
+                </div>
+                <div style="text-align: right; font-size: 12px; color: var(--sub);">
+                  <div>均分 ${doc.average_score || 0}</div>
+                  <div>${doc.rating_count || 0} 条评分</div>
+                </div>
+              </div>
+              ${doc.review_doc_url ? `
+                <div class="inline-form">
+                  <input type="text" id="rater-name-${doc.signup_id}" placeholder="评分人姓名" value="${manageNameEl.value || ''}" />
+                  <input type="number" id="rating-score-${doc.signup_id}" min="1" max="10" step="1" placeholder="1-10 分" />
+                  <input type="text" id="rating-comment-${doc.signup_id}" placeholder="可选备注" />
+                  <button type="button" onclick="submitReviewRating('${doc.signup_id}')">提交评分</button>
+                </div>
+              ` : '<div style="font-size: 12px; color: var(--warn); margin-top: 10px;">该评议员尚未上传评议文档</div>'}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function submitReviewRating(signupId) {
+      const raterName = (document.getElementById(`rater-name-${signupId}`)?.value || '').trim();
+      const comment = (document.getElementById(`rating-comment-${signupId}`)?.value || '').trim();
+      const score = Number(document.getElementById(`rating-score-${signupId}`)?.value || 0);
+      if (!raterName || !score) {
+        setManageMessage('请填写评分人姓名和分数', 'msg-err');
+        return;
+      }
+
+      setManageMessage('正在提交评分...', 'msg-ok');
+      try {
+        const res = await fetch('/api/review-rating', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signup_id: signupId, rater_name: raterName, score, comment }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '评分失败', 'msg-err');
+          return;
+        }
+        setManageMessage(`${data.message || '评分已提交'}（权重 ${data.weight}）`, 'msg-ok');
+        await loadActivities();
+        if (selectedActivity) {
+          renderActivityStats();
+        }
+        await loadLeaderboards();
+      } catch (err) {
+        setManageMessage('评分失败: ' + err.message, 'msg-err');
+      }
+    }
+
     function renderActivityStats() {
       if (!selectedActivity) return;
 
       const stats = selectedActivity;
-      const reviewerStatus = stats.reviewers >= stats.reviewer_full ? '已满' : `还需 ${stats.reviewer_full ? 0 : 3 - stats.reviewers} 人`;
+      const reviewerLimit = Number.isFinite(Number(stats.reviewer_limit)) ? Number(stats.reviewer_limit) : 3;
+      const reviewerCount = Number.isFinite(Number(stats.reviewers)) ? Number(stats.reviewers) : 0;
+      const reviewerIsFull = Boolean(stats.reviewer_full) || reviewerCount >= reviewerLimit;
+      const reviewerRemaining = Number.isFinite(Number(stats.reviewer_remaining))
+        ? Math.max(0, Number(stats.reviewer_remaining))
+        : Math.max(0, reviewerLimit - reviewerCount);
+      const reviewerStatus = reviewerIsFull ? '已满' : `还需 ${reviewerRemaining} 人`;
 
       const statsHTML = `
         <article class="stat">
@@ -520,8 +1093,8 @@
         </article>
         <article class="stat">
           <div class="stat-label">评议员</div>
-          <div class="stat-value">${stats.reviewers || 0}/3</div>
-          <div class="stat-status ${stats.reviewer_full ? 'full' : ''}">${reviewerStatus}</div>
+          <div class="stat-value">${reviewerCount}/${reviewerLimit}</div>
+          <div class="stat-status ${reviewerIsFull ? 'full' : ''}">${reviewerStatus}</div>
         </article>
         <article class="stat">
           <div class="stat-label">旁听人数</div>
@@ -534,7 +1107,7 @@
 
       // 显示评议员满员警告
       const warningsEl = document.getElementById('warnings');
-      if (stats.reviewer_full) {
+      if (reviewerIsFull) {
         warningsEl.innerHTML = `
           <div class="warnings">
             <div class="warning-item">⚠️ 该分享会评议员已满，如果报名评议员可能会被驳回</div>
@@ -542,6 +1115,66 @@
         `;
       } else {
         warningsEl.innerHTML = '';
+      }
+
+      renderReviewDocuments(stats.review_documents || []);
+    }
+
+    function renderLeaderboardSection(title, items, formatter) {
+      if (!items || !items.length) {
+        return `
+          <div style="margin-bottom: 16px;">
+            <div style="font-weight: 700; color: var(--primary); margin-bottom: 8px;">${title}</div>
+            <div class="empty-state" style="padding: 20px;">暂无数据</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 700; color: var(--primary); margin-bottom: 8px;">${title}</div>
+          <div class="leaderboard-list">
+            ${items.slice(0, 8).map((item, index) => `
+              <div class="leaderboard-item">
+                <div class="leaderboard-rank">#${index + 1}</div>
+                <div class="leaderboard-name">${item.name}</div>
+                <div class="leaderboard-value">${formatter(item)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBoundaryWatch(boundaryWatch) {
+      const names = boundaryWatch.non_compliant_names || [];
+      boundaryWatchEl.innerHTML = `
+        <div style="font-size: 14px; color: var(--sub);">最近 ${boundaryWatch.lookback_days || 14} 天内，底线要求为至少参与一次输出型活动（分享、评议、CAC有约）。</div>
+        <div style="margin-top: 12px;">
+          <span class="tag bad">未达标 ${boundaryWatch.non_compliant_count || 0} 人</span>
+          <span class="tag" style="margin-left: 8px;">统计覆盖 ${boundaryWatch.tracked_member_count || 0} 人</span>
+        </div>
+        ${names.length ? `<div class="name-list">${names.map((name) => `<span class="tag warn">${name}</span>`).join('')}</div>` : '<div class="empty-state" style="padding: 20px;">当前没有未达标成员</div>'}
+      `;
+    }
+
+    async function loadLeaderboards() {
+      try {
+        const res = await fetch('/api/leaderboards', { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          return;
+        }
+        const boards = data.leaderboards || {};
+        leaderboardsEl.innerHTML = [
+          renderLeaderboardSection('分享次数榜', boards.sharing || [], (item) => `${item.count} 次`),
+          renderLeaderboardSection('参与活动榜', boards.participation || [], (item) => `${item.count} 次`),
+          renderLeaderboardSection('评议质量榜', boards.review_quality || [], (item) => `${item.score} 分`),
+          renderLeaderboardSection('结项准时率榜', boards.punctuality || [], (item) => `${Math.round((item.on_time_rate || 0) * 100)}%`),
+        ].join('');
+        renderBoundaryWatch(data.boundary_watch || {});
+      } catch (err) {
+        console.error('Load leaderboards failed:', err);
       }
     }
 
@@ -553,6 +1186,7 @@
           const inactive = data.inactive_groups || {};
           const violations = data.boundary_violations || {};
           const timeConflicts = data.time_conflicts || {};
+          const boundaryWatch = data.boundary_watch || {};
 
           let warningHTML = '';
 
@@ -579,6 +1213,15 @@
             warningHTML += '</div>';
           }
 
+          if ((boundaryWatch.non_compliant_count || 0) > 0) {
+            warningHTML += `
+              <div class="warnings" style="background: #fee2e2; border-color: #fca5a5;">
+                <strong>📮 两周输出底线预警</strong><br/>
+                未达标成员 ${boundaryWatch.non_compliant_count} 人，邮件报告将发送至 nova@nju.edu.cn
+              </div>
+            `;
+          }
+
           if (inactive.total_active_speakers > 0) {
             warningHTML += `
               <div class="warnings">
@@ -599,6 +1242,7 @@
 
     // 初始加载
     loadActivities();
+    manageLoadBtnEl.addEventListener('click', () => loadMySignups());
     
     // 每30秒刷新一次活动列表
     setInterval(loadActivities, 30000);
