@@ -411,18 +411,9 @@
                 <label>活动时间 *</label>
                 <select id="form-time" required>
                   <option value="">请选择</option>
-                  <option value="09:00-10:00">09:00-10:00</option>
-                  <option value="10:00-11:00">10:00-11:00</option>
-                  <option value="11:00-12:00">11:00-12:00</option>
-                  <option value="12:00-13:00">12:00-13:00</option>
-                  <option value="13:00-14:00">13:00-14:00</option>
-                  <option value="14:00-15:00">14:00-15:00</option>
-                  <option value="15:00-16:00">15:00-16:00</option>
-                  <option value="16:00-17:00">16:00-17:00</option>
-                  <option value="17:00-18:00">17:00-18:00</option>
-                  <option value="18:00-19:00">18:00-19:00</option>
-                  <option value="19:00-20:00">19:00-20:00</option>
-                  <option value="20:00-21:00">20:00-21:00</option>
+                  {% for pair in time_slot_pairs %}
+                  <option value="{{ pair }}">{{ pair }}</option>
+                  {% endfor %}
                 </select>
               </div>
               
@@ -475,18 +466,9 @@
           <label>活动时间</label>
           <select id="edit-time">
             <option value="">请选择</option>
-            <option value="09:00-10:00">09:00-10:00</option>
-            <option value="10:00-11:00">10:00-11:00</option>
-            <option value="11:00-12:00">11:00-12:00</option>
-            <option value="12:00-13:00">12:00-13:00</option>
-            <option value="13:00-14:00">13:00-14:00</option>
-            <option value="14:00-15:00">14:00-15:00</option>
-            <option value="15:00-16:00">15:00-16:00</option>
-            <option value="16:00-17:00">16:00-17:00</option>
-            <option value="17:00-18:00">17:00-18:00</option>
-            <option value="18:00-19:00">18:00-19:00</option>
-            <option value="19:00-20:00">19:00-20:00</option>
-            <option value="20:00-21:00">20:00-21:00</option>
+            {% for pair in time_slot_pairs %}
+            <option value="{{ pair }}">{{ pair }}</option>
+            {% endfor %}
           </select>
         </div>
         
@@ -522,6 +504,7 @@
 
   <script>
     let currentStudentId = null;
+    let myActivities = [];  // 缓存已加载的活动数据
 
     function showMsg(elementId, text, type) {
       const el = document.getElementById(elementId);
@@ -597,6 +580,8 @@
           `;
           return;
         }
+
+        myActivities = activities;  // 缓存活动数据供编辑框使用
         
         container.innerHTML = activities.map(activity => `
           <div class="activity-item">
@@ -670,7 +655,12 @@
         
         const data = await res.json();
         if (data.ok) {
-          showMsg('create-msg', '✅ ' + data.message, 'success');
+          let successMsg = '✅ ' + data.message;
+          if (data.warnings && data.warnings.length > 0) {
+            successMsg += '<br>⚠️ 注意：' + data.warnings.join('<br>⚠️ ');
+          }
+          showMsg('create-msg', successMsg, data.warnings ? 'info' : 'success');
+          document.getElementById('create-msg').innerHTML = successMsg;
           document.getElementById('create-form').reset();
           
           // 清除消息并刷新列表
@@ -692,11 +682,21 @@
     });
 
     function openEditModal(activityId) {
-      const activity = document.baseElement = null; // 清空缓存
-      
-      // 从已加载的列表中找到活动信息（简单实现）
-      // 实际应该发送 API 请求获取详情
+      const activity = myActivities.find(a => a.id === activityId);
+
       document.getElementById('edit-activity-id').value = activityId;
+      hideMsg('edit-msg');
+
+      if (activity) {
+        document.getElementById('edit-date').value = activity.date || '';
+        const editTimeSelect = document.getElementById('edit-time');
+        editTimeSelect.value = activity.time || '';
+        document.getElementById('edit-speakers').value = activity.speakers || '';
+        document.getElementById('edit-topic').value = activity.topic || '';
+        document.getElementById('edit-classroom').value = activity.classroom || '';
+        document.getElementById('edit-videourl').value = activity.videourl || '';
+      }
+
       document.getElementById('edit-modal').classList.add('active');
     }
 

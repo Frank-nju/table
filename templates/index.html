@@ -552,8 +552,20 @@
         if (data.ok) {
           const inactive = data.inactive_groups || {};
           const violations = data.boundary_violations || {};
+          const timeConflicts = data.time_conflicts || {};
 
           let warningHTML = '';
+
+          if (timeConflicts.count > 0) {
+            warningHTML += `
+              <div class="warnings" style="background: #fecaca; border-color: #fca5a5;">
+                <strong>🚨 活动时间冲突（共 ${timeConflicts.count} 处）</strong><br/>
+            `;
+            (timeConflicts.conflicts || []).forEach(c => {
+              warningHTML += `<div class="warning-item">• ${c.date} ：「${c.activity1_topic}」(${c.time1}) 与「${c.activity2_topic}」(${c.time2}) 时间重叠</div>`;
+            });
+            warningHTML += '</div>';
+          }
 
           if (violations.count > 0) {
             warningHTML += `
