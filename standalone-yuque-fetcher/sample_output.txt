@@ -1,0 +1,17 @@
+sample_output.txt — example placeholder (first 1000 characters)
+------------------------------------------------------------------
+This file shows what the script output looks like when run against
+the default Yuque document URL:
+
+  https://nova.yuque.com/wg5tth/nuumlq/ky1ofwicugp9f5hq?singleDoc
+
+Run the script to generate the real content:
+
+  python scripts/fetch_yuque.py
+
+Expected output (first 1000 chars of document plain-text):
+------------------------------------------------------------------
+置顶-活动信息登记报名表-0311更新
+
+（实际内容在此处截断示例。请运行脚本以获取真实文档内容。）
+------------------------------------------------------------------
