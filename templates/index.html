@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CAC 分享会报名系统</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #1a202c;
+      --sub: #718096;
+      --line: #e2e8f0;
+      --ok: #10b981;
+      --ok-light: #d1fae5;
+      --warn: #f59e0b;
+      --warn-light: #fef3c7;
+      --bad: #ef4444;
+      --bad-light: #fee2e2;
+      --primary: #0891b2;
+      --primary-light: #06b6d4;
+      --primary-gradient: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+      --secondary: #7c3aed;
+      --secondary-gradient: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1600px 800px at 10% -20%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+        radial-gradient(1200px 600px at 100% 10%, rgba(124, 58, 237, 0.12) 0%, transparent 45%),
+        radial-gradient(800px 400px at 50% 100%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 32px 24px;
+      line-height: 1.6;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 32px;
+      background: var(--primary-gradient);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 200px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: 5%;
+      width: 150px;
+      height: 150px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 1.2;
+      color: white;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 16px;
+      font-weight: 500;
+      position: relative;
+      z-index: 1;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 28px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 20px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: var(--primary-gradient);
+      border-radius: 2px;
+    }
+
+    .activity-list {
+      display: grid;
+      gap: 14px;
+      max-height: 600px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .activity-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .activity-list::-webkit-scrollbar-track {
+      background: var(--bg);
+      border-radius: 3px;
+    }
+
+    .activity-list::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 3px;
+    }
+
+    .activity-item {
+      padding: 16px;
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      background: var(--card);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .activity-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary-gradient);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .activity-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .activity-item:hover::before {
+      opacity: 1;
+    }
+
+    .activity-item.selected {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(124, 58, 237, 0.05) 100%);
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+    }
+
+    .activity-item.selected::before {
+      opacity: 1;
+    }
+
+    .activity-date {
+      font-size: 12px;
+      color: var(--sub);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .activity-time {
+      font-size: 14px;
+      color: var(--warn);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .activity-speakers {
+      font-size: 13px;
+      color: var(--text);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    .activity-topic {
+      font-size: 14px;
+      color: var(--primary);
+      margin-top: 6px;
+      font-weight: 700;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      font-size: 14px;
+      color: var(--sub);
+      display: grid;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    input, select, textarea {
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 15px;
+      background: #fff;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    input:hover, select:hover, textarea:hover {
+      border-color: #cbd5e1;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 70px;
+    }
+
+    .role-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .role-radio {
+      display: none;
+    }
+
+    .role-label {
+      padding: 16px;
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      margin: 0;
+      background: var(--card);
+      font-size: 15px;
+    }
+
+    .role-label:hover {
+      border-color: #94a3b8;
+      background: #f8fafc;
+    }
+
+    .role-radio:checked + .role-label {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%);
+      color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
+    }
+
+    button {
+      border: 0;
+      color: white;
+      background: var(--primary-gradient);
+      font-weight: 700;
+      cursor: pointer;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 15px;
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    button:disabled::before {
+      display: none;
+    }
+
+    .msg {
+      min-height: 20px;
+      font-size: 14px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-weight: 500;
+    }
+
+    .msg-ok {
+      color: #065f46;
+      background: var(--ok-light);
+      border: 1px solid #a7f3d0;
+    }
+
+    .msg-err {
+      color: #991b1b;
+      background: var(--bad-light);
+      border: 1px solid #fecaca;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--sub);
+    }
+
+    .empty-state-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      text-align: center;
+      transition: all 0.25s ease;
+    }
+
+    .stat:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--sub);
+      margin-bottom: 8px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-status {
+      font-size: 12px;
+      margin-top: 6px;
+      color: var(--warn);
+      font-weight: 500;
+    }
+
+    .stat-status.full {
+      color: var(--bad);
+    }
+
+    .warnings {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 1px solid #fcd34d;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 16px;
+      font-size: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .warning-item {
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .warning-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .error-message {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      border: 1px solid #fecaca;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-top: 12px;
+      color: var(--bad);
+      font-size: 14px;
+    }
+
+    .manage-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .signup-record {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      margin-bottom: 12px;
+      transition: all 0.25s ease;
+    }
+
+    .signup-record:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .signup-record:last-child {
+      margin-bottom: 0;
+    }
+
+    .signup-record-title {
+      margin: 0 0 8px;
+      font-weight: 700;
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    .signup-record-meta {
+      font-size: 13px;
+      color: var(--sub);
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .signup-record-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-danger-lite {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger-lite:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .review-docs {
+      display: grid;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .review-doc-item {
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: var(--card);
+      transition: all 0.25s ease;
+    }
+
+    .review-doc-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .leaderboard-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
+      font-size: 14px;
+      transition: all 0.25s ease;
+    }
+
+    .leaderboard-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .leaderboard-rank {
+      color: white;
+      background: var(--secondary-gradient);
+      min-width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .leaderboard-rank:first-child {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    }
+
+    .leaderboard-rank:nth-child(2) {
+      background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+    }
+
+    .leaderboard-rank:nth-child(3) {
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+    }
+
+    .leaderboard-name {
+      flex: 1;
+      font-weight: 600;
+    }
+
+    .leaderboard-value {
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%);
+      color: var(--primary);
+      font-weight: 600;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    .tag.warn {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+      color: var(--warn);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .tag.bad {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+      color: var(--bad);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .inline-form {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .inline-form input {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .review-upload {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .name-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .onboarding-banner {
+      margin-bottom: 32px;
+      border: none;
+      background:
+        linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(124, 58, 237, 0.08) 100%),
+        var(--card);
+      border-radius: var(--radius-xl);
+      padding: 28px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .onboarding-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -5%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+    }
+
+    .onboarding-title {
+      margin: 0 0 12px;
+      font-size: 22px;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.3px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .onboarding-sub {
+      margin: 0 0 16px;
+      color: var(--sub);
+      font-size: 14px;
+      line-height: 1.7;
+      position: relative;
+      z-index: 1;
+    }
+
+    .onboarding-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .onboarding-item {
+      border: 2px solid var(--line);
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.8;
+      transition: all 0.25s ease;
+      position: relative;
+      z-index: 1;
+    }
+
+    .onboarding-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .onboarding-item strong {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .onboarding-rules {
+      border: 2px dashed var(--primary);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.05) 0%, rgba(6, 182, 212, 0.02) 100%);
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .manage-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .role-group {
+        grid-template-columns: 1fr;
+      }
+
+      .onboarding-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎤 CAC 分享会报名系统</h1>
+      <p class="subtitle">选择您感兴趣的分享活动，报名成为评议员或旁听者</p>
+      <div style="margin-top: 20px;">
+        <a href="/organizer" style="color: white; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 12px 24px; border-radius: var(--radius); display: inline-block; transition: all 0.3s ease; border: 2px solid rgba(255,255,255,0.3);"
+           onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='translateY(0)'">
+          📝 分享者管理
+        </a>
+        <a href="/profile" style="color: white; text-decoration: none; font-weight: 600; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 12px 24px; border-radius: var(--radius); display: inline-block; transition: all 0.3s ease; border: 2px solid rgba(255,255,255,0.3); margin-left: 8px;"
+           onmouseover="this.style.background='rgba(255,255,255,0.3)'; this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.background='rgba(255,255,255,0.2)'; this.style.transform='translateY(0)'">
+          🧭 个人主页
+        </a>
+      </div>
+    </div>
+
+    <div class="onboarding-banner">
+      <h2 class="onboarding-title">🚀 新手必看：30 秒上手</h2>
+      <p class="onboarding-sub">先看规则再操作。按下面 3 步做，基本不会走错：先选活动，再选角色报名，最后去「我的报名」管理与补评议文档。</p>
+      <div class="onboarding-grid">
+        <div class="onboarding-item"><strong>第 1 步：</strong>在「正在进行的分享会」选择活动，右侧会出现报名表单与名额统计。</div>
+        <div class="onboarding-item"><strong>第 2 步：</strong>normal 活动可选「评议员/旁听」；cac有约活动可选「参与者/旁听」。</div>
+        <div class="onboarding-item"><strong>第 3 步：</strong>报名后到「我的报名」查看、取消、上传评议文档；若收到邀请，可在「我的邀请」一键跳转报名。</div>
+        <div class="onboarding-item"><strong>进阶入口：</strong>发布活动请进「分享者管理」；查看个人任务与推荐活动请进「个人主页」。</div>
+      </div>
+      <div class="onboarding-rules">
+        <strong>规则与注意事项</strong><br />
+        1. 一个活动内同一姓名不可重复报名同一角色。<br />
+        2. 评议员名额有限，满员后不能再选评议员。<br />
+        3. 评议员需在活动结项后补交评议语雀链接，才会进入评分流程。<br />
+        4. 边界预警与榜单基于近期输出统计，建议定期参与分享或评议。
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <!-- 左侧：活动列表 -->
+      <div class="card">
+        <div class="card-title">📅 正在进行的分享会</div>
+        <div class="activity-list" id="activity-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <div>加载活动中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧：报名表单 -->
+      <div class="card">
+        <div class="card-title">📝 活动报名</div>
+        
+        <div id="form-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">👈</div>
+            <div>请先选择一个分享活动</div>
+          </div>
+        </div>
+
+        <!-- 活动统计面板 -->
+        <div id="stats-panel" style="display: none;">
+          <div class="card-title" style="margin-top: 0; margin-bottom: 12px; font-size: 14px;">报名统计</div>
+          <div class="stats-grid" id="activity-stats"></div>
+          <div id="warnings"></div>
+          <div id="review-docs"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔎 我的报名</div>
+      <div class="manage-grid">
+        <div>
+          <label>
+            报名姓名
+            <input type="text" id="manage-name" maxlength="30" placeholder="输入姓名查看已报名项目" />
+          </label>
+          <button id="manage-load-btn" style="margin-top: 10px; width: 100%;">查看我已报名的项目</button>
+          <div class="msg" id="manage-msg" style="margin-top: 12px;"></div>
+        </div>
+        <div id="my-signups">
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">🧾</div>
+            <div>输入姓名后可查看并取消自己的报名</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 16px;">
+        <div class="card-title" style="font-size: 16px;">📨 我的邀请</div>
+        <div id="my-invites">
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">✉️</div>
+            <div>输入姓名后可查看收到的评议邀请</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title">🏆 活跃榜单</div>
+        <div id="leaderboards"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📣 边界与成员预警</div>
+        <div id="boundary-watch"></div>
+      </div>
+    </div>
+
+    <!-- 全局预警 -->
+    <div class="card" id="global-warnings" style="display: none;">
+      <div class="card-title">⚠️ 系统预警与统计</div>
+      <div id="global-warnings-content"></div>
+    </div>
+  </div>
+
+  <script>
+    const activityListEl = document.getElementById('activity-list');
+    const formContainerEl = document.getElementById('form-container');
+    const statsPanelEl = document.getElementById('stats-panel');
+    const globalWarningsEl = document.getElementById('global-warnings');
+    const globalWarningsContentEl = document.getElementById('global-warnings-content');
+    const reviewDocsEl = document.getElementById('review-docs');
+    const manageNameEl = document.getElementById('manage-name');
+    const manageLoadBtnEl = document.getElementById('manage-load-btn');
+    const manageMsgEl = document.getElementById('manage-msg');
+    const mySignupsEl = document.getElementById('my-signups');
+    const myInvitesEl = document.getElementById('my-invites');
+    const leaderboardsEl = document.getElementById('leaderboards');
+    const boundaryWatchEl = document.getElementById('boundary-watch');
+
+    let activities = [];
+    let selectedActivity = null;
+
+    async function loadActivities() {
+      try {
+        const res = await fetch('/api/activities', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.ok) {
+          activities = data.activities || [];
+          if (selectedActivity) {
+            selectedActivity = activities.find((activity) => activity.id === selectedActivity.id) || null;
+          }
+          renderActivityList();
+          if (selectedActivity) {
+            renderSignupForm();
+            renderActivityStats();
+          }
+          loadWarnings();
+          loadLeaderboards();
+        }
+      } catch (e) {
+        console.error('Load activities failed:', e);
+      }
+    }
+
+    function renderActivityList() {
+      if (activities.length === 0) {
+        activityListEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div>暂无进行中的分享活动</div>
+            <p style="font-size: 12px; margin-top: 8px;">请联系 CAC 了解如何发布分享会</p>
+          </div>
+        `;
+        return;
+      }
+
+      activityListEl.innerHTML = activities.map((activity) => `
+        <div class="activity-item ${selectedActivity && selectedActivity.id === activity.id ? 'selected' : ''}" 
+             onclick="selectActivity('${activity.id}')">
+          <div class="activity-date">${activity.date || '日期未定'}</div>
+          <div class="activity-time">⏰ ${activity.time || '时间未定'}</div>
+          <div class="activity-speakers">👤 ${activity.speakers || '分享者未定'}</div>
+          <div class="activity-topic">📌 ${activity.topic || '主题未定'}</div>
+          <div class="activity-date" style="margin-top: 4px;">🏷️ ${(activity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}${activity.group_name ? ` · ${activity.group_name}` : ''}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectActivity(activityId) {
+      selectedActivity = activities.find(a => a.id === activityId);
+      if (!selectedActivity) return;
+
+      renderActivityList();
+      renderSignupForm();
+      renderActivityStats();
+    }
+
+    function renderSignupForm() {
+      if (!selectedActivity) return;
+
+      const isCacActivity = (selectedActivity.activity_type || 'normal') === 'cac有约';
+      const roleOptions = isCacActivity
+        ? `
+            <input type="radio" id="role-participant" name="role" value="参与者" class="role-radio" required>
+            <label for="role-participant" class="role-label">🤝 参与者</label>
+
+            <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
+            <label for="role-listener" class="role-label">👂 旁听</label>
+          `
+        : `
+            <input type="radio" id="role-reviewer" name="role" value="评议员" class="role-radio" required>
+            <label for="role-reviewer" class="role-label">👨‍⚖️ 评议员</label>
+
+            <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
+            <label for="role-listener" class="role-label">👂 旁听</label>
+          `;
+
+      const formHTML = `
+        <form id="signup-form">
+          <input type="hidden" name="activity_id" value="${selectedActivity.id}">
+
+          <div class="tag" style="margin-bottom: 6px; display: inline-block;">
+            ${(selectedActivity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}${selectedActivity.group_name ? ` · ${selectedActivity.group_name}` : ''}
+          </div>
+          
+          <label>
+            姓名
+            <input type="text" name="name" maxlength="30" required />
+          </label>
+
+          <label>
+            邮箱
+            <input type="email" name="email" maxlength="120" placeholder="选填，用于接收提醒" />
+          </label>
+
+          <label>
+            联系电话
+            <input type="tel" name="phone" maxlength="20" placeholder="选填" />
+          </label>
+
+          <label>
+            我的角色
+            <div class="role-group">
+              ${roleOptions}
+            </div>
+          </label>
+
+          <button type="submit">提交报名</button>
+          <div class="msg" id="form-msg"></div>
+        </form>
+      `;
+
+      formContainerEl.innerHTML = formHTML;
+      statsPanelEl.style.display = 'block';
+
+      document.getElementById('signup-form').addEventListener('submit', handleSubmit);
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const msgEl = document.getElementById('form-msg');
+      msgEl.textContent = '提交中...';
+      msgEl.className = 'msg msg-ok';
+
+      const fd = new FormData(e.target);
+      const payload = {
+        name: (fd.get('name') || '').trim(),
+        email: (fd.get('email') || '').trim(),
+        activity_id: selectedActivity.id,
+        role: (fd.get('role') || '').trim(),
+        phone: (fd.get('phone') || '').trim(),
+      };
+
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          msgEl.textContent = data.message || '报名成功！';
+          msgEl.className = 'msg msg-ok';
+          e.target.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+          manageNameEl.value = payload.name;
+          
+          // 刷新统计
+          await loadActivities();
+          await loadMySignups(payload.name);
+        } else {
+          msgEl.textContent = data.message || '报名失败';
+          msgEl.className = 'msg msg-err';
+        }
+      } catch (err) {
+        msgEl.textContent = '提交失败: ' + err.message;
+        msgEl.className = 'msg msg-err';
+      }
+    }
+
+    function setManageMessage(text, type) {
+      manageMsgEl.textContent = text || '';
+      const normalizedType = (type || '').replace(/^msg\s+/, '').trim();
+      manageMsgEl.className = normalizedType ? `msg ${normalizedType}` : 'msg';
+    }
+
+    function renderMySignups(signups, currentName) {
+      if (!signups.length) {
+        mySignupsEl.innerHTML = `
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">📭</div>
+            <div>${currentName} 当前还没有报名任何活动</div>
+          </div>
+        `;
+        return;
+      }
+
+      mySignupsEl.innerHTML = signups.map((signup) => {
+        const activity = signup.activity || {};
+        const canUploadReview = signup.role === '评议员' && signup.activity_state === '已结项';
+        const reviewUploadHTML = canUploadReview ? `
+          <div class="review-upload">
+            <div style="font-size: 13px; color: var(--sub); margin-bottom: 6px;">评议语雀链接</div>
+            ${signup.review_doc_url ? `<div><a href="${signup.review_doc_url}" target="_blank" rel="noopener">已提交文档，点击查看</a></div>` : ''}
+            <div class="inline-form">
+              <input type="url" id="review-url-${signup.id}" placeholder="粘贴语雀文档链接" value="${signup.review_doc_url || ''}" />
+              <button type="button" onclick="submitReviewDoc('${signup.id}')">上传/更新</button>
+            </div>
+            <div style="font-size: 12px; color: var(--sub); margin-top: 6px;">当前均分：${signup.average_score || 0}，评分数：${signup.rating_count || 0}</div>
+          </div>
+        ` : '';
+        return `
+          <div class="signup-record">
+            <div class="signup-record-title">${activity.topic || '未命名活动'}</div>
+            <div class="signup-record-meta">
+              <div>📅 ${activity.date || '日期待定'} ${activity.time || ''}</div>
+              <div>👤 分享者：${activity.speakers || '待定'}</div>
+              <div>🏷️ 您的角色：${signup.role || '未设置'}</div>
+              <div>🏢 教室：${activity.classroom || '待定'}</div>
+              <div>📌 状态：${signup.activity_state || '进行中'}</div>
+            </div>
+            <div class="signup-record-actions">
+              <button class="btn-danger-lite" onclick="cancelSignup('${signup.id}')">取消报名</button>
+            </div>
+            ${reviewUploadHTML}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderMyInvites(invites, currentName) {
+      if (!invites.length) {
+        myInvitesEl.innerHTML = `
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">📭</div>
+            <div>${currentName} 当前没有收到邀请</div>
+          </div>
+        `;
+        return;
+      }
+
+      myInvitesEl.innerHTML = invites.map((invite) => `
+        <div class="signup-record">
+          <div class="signup-record-title">${invite.activity_topic || '未命名活动'}</div>
+          <div class="signup-record-meta">
+            <div>👤 邀请人：${invite.inviter_name || '-'}</div>
+            <div>🏷️ 邀请来源：${invite.source_type || '分享者指定'}</div>
+            <div>📌 状态：<span class="tag ${((invite.status || '已发送') === '已发送') ? 'warn' : (((invite.status || '已发送') === '已拒绝' || (invite.status || '已发送') === '已撤回') ? 'bad' : '')}">${invite.status || '已发送'}</span></div>
+            <div>🕒 邀请时间：${invite.created_at || '未知'}</div>
+          </div>
+          <div class="signup-record-actions">
+            <button onclick="jumpToInviteActivity('${invite.activity_id}')">去报名</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function jumpToInviteActivity(activityId) {
+      if (!activityId) return;
+      selectActivity(activityId);
+      setManageMessage('已为您定位到被邀请活动，请在右侧填写报名。', 'msg-ok');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function loadMyInvites(nameArg) {
+      const name = (nameArg || manageNameEl.value || '').trim();
+      if (!name) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/my-invites/${encodeURIComponent(name)}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          let okMsg = data.message || '报名成功！';
+          if ((Number(data.accepted_invites) || 0) > 0) {
+            okMsg += '（邀请状态已自动更新）';
+          }
+          msgEl.textContent = okMsg;
+          return;
+        }
+        renderMyInvites(data.invites || [], name);
+      } catch (err) {
+        myInvitesEl.innerHTML = `<div class="msg msg-err">邀请查询失败: ${err.message}</div>`;
+      }
+    }
+
+    async function loadMySignups(nameArg) {
+      const name = (nameArg || manageNameEl.value || '').trim();
+      if (!name) {
+        setManageMessage('请输入姓名后再查询', 'msg-err');
+        return;
+      }
+
+      setManageMessage('查询中...', 'msg-ok');
+      try {
+        const res = await fetch(`/api/my-signups/${encodeURIComponent(name)}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '查询失败', 'msg-err');
+          return;
+        }
+
+        renderMySignups(data.signups || [], name);
+        await loadMyInvites(name);
+        setManageMessage(`已加载 ${name} 的报名记录`, 'msg-ok');
+      } catch (err) {
+        setManageMessage('查询失败: ' + err.message, 'msg-err');
+      }
+    }
+
+    async function cancelSignup(signupId) {
+      const name = (manageNameEl.value || '').trim();
+      if (!name) {
+        setManageMessage('请先输入姓名再取消报名', 'msg-err');
+        return;
+      }
+
+      if (!confirm('确定要取消这条报名记录吗？')) {
+        return;
+      }
+
+      setManageMessage('正在取消报名...', 'msg-ok');
+      try {
+        const res = await fetch(`/api/signup/${signupId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '取消失败', 'msg-err');
+          return;
+        }
+
+        setManageMessage(data.message || '报名已取消', 'msg-ok');
+        await loadActivities();
+        await loadMySignups(name);
+      } catch (err) {
+        setManageMessage('取消失败: ' + err.message, 'msg-err');
+      }
+    }
+
+    async function submitReviewDoc(signupId) {
+      const name = (manageNameEl.value || '').trim();
+      const reviewDocUrl = (document.getElementById(`review-url-${signupId}`)?.value || '').trim();
+      if (!name || !reviewDocUrl) {
+        setManageMessage('请先填写姓名和评议文档链接', 'msg-err');
+        return;
+      }
+
+      setManageMessage('正在提交评议文档...', 'msg-ok');
+      try {
+        const res = await fetch(`/api/signup/${signupId}/review-doc`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, review_doc_url: reviewDocUrl }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '提交失败', 'msg-err');
+          return;
+        }
+        setManageMessage(data.message || '评议文档已提交', 'msg-ok');
+        await loadMySignups(name);
+        await loadActivities();
+      } catch (err) {
+        setManageMessage('提交失败: ' + err.message, 'msg-err');
+      }
+    }
+
+    function renderReviewDocuments(documents) {
+      if (!documents || !documents.length) {
+        reviewDocsEl.innerHTML = '';
+        return;
+      }
+
+      reviewDocsEl.innerHTML = `
+        <div class="card-title" style="margin-top: 16px; margin-bottom: 12px; font-size: 14px;">评议文档与评分</div>
+        <div class="review-docs">
+          ${documents.map((doc) => `
+            <div class="review-doc-item">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center;">
+                <div>
+                  <div style="font-weight: 700; color: var(--primary);">${doc.reviewer_name}</div>
+                  <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">
+                    ${doc.review_doc_url ? `<a href="${doc.review_doc_url}" target="_blank" rel="noopener">查看语雀文档</a>` : '尚未提交文档'}
+                  </div>
+                </div>
+                <div style="text-align: right; font-size: 12px; color: var(--sub);">
+                  <div>均分 ${doc.average_score || 0}</div>
+                  <div>${doc.rating_count || 0} 条评分</div>
+                </div>
+              </div>
+              ${doc.review_doc_url ? `
+                <div class="inline-form">
+                  <input type="text" id="rater-name-${doc.signup_id}" placeholder="评分人姓名" value="${manageNameEl.value || ''}" />
+                  <input type="number" id="rating-score-${doc.signup_id}" min="1" max="10" step="1" placeholder="1-10 分" />
+                  <input type="text" id="rating-comment-${doc.signup_id}" placeholder="可选备注" />
+                  <button type="button" onclick="submitReviewRating('${doc.signup_id}')">提交评分</button>
+                </div>
+              ` : '<div style="font-size: 12px; color: var(--warn); margin-top: 10px;">该评议员尚未上传评议文档</div>'}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    async function submitReviewRating(signupId) {
+      const raterName = (document.getElementById(`rater-name-${signupId}`)?.value || '').trim();
+      const comment = (document.getElementById(`rating-comment-${signupId}`)?.value || '').trim();
+      const score = Number(document.getElementById(`rating-score-${signupId}`)?.value || 0);
+      if (!raterName || !score) {
+        setManageMessage('请填写评分人姓名和分数', 'msg-err');
+        return;
+      }
+
+      setManageMessage('正在提交评分...', 'msg-ok');
+      try {
+        const res = await fetch('/api/review-rating', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signup_id: signupId, rater_name: raterName, score, comment }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          setManageMessage(data.message || '评分失败', 'msg-err');
+          return;
+        }
+        setManageMessage(`${data.message || '评分已提交'}（权重 ${data.weight}）`, 'msg-ok');
+        await loadActivities();
+        if (selectedActivity) {
+          renderActivityStats();
+        }
+        await loadLeaderboards();
+      } catch (err) {
+        setManageMessage('评分失败: ' + err.message, 'msg-err');
+      }
+    }
+
+    function renderActivityStats() {
+      if (!selectedActivity) return;
+
+      const stats = selectedActivity;
+      const reviewerLimit = Number.isFinite(Number(stats.reviewer_limit)) ? Number(stats.reviewer_limit) : 3;
+      const reviewerCount = Number.isFinite(Number(stats.reviewers)) ? Number(stats.reviewers) : 0;
+      const reviewerIsFull = Boolean(stats.reviewer_full) || reviewerCount >= reviewerLimit;
+      const reviewerRemaining = Number.isFinite(Number(stats.reviewer_remaining))
+        ? Math.max(0, Number(stats.reviewer_remaining))
+        : Math.max(0, reviewerLimit - reviewerCount);
+      const reviewerStatus = reviewerIsFull ? '已满' : `还需 ${reviewerRemaining} 人`;
+
+      const statsHTML = `
+        <article class="stat">
+          <div class="stat-label">拟参加人数</div>
+          <div class="stat-value">${stats.expected_attendance || 0}</div>
+          <div class="stat-status">分享 + 旁听 + 评议</div>
+        </article>
+        <article class="stat">
+          <div class="stat-label">评议员</div>
+          <div class="stat-value">${reviewerCount}/${reviewerLimit}</div>
+          <div class="stat-status ${reviewerIsFull ? 'full' : ''}">${reviewerStatus}</div>
+        </article>
+        <article class="stat">
+          <div class="stat-label">旁听人数</div>
+          <div class="stat-value">${stats.listeners || 0}</div>
+          <div class="stat-status">无限制</div>
+        </article>
+      `;
+      
+      document.getElementById('activity-stats').innerHTML = statsHTML;
+
+      // 显示评议员满员警告
+      const warningsEl = document.getElementById('warnings');
+      if (reviewerIsFull) {
+        warningsEl.innerHTML = `
+          <div class="warnings">
+            <div class="warning-item">⚠️ 该分享会评议员已满，如果报名评议员可能会被驳回</div>
+          </div>
+        `;
+      } else {
+        warningsEl.innerHTML = '';
+      }
+
+      renderReviewDocuments(stats.review_documents || []);
+    }
+
+    function renderLeaderboardSection(title, items, formatter) {
+      if (!items || !items.length) {
+        return `
+          <div style="margin-bottom: 16px;">
+            <div style="font-weight: 700; color: var(--primary); margin-bottom: 8px;">${title}</div>
+            <div class="empty-state" style="padding: 20px;">暂无数据</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="margin-bottom: 16px;">
+          <div style="font-weight: 700; color: var(--primary); margin-bottom: 8px;">${title}</div>
+          <div class="leaderboard-list">
+            ${items.slice(0, 8).map((item, index) => `
+              <div class="leaderboard-item">
+                <div class="leaderboard-rank">#${index + 1}</div>
+                <div class="leaderboard-name">${item.name}</div>
+                <div class="leaderboard-value">${formatter(item)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderBoundaryWatch(boundaryWatch) {
+      const names = boundaryWatch.non_compliant_names || [];
+      boundaryWatchEl.innerHTML = `
+        <div style="font-size: 14px; color: var(--sub);">最近 ${boundaryWatch.lookback_days || 14} 天内，底线要求为至少参与一次输出型活动（分享、评议、CAC有约）。</div>
+        <div style="margin-top: 12px;">
+          <span class="tag bad">未达标 ${boundaryWatch.non_compliant_count || 0} 人</span>
+          <span class="tag" style="margin-left: 8px;">统计覆盖 ${boundaryWatch.tracked_member_count || 0} 人</span>
+        </div>
+        ${names.length ? `<div class="name-list">${names.map((name) => `<span class="tag warn">${name}</span>`).join('')}</div>` : '<div class="empty-state" style="padding: 20px;">当前没有未达标成员</div>'}
+      `;
+    }
+
+    async function loadLeaderboards() {
+      try {
+        const res = await fetch('/api/leaderboards', { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          return;
+        }
+        const boards = data.leaderboards || {};
+        leaderboardsEl.innerHTML = [
+          renderLeaderboardSection('分享次数榜', boards.sharing || [], (item) => `${item.count} 次`),
+          renderLeaderboardSection('参与活动榜', boards.participation || [], (item) => `${item.count} 次`),
+          renderLeaderboardSection('评议质量榜', boards.review_quality || [], (item) => `${item.score} 分`),
+          renderLeaderboardSection('结项准时率榜', boards.punctuality || [], (item) => `${Math.round((item.on_time_rate || 0) * 100)}%`),
+        ].join('');
+        renderBoundaryWatch(data.boundary_watch || {});
+      } catch (err) {
+        console.error('Load leaderboards failed:', err);
+      }
+    }
+
+    async function loadWarnings() {
+      try {
+        const res = await fetch('/api/stats', { cache: 'no-store' });
+        const data = await res.json();
+        if (data.ok) {
+          const inactive = data.inactive_groups || {};
+          const violations = data.boundary_violations || {};
+          const timeConflicts = data.time_conflicts || {};
+          const boundaryWatch = data.boundary_watch || {};
+
+          let warningHTML = '';
+
+          if (timeConflicts.count > 0) {
+            warningHTML += `
+              <div class="warnings" style="background: #fecaca; border-color: #fca5a5;">
+                <strong>🚨 活动时间冲突（共 ${timeConflicts.count} 处）</strong><br/>
+            `;
+            (timeConflicts.conflicts || []).forEach(c => {
+              warningHTML += `<div class="warning-item">• ${c.date} ：「${c.activity1_topic}」(${c.time1}) 与「${c.activity2_topic}」(${c.time2}) 时间重叠</div>`;
+            });
+            warningHTML += '</div>';
+          }
+
+          if (violations.count > 0) {
+            warningHTML += `
+              <div class="warnings" style="background: #fecaca; border-color: #fca5a5;">
+                <strong>⚠️ 参与度过高警告（可能接近违规）</strong><br/>
+                共 ${violations.count} 位社员的参与次数超过 ${violations.warning_threshold} 次：<br/>
+            `;
+            Object.entries(violations.potential_violations || {}).forEach(([name, count]) => {
+              warningHTML += `<div class="warning-item">• ${name}: ${count} 次</div>`;
+            });
+            warningHTML += '</div>';
+          }
+
+          if ((boundaryWatch.non_compliant_count || 0) > 0) {
+            warningHTML += `
+              <div class="warnings" style="background: #fee2e2; border-color: #fca5a5;">
+                <strong>📮 两周输出底线预警</strong><br/>
+                未达标成员 ${boundaryWatch.non_compliant_count} 人，邮件报告将发送至 nova@nju.edu.cn
+              </div>
+            `;
+          }
+
+          if (inactive.total_active_speakers > 0) {
+            warningHTML += `
+              <div class="warnings">
+                <div class="warning-item">📊 当前有 ${inactive.total_active_speakers} 个活跃分享者/兴趣组</div>
+              </div>
+            `;
+          }
+
+          if (warningHTML) {
+            globalWarningsEl.style.display = 'block';
+            globalWarningsContentEl.innerHTML = warningHTML;
+          }
+        }
+      } catch (e) {
+        console.error('Load warnings failed:', e);
+      }
+    }
+
+    // 初始加载
+    loadActivities();
+    manageLoadBtnEl.addEventListener('click', () => loadMySignups());
+    
+    // 每30秒刷新一次活动列表
+    setInterval(loadActivities, 30000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1780 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>分享会活动管理 - CAC</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #1a202c;
+      --sub: #718096;
+      --line: #e2e8f0;
+      --ok: #10b981;
+      --ok-light: #d1fae5;
+      --warn: #f59e0b;
+      --warn-light: #fef3c7;
+      --bad: #ef4444;
+      --bad-light: #fee2e2;
+      --primary: #0891b2;
+      --primary-light: #06b6d4;
+      --primary-gradient: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+      --secondary: #7c3aed;
+      --secondary-gradient: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1600px 800px at 10% -20%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+        radial-gradient(1200px 600px at 100% 10%, rgba(124, 58, 237, 0.12) 0%, transparent 45%),
+        radial-gradient(800px 400px at 50% 100%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 32px 24px;
+      line-height: 1.6;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      padding: 28px 32px;
+      background: var(--primary-gradient);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 200px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -30%;
+      left: 5%;
+      width: 150px;
+      height: 150px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      color: white;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-user-info {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+      margin: 6px 0 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-user-info a {
+      color: rgba(255, 255, 255, 0.9);
+      text-decoration: underline;
+    }
+
+    .logout-btn {
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(10px);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 0;
+    }
+
+    .tab-btn {
+      padding: 14px 24px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--sub);
+      transition: all 0.2s ease;
+      position: relative;
+      bottom: -2px;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 28px;
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 20px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 24px;
+      background: var(--primary-gradient);
+      border-radius: 2px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 14px;
+      color: var(--sub);
+      display: block;
+      gap: 6px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    input, textarea, select {
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 15px;
+      background: #fff;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      width: 100%;
+    }
+
+    input:hover, textarea:hover, select:hover {
+      border-color: #cbd5e1;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .form-full {
+      grid-column: 1 / -1;
+    }
+
+    button {
+      border: 0;
+      color: white;
+      background: var(--primary-gradient);
+      font-weight: 700;
+      cursor: pointer;
+      padding: 14px 24px;
+      border-radius: var(--radius);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 15px;
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      box-shadow: 0 4px 14px rgba(100, 116, 139, 0.3);
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      box-shadow: 0 6px 20px rgba(100, 116, 139, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .activity-item {
+      background: #f8fbfd;
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: all 0.25s ease;
+    }
+
+    .activity-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .activity-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .activity-header h4 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .activity-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .meta-item {
+      padding: 8px 12px;
+      background: white;
+      border-radius: 8px;
+    }
+
+    .meta-label {
+      color: var(--sub);
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .meta-value {
+      color: var(--text);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    .activity-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .activity-actions button {
+      padding: 8px 14px;
+      font-size: 13px;
+    }
+
+    .msg {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 500;
+      min-height: 20px;
+    }
+
+    .msg.success {
+      background: var(--ok-light);
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .msg.error {
+      background: var(--bad-light);
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .msg.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 40px;
+      color: var(--sub);
+    }
+
+    .empty-state-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    .login-form {
+      max-width: 480px;
+      margin: 60px auto;
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 32px;
+      text-align: center;
+    }
+
+    .login-card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .login-card p {
+      color: var(--sub);
+      margin: 0 0 24px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--sub);
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%);
+      color: var(--primary);
+      font-weight: 600;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    .tag.warn {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+      color: var(--warn);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .tag.bad {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+      color: var(--bad);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    @media (max-width: 900px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-meta {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-actions {
+        flex-direction: column;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      .tabs {
+        flex-wrap: wrap;
+      }
+
+      .tab-btn {
+        padding: 12px 16px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 登录界面 -->
+    <div id="login-section" class="login-form" style="display: block;">
+      <div class="login-card">
+        <h2>🎤 分享会活动管理系统</h2>
+        <p>分享者专用管理界面</p>
+
+        <div class="form-group" style="text-align: left;">
+          <label>您的姓名</label>
+          <input type="text" id="login-name" placeholder="如：张三" maxlength="30" />
+        </div>
+
+        <button class="btn-primary" onclick="handleLogin()" style="width: 100%;">进入管理系统</button>
+
+        <div id="login-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+      </div>
+    </div>
+
+    <!-- 管理界面 -->
+    <div id="main-section" style="display: none;">
+      <div class="header">
+        <div>
+          <h1>🎤 我的分享活动</h1>
+          <p class="header-user-info">姓名：<strong id="current-user-name"></strong> · <a href="/profile">🧭 打开个人主页</a></p>
+        </div>
+        <button class="logout-btn" onclick="handleLogout()">退出登录</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('list')">📋 我的活动</button>
+        <button class="tab-btn" onclick="switchTab('create')">➕ 创建活动</button>
+        <button class="tab-btn" onclick="switchTab('output')">🧾 输出记录</button>
+        <button class="tab-btn" onclick="switchTab('group')">👥 兴趣组管理</button>
+        <button class="tab-btn" onclick="switchTab('invite')">✉️ 评议邀请</button>
+        <button class="tab-btn" onclick="switchTab('governance')">📈 治理看板</button>
+      </div>
+
+      <!-- 活动列表标签页 -->
+      <div id="list-tab" class="tab-content active">
+        <div id="activities-container">
+          <div class="empty-state">
+            <div class="empty-state-icon">⏳</div>
+            <div>加载中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 创建活动标签页 -->
+      <div id="create-tab" class="tab-content">
+        <div class="card">
+          <div class="card-title">创建新的分享活动</div>
+
+          <form id="create-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>活动类型 *</label>
+                <select id="form-activity-type" required>
+                  <option value="normal">normal（常规分享）</option>
+                  <option value="cac 有约">cac 有约（组内活动）</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>所属兴趣组（cac 有约必选）</label>
+                <select id="form-group-id">
+                  <option value="">不选择</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>活动日期 *</label>
+                <input type="date" id="form-date" required />
+              </div>
+
+              <div class="form-group">
+                <label>活动时间 *</label>
+                <select id="form-time" required>
+                  <option value="">请选择</option>
+                  {% for pair in time_slot_pairs %}
+                  <option value="{{ pair }}">{{ pair }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="form-group form-full">
+                <label>分享者姓名 * (多人用逗号分隔)</label>
+                <input type="text" id="form-speakers" placeholder="如：张三，李四" required />
+              </div>
+
+              <div class="form-group form-full">
+                <label>活动主题 *</label>
+                <input type="text" id="form-topic" placeholder="如：Python 异步编程" required />
+              </div>
+
+              <div class="form-group form-full">
+                <label>活动教室</label>
+                <input type="text" id="form-classroom" placeholder="如：理科楼 404（可后续更新）" />
+              </div>
+
+              <div class="form-group form-full">
+                <label>线上视频号（可选）</label>
+                <input type="text" id="form-videourl" placeholder="如：https://meeting.tencent.com/..." />
+              </div>
+
+              <div class="form-group form-full">
+                <label>提醒邮箱（可选）</label>
+                <input type="email" id="form-creator-email" placeholder="如：yourname@example.com" />
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%;">创建活动</button>
+            <div id="create-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+      </div>
+
+      <div id="output-tab" class="tab-content">
+        <div class="card">
+          <div class="card-title">登记站外输出活动</div>
+          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">用于补录 CAC 有约 或未通过本站报名的输出活动，参与边界统计。</p>
+          <form id="output-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>姓名 *</label>
+                <input type="text" id="output-name" required />
+              </div>
+              <div class="form-group">
+                <label>输出类型 *</label>
+                <select id="output-type" required>
+                  <option value="">请选择</option>
+                  <option value="分享">分享</option>
+                  <option value="评议">评议</option>
+                  <option value="CAC 有约">CAC 有约</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>日期 *</label>
+                <input type="date" id="output-date" required />
+              </div>
+              <div class="form-group form-full">
+                <label>备注</label>
+                <input type="text" id="output-note" placeholder="可选：补录说明、相关链接等" />
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">保存输出记录</button>
+            <div id="output-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+      </div>
+
+      <div id="group-tab" class="tab-content">
+        <div class="card">
+          <div class="card-title">创建兴趣组</div>
+          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">至少 2 人（含组长）可创建兴趣组；创建后可用于活动归属。</p>
+          <form id="group-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>组名 *</label>
+                <input type="text" id="group-name" required />
+              </div>
+              <div class="form-group">
+                <label>组长 *</label>
+                <input type="text" id="group-leader" required />
+              </div>
+              <div class="form-group form-full">
+                <label>组长邮箱（首次建档建议填写）</label>
+                <input type="email" id="group-leader-email" />
+              </div>
+              <div class="form-group form-full">
+                <label>成员名单（逗号分隔）*</label>
+                <input type="text" id="group-members" placeholder="如：张三，李四" required />
+              </div>
+              <div class="form-group form-full">
+                <label>主题目标 *</label>
+                <textarea id="group-topic-goal" required></textarea>
+              </div>
+              <div class="form-group form-full">
+                <label>时间边界 *</label>
+                <textarea id="group-time-boundary" required></textarea>
+              </div>
+              <div class="form-group form-full">
+                <label>执行方案 *</label>
+                <textarea id="group-execution-plan" required></textarea>
+              </div>
+              <div class="form-group form-full">
+                <label>简介</label>
+                <textarea id="group-description"></textarea>
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">创建兴趣组</button>
+            <div id="group-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+            <div class="card-title" style="margin: 0;">已有兴趣组</div>
+            <button type="button" class="btn-secondary" onclick="loadGroups()">刷新列表</button>
+          </div>
+          <div id="my-groups-list" style="margin-top: 12px;"></div>
+        </div>
+      </div>
+
+      <div id="invite-tab" class="tab-content">
+        <div class="card">
+          <div class="card-title">发送评议邀请</div>
+          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">按活动邀请评议员，支持开放报名、分享者指定、CAC 特邀三种来源。</p>
+          <form id="invite-form">
+            <div class="form-grid">
+              <div class="form-group form-full">
+                <label>活动 *</label>
+                <select id="invite-activity-id" required>
+                  <option value="">请选择活动</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>被邀请人姓名 *</label>
+                <input type="text" id="invitee-name" required />
+              </div>
+              <div class="form-group">
+                <label>被邀请人邮箱（首次建档建议填写）</label>
+                <input type="email" id="invitee-email" />
+              </div>
+              <div class="form-group form-full">
+                <label>邀请来源 *</label>
+                <select id="invite-source-type" required>
+                  <option value="分享者指定">分享者指定</option>
+                  <option value="开放报名">开放报名</option>
+                  <option value="CAC 特邀">CAC 特邀</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" style="width: 100%;">发送邀请</button>
+            <div id="invite-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+            <div class="card-title" style="margin: 0;">当前活动邀请记录</div>
+            <button type="button" class="btn-secondary" onclick="loadActivityInvites()">刷新邀请记录</button>
+          </div>
+          <div id="invite-list" style="margin-top: 12px;"></div>
+        </div>
+      </div>
+
+      <div id="governance-tab" class="tab-content">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+            <div class="card-title" style="margin: 0;">治理月报</div>
+            <button type="button" class="btn-secondary" onclick="loadGovernanceDashboard()">刷新看板</button>
+          </div>
+          <div id="governance-summary" style="margin-top: 12px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">兴趣组健康度</div>
+          <div id="governance-groups"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">评议质量预警</div>
+          <div id="governance-reviewers"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">边界预警</div>
+          <div id="governance-boundary"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">时间冲突检测</div>
+          <div id="governance-conflicts"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">评议文档评分</div>
+          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">对已结项活动中他人已提交的评议文档进行评分</div>
+          <div id="governance-rating-panel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑活动模态框 -->
+  <div id="edit-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>编辑活动</h2>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+
+      <form id="edit-form">
+        <input type="hidden" id="edit-activity-id" />
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>活动类型</label>
+            <select id="edit-activity-type">
+              <option value="normal">normal（常规分享）</option>
+              <option value="cac 有约">cac 有约（组内活动）</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>所属兴趣组</label>
+            <select id="edit-group-id">
+              <option value="">不选择</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>活动日期</label>
+            <input type="date" id="edit-date" />
+          </div>
+
+          <div class="form-group">
+            <label>活动时间</label>
+            <select id="edit-time">
+              <option value="">请选择</option>
+              {% for pair in time_slot_pairs %}
+              <option value="{{ pair }}">{{ pair }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group form-full">
+            <label>分享者姓名 (逗号分隔)</label>
+            <input type="text" id="edit-speakers" />
+          </div>
+
+          <div class="form-group form-full">
+            <label>活动主题</label>
+            <input type="text" id="edit-topic" />
+          </div>
+
+          <div class="form-group form-full">
+            <label>活动教室</label>
+            <input type="text" id="edit-classroom" />
+          </div>
+
+          <div class="form-group form-full">
+            <label>线上视频号</label>
+            <input type="text" id="edit-videourl" />
+          </div>
+
+          <div class="form-group form-full">
+            <label>提醒邮箱</label>
+            <input type="email" id="edit-creator-email" />
+          </div>
+        </div>
+
+        <div class="btn-group" style="margin-top: 24px;">
+          <button type="submit" class="btn-primary">保存更改</button>
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">取消</button>
+        </div>
+
+        <div id="edit-msg" class="msg" style="margin-top: 12px; display: none;"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentUserName = null;
+    let myActivities = [];  // 缓存已加载的活动数据
+    let availableGroups = [];
+
+    function renderGovernanceSummary(report) {
+      const typeBreakdown = report.activity_type_breakdown || {};
+      return `
+        <div class="activity-meta">
+          <div class="meta-item"><div class="meta-label">📅 月份</div><div class="meta-value">${report.year_month || '-'}</div></div>
+          <div class="meta-item"><div class="meta-label">🎤 活动数</div><div class="meta-value">${report.activity_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">📝 报名数</div><div class="meta-value">${report.signup_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">🧾 输出补录</div><div class="meta-value">${report.output_record_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">👥 活跃组织者</div><div class="meta-value">${report.active_creator_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">🙋 活跃参与者</div><div class="meta-value">${report.active_participant_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">✅ 已结项</div><div class="meta-value">${report.closed_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">⏳ 待结项</div><div class="meta-value">${report.pending_close_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">⏱️ 准时率</div><div class="meta-value">${Math.round((report.on_time_close_rate || 0) * 100)}%</div></div>
+        </div>
+        <div style="margin-top: 12px; color: var(--sub); font-size: 13px;">类型分布：normal ${typeBreakdown.normal || 0} 场，cac 有约 ${typeBreakdown['cac 有约'] || 0} 场</div>
+      `;
+    }
+
+    function renderGovernanceGroups(groups) {
+      if (!groups || !groups.length) {
+        return '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>暂无兴趣组数据</div></div>';
+      }
+      return groups.map(group => `
+        <div class="activity-item" style="margin-bottom: 12px;">
+          <div class="activity-header">
+            <div>
+              <h4 style="margin: 0 0 4px;">${group.name || '(未命名兴趣组)'}</h4>
+              <div style="font-size: 13px; color: var(--sub);">组长：${group.leader_name || '-'} · 成员 ${group.member_count || 0} 人 · 活跃成员 ${group.active_member_count || 0} 人</div>
+            </div>
+            <span class="tag ${group.status === 'healthy' ? '' : (group.status === 'at_risk' ? 'warn' : 'bad')}">${group.status === 'healthy' ? '健康' : (group.status === 'at_risk' ? '需关注' : '接近停摆')}</span>
+          </div>
+          <div class="activity-meta">
+            <div class="meta-item"><div class="meta-label">近 30 天活动</div><div class="meta-value">${group.recent_activity_count || 0}</div></div>
+            <div class="meta-item"><div class="meta-label">待结项</div><div class="meta-value">${group.pending_close_count || 0}</div></div>
+            <div class="meta-item"><div class="meta-label">健康分</div><div class="meta-value">${group.health_score || 0}</div></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderGovernanceReviewers(items) {
+      if (!items || !items.length) {
+        return '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>暂无评议预警</div></div>';
+      }
+      return items.slice(0, 12).map(item => `
+        <div class="activity-item" style="margin-bottom: 12px;">
+          <div class="activity-header">
+            <div>
+              <h4 style="margin: 0 0 4px;">${item.name || '(未命名)'}</h4>
+              <div style="font-size: 13px; color: var(--sub);">均分 ${item.score || 0} · 评分数 ${item.rating_count || 0} · 评议数 ${item.review_count || 0}</div>
+            </div>
+            <span class="tag ${item.status === 'ok' ? '' : (item.status === 'pending_docs' ? 'bad' : 'warn')}">${item.status === 'pending_docs' ? `待交文档 ${item.pending_doc_count || 0}` : (item.status === 'low_score' ? '质量偏低' : (item.status === 'not_enough_feedback' ? '反馈不足' : '正常'))}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderGovernanceBoundary(boundaryWatch) {
+      const names = boundaryWatch.non_compliant_names || [];
+      return `
+        <div style="font-size: 13px; color: var(--sub);">最近 ${boundaryWatch.lookback_days || 14} 天未达输出底线成员：${boundaryWatch.non_compliant_count || 0} / ${boundaryWatch.tracked_member_count || 0}</div>
+        ${names.length ? `<div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">${names.map(name => `<span class="tag bad">${name}</span>`).join('')}</div>` : '<div class="empty-state" style="padding: 20px; margin-top: 12px;">当前没有边界预警</div>'}
+      `;
+    }
+
+    function renderGovernanceConflicts(data) {
+      const conflicts = (data && data.conflicts) || [];
+      if (!conflicts.length) {
+        return '<div class="empty-state" style="padding: 20px;">未检测到时间冲突 ✅</div>';
+      }
+      return conflicts.map(c => `
+        <div class="activity-item" style="margin-bottom: 12px;">
+          <div class="activity-header">
+            <div>
+              <h4 style="margin: 0 0 4px;">${c.date} ${c.time_slot}</h4>
+              <div style="font-size: 13px; color: var(--sub);">${c.count} 个活动同时段冲突${c.is_cac_slot ? ' ⚡CAC 有约固定档' : ''}</div>
+            </div>
+            <span class="tag bad">冲突</span>
+          </div>
+          <div style="margin-top: 8px;">
+            ${c.activities.map(a => `<div style="font-size:12px; color:var(--sub); margin-bottom:4px;">· ${a.topic || '(无主题)'} / ${a.speakers || '-'} [${a.type || 'normal'}]</div>`).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadRatingPanel() {
+      const el = document.getElementById('governance-rating-panel');
+      if (!el || !currentUserName) return;
+      el.innerHTML = '<div style="color:var(--sub); font-size:13px;">加载中...</div>';
+      try {
+        const res = await fetch(`/api/reviewer-submitted-docs?rater=${encodeURIComponent(currentUserName)}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) { el.innerHTML = `<div class="msg error">${data.message}</div>`; return; }
+        const docs = data.docs || [];
+        if (!docs.length) {
+          el.innerHTML = '<div class="empty-state" style="padding: 20px;">暂无待评分的评议文档</div>';
+          return;
+        }
+        el.innerHTML = docs.map(doc => `
+          <div class="activity-item" style="margin-bottom: 12px;" id="rating-item-${doc.signup_id}">
+            <div style="margin-bottom: 8px;">
+              <strong>${doc.reviewer_name}</strong>
+              <span style="font-size:12px; color:var(--sub);">· ${doc.activity_topic || '-'} (${doc.activity_date || '-'})</span>
+            </div>
+            <div style="margin-bottom: 8px;"><a href="${doc.doc_url}" target="_blank" style="font-size:12px; color:var(--primary);">查看评议文档 ↗</a></div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input type="number" min="1" max="10" step="0.5" placeholder="评分 1-10" id="rating-score-${doc.signup_id}" style="width:110px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" />
+              <input type="text" placeholder="备注（选填）" id="rating-comment-${doc.signup_id}" style="flex:1; min-width:160px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" />
+              <button class="btn-primary" style="font-size:12px; padding:4px 12px;" onclick="submitRating('${doc.signup_id}', '${doc.reviewer_name}')">提交评分</button>
+            </div>
+            <div id="rating-msg-${doc.signup_id}" style="display:none; margin-top:6px; font-size:12px;"></div>
+          </div>
+        `).join('');
+      } catch (err) {
+        el.innerHTML = `<div class="msg error">❌ ${err.message}</div>`;
+      }
+    }
+
+    async function submitRating(signupId, reviewerName) {
+      const scoreEl = document.getElementById(`rating-score-${signupId}`);
+      const commentEl = document.getElementById(`rating-comment-${signupId}`);
+      const msgEl = document.getElementById(`rating-msg-${signupId}`);
+      const score = parseFloat(scoreEl.value);
+      if (!score || score < 1 || score > 10) {
+        msgEl.textContent = '请填写 1-10 的评分';
+        msgEl.style.color = 'var(--bad)';
+        msgEl.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch('/api/review-rating', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signup_id: signupId, rater_name: currentUserName, score, comment: (commentEl.value || '').trim() }),
+        });
+        const data = await res.json();
+        msgEl.textContent = data.ok ? '✅ 评分已提交' : ('❌ ' + (data.message || '提交失败'));
+        msgEl.style.color = data.ok ? '#059669' : 'var(--bad)';
+        msgEl.style.display = 'block';
+        if (data.ok) { setTimeout(() => loadRatingPanel(), 1200); }
+      } catch (err) {
+        msgEl.textContent = '❌ ' + err.message;
+        msgEl.style.color = 'var(--bad)';
+        msgEl.style.display = 'block';
+      }
+    }
+    window.submitRating = submitRating;
+
+    async function loadGovernanceDashboard() {
+      const summaryEl = document.getElementById('governance-summary');
+      const groupsEl = document.getElementById('governance-groups');
+      const reviewersEl = document.getElementById('governance-reviewers');
+      const boundaryEl = document.getElementById('governance-boundary');
+      if (!summaryEl || !groupsEl || !reviewersEl || !boundaryEl) {
+        return;
+      }
+      summaryEl.innerHTML = '<div class="empty-state" style="padding: 20px;">加载中...</div>';
+      try {
+        const res = await fetch('/api/admin/dashboard', { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          summaryEl.innerHTML = `<div class="msg error">❌ ${data.message || '加载失败'}</div>`;
+          return;
+        }
+        summaryEl.innerHTML = renderGovernanceSummary(data.monthly_report || {});
+        groupsEl.innerHTML = renderGovernanceGroups(data.group_health || []);
+        reviewersEl.innerHTML = renderGovernanceReviewers(data.reviewer_watch || []);
+        boundaryEl.innerHTML = renderGovernanceBoundary(data.boundary_watch || {});
+        const conflictsEl = document.getElementById('governance-conflicts');
+        if (conflictsEl) conflictsEl.innerHTML = renderGovernanceConflicts(data.time_conflicts || {});
+        loadRatingPanel();
+      } catch (err) {
+        summaryEl.innerHTML = `<div class="msg error">❌ ${err.message}</div>`;
+      }
+    }
+
+    function showMsg(elementId, text, type) {
+      const el = document.getElementById(elementId);
+      el.textContent = text;
+      el.className = `msg ${type}`;
+      el.style.display = 'block';
+    }
+
+    function hideMsg(elementId) {
+      const el = document.getElementById(elementId);
+      el.style.display = 'none';
+    }
+
+    function handleLogin() {
+      const userName = document.getElementById('login-name').value.trim();
+      if (!userName) {
+        showMsg('login-msg', '❌ 请输入姓名', 'error');
+        return;
+      }
+
+      currentUserName = userName;
+      document.getElementById('current-user-name').textContent = userName;
+      document.getElementById('output-name').value = userName;
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('main-section').style.display = 'block';
+
+      loadMyActivities();
+      loadGroups();
+      loadGovernanceDashboard();
+    }
+
+    async function loadGroups() {
+      try {
+        const res = await fetch('/api/groups', { cache: 'no-store' });
+        const data = await res.json();
+        availableGroups = data.ok ? (data.groups || []) : [];
+      } catch (e) {
+        availableGroups = [];
+      }
+      renderGroupSelectOptions();
+      renderMyGroupsPanel();
+    }
+
+    function renderGroupSelectOptions() {
+      const options = ['<option value="">不选择</option>']
+        .concat(availableGroups.map(group => `<option value="${group.id}">${group.name}</option>`));
+
+      const createSelect = document.getElementById('form-group-id');
+      const editSelect = document.getElementById('edit-group-id');
+      if (createSelect) {
+        createSelect.innerHTML = options.join('');
+      }
+      if (editSelect) {
+        editSelect.innerHTML = options.join('');
+      }
+    }
+
+    function renderMyGroupsPanel() {
+      const box = document.getElementById('my-groups-list');
+      if (!box) return;
+      if (!availableGroups.length) {
+        box.innerHTML = `
+          <div class="empty-state" style="padding: 24px 20px;">
+            <div class="empty-state-icon">📭</div>
+            <div>暂无兴趣组</div>
+          </div>
+        `;
+        return;
+      }
+
+      box.innerHTML = availableGroups.map(group => `
+        <div class="activity-item" style="margin-bottom: 12px;">
+          <div class="activity-header">
+            <div>
+              <h4 style="margin: 0 0 4px;">${group.name || '(未命名兴趣组)'}</h4>
+              <div style="font-size: 13px; color: var(--sub);">组长：${group.leader_name || '未设置'} · 成员 ${group.member_count || 0} 人</div>
+            </div>
+            <div>
+              <span class="tag">${group.status || '活跃'}</span>
+              ${renderGroupActionButtons(group)}
+            </div>
+          </div>
+          <div style="font-size: 13px; color: var(--sub); line-height: 1.6; margin-top: 8px;">
+            <div><strong>主题目标：</strong>${group.topic_goal || '未填写'}</div>
+            <div><strong>时间边界：</strong>${group.time_boundary || '未填写'}</div>
+            <div><strong>执行方案：</strong>${group.execution_plan || '未填写'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderGroupActionButtons(group) {
+      const members = group.members || [];
+      const me = (currentUserName || '').trim();
+      if (!me) return '';
+      const myMembership = members.find(item => (item.name || '').trim() === me);
+      if (!myMembership) {
+        return `<button type="button" class="btn-primary" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;" onclick="joinGroup('${group.id}')">加入</button>`;
+      }
+      if ((myMembership.role || '') === '组长') {
+        return `<span class="tag" style="margin-left: 8px;">我是组长</span>`;
+      }
+      return `<button type="button" class="btn-danger" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;" onclick="leaveGroup('${group.id}')">退出</button>`;
+    }
+
+    async function joinGroup(groupId) {
+      const payload = {
+        name: (currentUserName || '').trim(),
+      };
+      if (!payload.name) {
+        alert('请先登录姓名后再加入兴趣组');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/group/${groupId}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          if ((data.message || '').includes('首次使用请填写邮箱')) {
+            const email = prompt('首次加入兴趣组需要邮箱，请输入邮箱：') || '';
+            const emailTrimmed = email.trim();
+            if (!emailTrimmed) {
+              alert('❌ 未填写邮箱，无法加入兴趣组');
+              return;
+            }
+            const retryRes = await fetch(`/api/group/${groupId}/join`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...payload, email: emailTrimmed }),
+            });
+            const retryData = await retryRes.json();
+            if (!retryData.ok) {
+              alert('❌ ' + (retryData.message || '加入失败'));
+              return;
+            }
+            alert('✅ ' + (retryData.message || '加入成功'));
+            await loadGroups();
+            return;
+          }
+          alert('❌ ' + (data.message || '加入失败'));
+          return;
+        }
+        alert('✅ ' + (data.message || '加入成功'));
+        await loadGroups();
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    async function leaveGroup(groupId) {
+      const payload = {
+        name: (currentUserName || '').trim(),
+      };
+      if (!payload.name) {
+        alert('请先登录姓名后再退出兴趣组');
+        return;
+      }
+      if (!confirm('确认退出该兴趣组？')) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/group/${groupId}/leave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          alert('❌ ' + (data.message || '退出失败'));
+          return;
+        }
+        alert('✅ ' + (data.message || '退出成功'));
+        await loadGroups();
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    function populateInviteActivityOptions() {
+      const select = document.getElementById('invite-activity-id');
+      if (!select) return;
+      const options = ['<option value="">请选择活动</option>']
+        .concat(myActivities.map(activity => `<option value="${activity.id}">${activity.date || '日期未定'} ${activity.time || ''} · ${activity.topic || '(未命名活动)'}</option>`));
+      select.innerHTML = options.join('');
+    }
+
+    async function loadActivityInvites() {
+      const select = document.getElementById('invite-activity-id');
+      const box = document.getElementById('invite-list');
+      if (!select || !box) return;
+      const activityId = (select.value || '').trim();
+      if (!activityId) {
+        box.innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>请选择活动后查看邀请记录</div></div>';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/activity/${activityId}/invites`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          box.innerHTML = `<div class="msg error">❌ ${data.message || '加载邀请记录失败'}</div>`;
+          return;
+        }
+        const invites = data.invites || [];
+        if (!invites.length) {
+          box.innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>该活动暂无邀请记录</div></div>';
+          return;
+        }
+        box.innerHTML = invites.map(invite => `
+          <div class="activity-item" style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center;">
+              <div>
+                <div style="font-weight: 700; color: var(--primary);">${invite.invitee_name || '(未命名)'}</div>
+                <div style="font-size: 13px; color: var(--sub); margin-top: 4px;">来源：${invite.source_type || '分享者指定'} · 邀请人：${invite.inviter_name || '-'}</div>
+                <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">邮箱：${invite.invitee_email || '未填写'} · 发起：${invite.created_at || '未知'}</div>
+                <div style="font-size: 12px; color: var(--sub); margin-top: 2px;">最近状态更新：${invite.updated_at || '-'} · 操作人：${invite.updated_by || '-'}</div>
+              </div>
+              <span class="tag ${((invite.status || '已发送') === '已发送') ? 'warn' : (((invite.status || '已发送') === '已拒绝' || (invite.status || '已发送') === '已撤回') ? 'bad' : '')}">${invite.status || '已发送'}</span>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+              ${renderInviteActionButtons(invite)}
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        box.innerHTML = `<div class="msg error">❌ ${err.message}</div>`;
+      }
+    }
+
+    function renderInviteActionButtons(invite) {
+      const status = invite.status || '已发送';
+      const canUpdate = status === '已发送';
+      return `
+        <button type="button" class="btn-primary" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已接受')">标记接受</button>
+        <button type="button" class="btn-danger" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已拒绝')">标记拒绝</button>
+        <button type="button" class="btn-secondary" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已撤回')">撤回邀请</button>
+      `;
+    }
+
+    async function updateInviteStatus(inviteId, status) {
+      if (!inviteId || !status) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/invite/${inviteId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            operator_name: currentUserName,
+            status,
+          }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          alert('❌ ' + (data.message || '邀请状态更新失败'));
+          return;
+        }
+        showMsg('invite-msg', '✅ ' + (data.message || '邀请状态已更新'), 'success');
+        await loadActivityInvites();
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    function handleLogout() {
+      if (confirm('确认退出登录？')) {
+        currentUserName = null;
+        document.getElementById('login-name').value = '';
+        document.getElementById('output-name').value = '';
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('main-section').style.display = 'none';
+        hideMsg('login-msg');
+      }
+    }
+
+    function switchTab(tab) {
+      // 隐藏所有标签页
+      document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('active');
+      });
+
+      // 显示选中的标签页
+      document.getElementById(tab + '-tab').classList.add('active');
+      event.target.classList.add('active');
+      if (tab === 'governance') {
+        loadGovernanceDashboard();
+      }
+    }
+
+    async function loadMyActivities() {
+      const container = document.getElementById('activities-container');
+
+      try {
+        const res = await fetch(`/api/my-activities/${encodeURIComponent(currentUserName)}`);
+        const data = await res.json();
+
+        if (!data.ok) {
+          container.innerHTML = `<div class="msg error">${data.message}</div>`;
+          return;
+        }
+
+        const activities = data.activities || [];
+        myActivities = activities;
+        populateInviteActivityOptions();
+        if (!activities.length) {
+          document.getElementById('invite-list').innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>暂无可邀请的活动</div></div>';
+        }
+
+        if (activities.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📭</div>
+              <div>还没有创建任何活动，点击"创建活动"开始吧！</div>
+            </div>
+          `;
+          return;
+        }
+
+        myActivities = activities;  // 缓存活动数据供编辑框使用
+
+        container.innerHTML = activities.map(activity => `
+          <div class="activity-item">
+            <div class="activity-header">
+              <div>
+                <h4 style="margin: 0 0 4px;">${activity.topic || '(未设置主题)'}</h4>
+                <p style="margin: 0; color: var(--sub); font-size: 13px;">${activity.speakers || '(未设置分享者)'}</p>
+                <div style="margin-top: 6px;">
+                  <span class="tag ${activity.status === '已结项' ? (activity.on_time ? '' : 'warn') : 'warn'}">${activity.status || '进行中'}</span>
+                  ${activity.status === '已结项' ? `<span class="tag ${activity.on_time ? '' : 'bad'}" style="margin-left: 6px;">${activity.on_time ? '准时结项' : '逾期结项'}</span>` : ''}
+                  <span class="tag" style="margin-left: 6px;">${(activity.activity_type || 'normal') === 'cac 有约' ? 'cac 有约' : 'normal'}</span>
+                  ${activity.group_name ? `<span class="tag" style="margin-left: 6px;">兴趣组：${activity.group_name}</span>` : ''}
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 12px; color: ${(Boolean(activity.reviewer_full) || (Number(activity.reviewers) || 0) >= (Number(activity.reviewer_limit) || 3)) ? 'var(--bad)' : 'var(--warn)'};">
+                  评议员 ${(Number(activity.reviewers) || 0)}/${(Number(activity.reviewer_limit) || 3)}
+                </div>
+              </div>
+            </div>
+
+            <div class="activity-meta">
+              <div class="meta-item">
+                <div class="meta-label">📅 日期</div>
+                <div class="meta-value">${activity.date || '未设置'}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">⏰ 时间</div>
+                <div class="meta-value">${activity.time || '未设置'}</div>
+              </div>
+              <div class="meta-item">
+                <div class="meta-label">🏢 教室</div>
+                <div class="meta-value">${activity.classroom || '待定'}</div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 12px; padding: 8px 12px; background: white; border-radius: 8px; font-size: 13px;">
+              <div style="color: var(--sub);">📊 拟参加人数</div>
+              <div style="font-weight: 600; color: var(--primary);">${activity.expected_attendance || 0}</div>
+              ${activity.closed_at ? `<div style="margin-top: 4px; color: var(--sub);">结项时间：${activity.closed_at}</div>` : ''}
+            </div>
+
+            <div class="activity-actions">
+              <button class="btn-secondary" onclick="openEditModal('${activity.id}')">编辑</button>
+              ${activity.status !== '已结项' ? `<button class="btn-primary" onclick="closeActivity('${activity.id}')">结项</button>` : ''}
+              <button class="btn-danger" onclick="deleteActivity('${activity.id}')">删除</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<div class="msg error">❌ 加载失败：${err.message}</div>`;
+      }
+    }
+
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const payload = {
+        activity_type: document.getElementById('form-activity-type').value,
+        group_id: document.getElementById('form-group-id').value,
+        date: document.getElementById('form-date').value,
+        time: document.getElementById('form-time').value,
+        speakers: document.getElementById('form-speakers').value.trim(),
+        topic: document.getElementById('form-topic').value.trim(),
+        classroom: document.getElementById('form-classroom').value.trim(),
+        videourl: document.getElementById('form-videourl').value.trim(),
+        creator_email: document.getElementById('form-creator-email').value.trim(),
+        creator_name: currentUserName,
+      };
+
+      if (!payload.date || !payload.time || !payload.speakers || !payload.topic) {
+        showMsg('create-msg', '❌ 请完整填写必填字段', 'error');
+        return;
+      }
+      if (payload.activity_type === 'cac 有约' && !payload.group_id) {
+        showMsg('create-msg', '❌ cac 有约 活动必须选择所属兴趣组', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/activity', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          let successMsg = '✅ ' + data.message;
+          if (data.warnings && data.warnings.length > 0) {
+            successMsg += '<br>⚠️ 注意：' + data.warnings.join('<br>⚠️ ');
+          }
+          showMsg('create-msg', successMsg, data.warnings ? 'info' : 'success');
+          document.getElementById('create-form').reset();
+          document.getElementById('form-activity-type').value = 'normal';
+          document.getElementById('form-group-id').value = '';
+
+          // 清除消息并刷新列表
+          setTimeout(() => {
+            hideMsg('create-msg');
+            loadMyActivities();
+            // 切换回列表标签页
+            document.getElementById('list-tab').classList.add('active');
+            document.getElementById('create-tab').classList.remove('active');
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+          }, 1500);
+        } else {
+          showMsg('create-msg', '❌ ' + data.message, 'error');
+        }
+      } catch (err) {
+        showMsg('create-msg', '❌ 网络错误：' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('invite-activity-id').addEventListener('change', () => {
+      loadActivityInvites();
+    });
+
+    document.getElementById('invite-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        activity_id: document.getElementById('invite-activity-id').value,
+        inviter_name: currentUserName,
+        invitee_name: document.getElementById('invitee-name').value.trim(),
+        invitee_email: document.getElementById('invitee-email').value.trim(),
+        source_type: document.getElementById('invite-source-type').value,
+      };
+
+      if (!payload.activity_id || !payload.invitee_name) {
+        showMsg('invite-msg', '❌ 请完整填写必填字段', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/review-invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showMsg('invite-msg', '✅ ' + (data.message || '邀请已发送'), 'success');
+          document.getElementById('invite-form').reset();
+          setTimeout(() => {
+            loadActivityInvites();
+          }, 1500);
+        } else {
+          showMsg('invite-msg', '❌ ' + (data.message || '发送失败'), 'error');
+        }
+      } catch (err) {
+        showMsg('invite-msg', '❌ 网络错误：' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('output-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('output-name').value.trim(),
+        output_type: document.getElementById('output-type').value,
+        date: document.getElementById('output-date').value,
+        note: document.getElementById('output-note').value.trim(),
+      };
+
+      if (!payload.name || !payload.output_type || !payload.date) {
+        showMsg('output-msg', '❌ 请完整填写必填字段', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/output-record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showMsg('output-msg', '✅ ' + (data.message || '记录已保存'), 'success');
+          document.getElementById('output-form').reset();
+          document.getElementById('output-name').value = currentUserName || '';
+        } else {
+          showMsg('output-msg', '❌ ' + (data.message || '保存失败'), 'error');
+        }
+      } catch (err) {
+        showMsg('output-msg', '❌ 网络错误：' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('group-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('group-name').value.trim(),
+        leader_name: document.getElementById('group-leader').value.trim(),
+        leader_email: document.getElementById('group-leader-email').value.trim(),
+        members: document.getElementById('group-members').value.trim(),
+        topic_goal: document.getElementById('group-topic-goal').value.trim(),
+        time_boundary: document.getElementById('group-time-boundary').value.trim(),
+        execution_plan: document.getElementById('group-execution-plan').value.trim(),
+        description: document.getElementById('group-description').value.trim(),
+      };
+
+      if (!payload.name || !payload.leader_name || !payload.members || !payload.topic_goal || !payload.time_boundary || !payload.execution_plan) {
+        showMsg('group-msg', '❌ 请完整填写必填字段', 'error');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/group', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showMsg('group-msg', '✅ ' + (data.message || '兴趣组已创建'), 'success');
+          document.getElementById('group-form').reset();
+          setTimeout(() => {
+            loadGroups();
+          }, 1500);
+        } else {
+          showMsg('group-msg', '❌ ' + (data.message || '创建失败'), 'error');
+        }
+      } catch (err) {
+        showMsg('group-msg', '❌ 网络错误：' + err.message, 'error');
+      }
+    });
+
+    function openEditModal(activityId) {
+      const activity = myActivities.find(a => a.id === activityId);
+      if (!activity) return;
+
+      document.getElementById('edit-activity-id').value = activityId;
+      document.getElementById('edit-activity-type').value = activity.activity_type || 'normal';
+      document.getElementById('edit-group-id').value = activity.group_id || '';
+      document.getElementById('edit-date').value = activity.date || '';
+      document.getElementById('edit-time').value = activity.time || '';
+      document.getElementById('edit-speakers').value = activity.speakers || '';
+      document.getElementById('edit-topic').value = activity.topic || '';
+      document.getElementById('edit-classroom').value = activity.classroom || '';
+      document.getElementById('edit-videourl').value = activity.videourl || '';
+      document.getElementById('edit-creator-email').value = activity.creator_email || '';
+
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('active');
+      document.getElementById('edit-msg').style.display = 'none';
+    }
+
+    document.getElementById('edit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const activityId = document.getElementById('edit-activity-id').value;
+
+      const payload = {
+        activity_type: document.getElementById('edit-activity-type').value,
+        group_id: document.getElementById('edit-group-id').value,
+        date: document.getElementById('edit-date').value,
+        time: document.getElementById('edit-time').value,
+        speakers: document.getElementById('edit-speakers').value.trim(),
+        topic: document.getElementById('edit-topic').value.trim(),
+        classroom: document.getElementById('edit-classroom').value.trim(),
+        videourl: document.getElementById('edit-videourl').value.trim(),
+        creator_email: document.getElementById('edit-creator-email').value.trim(),
+        creator_name: currentUserName,
+      };
+
+      try {
+        const res = await fetch(`/api/activity/${activityId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showMsg('edit-msg', '✅ ' + (data.message || '活动已更新'), 'success');
+          setTimeout(() => {
+            closeEditModal();
+            loadMyActivities();
+          }, 1500);
+        } else {
+          showMsg('edit-msg', '❌ ' + (data.message || '更新失败'), 'error');
+        }
+      } catch (err) {
+        showMsg('edit-msg', '❌ 网络错误：' + err.message, 'error');
+      }
+    });
+
+    async function closeActivity(activityId) {
+      if (!confirm('确认结项该活动？')) return;
+
+      try {
+        const res = await fetch(`/api/activity/${activityId}/close`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert('✅ 活动已结项');
+          loadMyActivities();
+        } else {
+          alert('❌ ' + (data.message || '结项失败'));
+        }
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    async function deleteActivity(activityId) {
+      if (!confirm('确认删除该活动？此操作不可恢复！')) return;
+
+      try {
+        const res = await fetch(`/api/activity/${activityId}`, {
+          method: 'DELETE',
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert('✅ 活动已删除');
+          loadMyActivities();
+        } else {
+          alert('❌ ' + (data.message || '删除失败'));
+        }
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    // 页面加载完成后，如果是从个人主页跳转过来的，尝试自动登录
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const userName = urlParams.get('user');
+      if (userName) {
+        document.getElementById('login-name').value = userName;
+        handleLogin();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Private roster template
+# Copy this file to member_roster.local.txt and fill one member name per line.
+# Do not commit member_roster.local.txt.
+
+# Example:
+# Alice
+# Bob
