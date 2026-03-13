@@ -20,14 +20,6 @@ else:
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 try:
-    from seatable_api import Base
-except Exception:
-    Base = None
-try:
-    from seatable_api.constants import ColumnTypes
-except Exception:
-    ColumnTypes = None
-try:
     import pymysql
 except Exception:
     pymysql = None
@@ -35,8 +27,6 @@ except Exception:
 
 load_dotenv()
 
-SERVER_URL = os.getenv("SEATABLE_SERVER_URL", "https://table.nju.edu.cn").rstrip("/")
-API_TOKEN = os.getenv("SEATABLE_API_TOKEN", "")
 DB_BACKEND = os.getenv("DB_BACKEND", "mysql").strip().lower()
 MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1").strip()
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
@@ -351,18 +341,7 @@ class MySQLBase:
 if DB_BACKEND == "mysql":
     base = MySQLBase()
 else:
-    if Base is None:
-        raise RuntimeError("未安装 seatable-api，无法使用 seatable 后端")
-    if not API_TOKEN:
-        raise RuntimeError("SEATABLE_API_TOKEN is required when DB_BACKEND=seatable")
-    base = Base(API_TOKEN, SERVER_URL)
-    try:
-        base.auth()
-    except Exception as exc:
-        raise RuntimeError(
-            "SeaTable 认证失败。请确认使用的是 Base 的 API Token（不是账号令牌），"
-            "并且该 Token 对目标表有读写权限。"
-        ) from exc
+    raise RuntimeError(f"不支持的 DB_BACKEND: '{DB_BACKEND}'。目前仅支持 'mysql'。")
 
 app = Flask(__name__)
 

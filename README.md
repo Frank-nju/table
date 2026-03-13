@@ -69,9 +69,8 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-至少确保以下配置正确：
+系统使用 MySQL 作为唯一数据后端（`DB_BACKEND` 默认值为 `mysql`）。至少确保以下配置正确：
 
-- `DB_BACKEND=mysql`
 - `MYSQL_HOST`
 - `MYSQL_PORT`
 - `MYSQL_USER`
@@ -89,16 +88,6 @@ python app.py
 默认访问：`http://127.0.0.1:8080`
 
 健康检查：`GET /healthz`
-
-### 4. 历史数据迁移（SeaTable -> MySQL）
-
-若你已有线上 SeaTable 历史数据，可先在 `.env` 中同时填好 `SEATABLE_*` 与 `MYSQL_*`，然后执行：
-
-```bash
-python scripts/migrate_seatable_to_mysql.py
-```
-
-迁移后将 `DB_BACKEND=mysql` 保持开启并重启服务。
 
 ## 生产部署
 

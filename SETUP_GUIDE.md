@@ -74,13 +74,7 @@ MYSQL_DATABASE=table_signup
 
 ## 5. 本地运行
 
-如果你已有 SeaTable 历史数据，先执行一次迁移：
-
-```bash
-python scripts/migrate_seatable_to_mysql.py
-```
-
-再启动服务：
+启动服务：
 
 ```bash
 python app.py
