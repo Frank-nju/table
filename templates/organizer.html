@@ -1766,7 +1766,7 @@
     }
 
     async function deleteActivity(activityId) {
-      if (!confirm('确认删除该活动？此操作不可恢复！')) return;
+      if (!confirm('确认删除该活动？\n\n如有报名者，系统将自动发送取消通知邮件给他们。')) return;
 
       try {
         const res = await fetch(`/api/activity/${activityId}`, {
@@ -1776,7 +1776,7 @@
         });
         const data = await res.json();
         if (data.ok) {
-          alert('✅ 活动已删除');
+          alert('✅ ' + data.message);
           loadMyActivities();
         } else {
           alert('❌ ' + (data.message || '删除失败'));

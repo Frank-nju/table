@@ -3434,42 +3434,69 @@ def api_close_activity(activity_id):
 
 @app.delete("/api/activity/<activity_id>")
 def api_delete_activity(activity_id):
-    """删除活动（仅限创建者，且无报名时）"""
+    """删除活动（仅限创建者，会通知报名者）"""
     activity_id = str(activity_id).strip()
     activity = _get_activity_by_id(activity_id)
-    
+
     if not activity:
         return jsonify({"ok": False, "message": "活动不存在"}), 404
-    
+
     data = request.get_json(silent=True) or {}
     creator_name = str(data.get("creator_name", "")).strip()
-    
+
     # 验证身份
     actual_creator = _get_activity_creator_name(activity)
     if actual_creator != creator_name:
         return jsonify({
-            "ok": False, 
+            "ok": False,
             "message": "只有活动创建者才能删除此活动"
         }), 403
-    
-    # 检查是否有报名记录
-    signup_count = _count_signups_by_activity(activity_id)
-    if signup_count > 0:
-        return jsonify({
-            "ok": False, 
-            "message": f"无法删除：已有 {signup_count} 人报名，请先清除报名记录"
-        }), 409
-    
+
+    # 获取活动信息
+    topic = str(activity.get(ACTIVITY_COL_TOPIC, '')).strip() or '未命名活动'
+    date = str(activity.get(ACTIVITY_COL_DATE, '')).strip() or '日期待定'
+    time = str(activity.get(ACTIVITY_COL_TIME, '')).strip() or '时间待定'
+
+    # 获取所有报名者并发送通知
+    signups = _get_activity_signups(activity_id)
+    notified_count = 0
+    for signup in signups:
+        signup_name = _get_signup_name(signup)
+        signup_email = _get_signup_email(signup)
+        if signup_email:
+            subject = f"[CAC 分享会] 活动取消通知：{topic}"
+            body = (
+                f"您好 {signup_name}，\n\n"
+                f"很抱歉通知您，您报名的活动已被创建者取消：\n\n"
+                f"活动：{topic}\n"
+                f"时间：{date} {time}\n\n"
+                f"如有疑问，请联系活动创建者 {creator_name}。\n\n"
+                f"—— CAC 分享会系统"
+            )
+            _send_email_async(signup_email, subject, body)
+            notified_count += 1
+
+    # 删除所有报名记录
+    for signup in signups:
+        try:
+            base.delete_row(SIGNUP_TABLE_NAME, signup.get('_id'))
+        except Exception:
+            pass
+
+    # 删除活动
     try:
         base.delete_row(ACTIVITY_TABLE_NAME, activity.get('_id'))
         _notify_activity_change(
             _get_activity_creator_email(activity),
             creator_name,
-            str(activity.get(ACTIVITY_COL_TOPIC, '')).strip(),
+            topic,
             '删除',
         )
         _touch_data_version()
-        return jsonify({"ok": True, "message": "活动删除成功"})
+        msg = f"活动已删除"
+        if notified_count > 0:
+            msg += f"，已通知 {notified_count} 位报名者"
+        return jsonify({"ok": True, "message": msg})
     except Exception as e:
         return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
 
