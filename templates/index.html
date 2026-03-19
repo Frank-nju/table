@@ -808,22 +808,8 @@
       </div>
     </div>
 
-    <div class="onboarding-banner">
-      <h2 class="onboarding-title">🚀 新手必看：30 秒上手</h2>
-      <p class="onboarding-sub">先看规则再操作。按下面 3 步做，基本不会走错：先选活动，再选角色报名，最后去「我的报名」管理与补评议文档。</p>
-      <div class="onboarding-grid">
-        <div class="onboarding-item"><strong>第 1 步：</strong>在「正在进行的分享会」选择活动，右侧会出现报名表单与名额统计。</div>
-        <div class="onboarding-item"><strong>第 2 步：</strong>normal 活动可选「评议员/旁听」；cac有约活动可选「参与者/旁听」。</div>
-        <div class="onboarding-item"><strong>第 3 步：</strong>报名后到「我的报名」查看、取消、上传评议文档；若收到邀请，可在「我的邀请」一键跳转报名。</div>
-        <div class="onboarding-item"><strong>进阶入口：</strong>发布活动请进「分享者管理」；查看个人任务与推荐活动请进「个人主页」。</div>
-      </div>
-      <div class="onboarding-rules">
-        <strong>规则与注意事项</strong><br />
-        1. 一个活动内同一姓名不可重复报名同一角色。<br />
-        2. 评议员名额有限，满员后不能再选评议员。<br />
-        3. 评议员需在活动结项后补交评议语雀链接，才会进入评分流程。<br />
-        4. 边界预警与榜单基于近期输出统计，建议定期参与分享或评议。
-      </div>
+    <div class="welcome-hint" style="text-align: center; padding: 20px 16px; color: var(--sub); font-size: 15px;">
+      👋 欢迎使用 CAC 分享会系统，选择下方活动即可开始报名
     </div>
 
     <div class="main-grid">
@@ -984,20 +970,26 @@
       if (!selectedActivity) return;
 
       const isCacActivity = (selectedActivity.activity_type || 'normal') === 'cac有约';
+
+      // 检查评议员是否满员
+      const reviewerLimit = Number.isFinite(Number(selectedActivity.reviewer_limit)) ? Number(selectedActivity.reviewer_limit) : 3;
+      const reviewerCount = Number.isFinite(Number(selectedActivity.reviewers)) ? Number(selectedActivity.reviewers) : 0;
+      const reviewerIsFull = Boolean(selectedActivity.reviewer_full) || reviewerCount >= reviewerLimit;
+
       const roleOptions = isCacActivity
         ? `
             <input type="radio" id="role-participant" name="role" value="参与者" class="role-radio" required>
-            <label for="role-participant" class="role-label">🤝 参与者</label>
+            <label for="role-participant" class="role-label">🤝 参与者 <span style="font-size: 11px; color: var(--sub); font-weight: normal;">需参与讨论</span></label>
 
             <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
-            <label for="role-listener" class="role-label">👂 旁听</label>
+            <label for="role-listener" class="role-label">👂 旁听 <span style="font-size: 11px; color: var(--sub); font-weight: normal;">仅旁听学习</span></label>
           `
         : `
-            <input type="radio" id="role-reviewer" name="role" value="评议员" class="role-radio" required>
-            <label for="role-reviewer" class="role-label">👨‍⚖️ 评议员</label>
+            <input type="radio" id="role-reviewer" name="role" value="评议员" class="role-radio" required ${reviewerIsFull ? 'disabled' : 'checked'}>
+            <label for="role-reviewer" class="role-label ${reviewerIsFull ? 'disabled' : ''}" style="${reviewerIsFull ? 'opacity: 0.5; cursor: not-allowed;' : ''}">👨‍⚖️ 评议员 <span style="font-size: 11px; color: ${reviewerIsFull ? 'var(--warn)' : 'var(--sub)'}; font-weight: normal;">${reviewerIsFull ? '已满员' : '需提交评议文档'}</span></label>
 
-            <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio">
-            <label for="role-listener" class="role-label">👂 旁听</label>
+            <input type="radio" id="role-listener" name="role" value="旁听" class="role-radio" ${reviewerIsFull ? 'checked' : ''}>
+            <label for="role-listener" class="role-label">👂 旁听 <span style="font-size: 11px; color: var(--sub); font-weight: normal;">无评议任务</span></label>
           `;
 
       const formHTML = `
@@ -1030,6 +1022,11 @@
             </div>
           </label>
 
+          <label id="review-content-label" style="display: ${isCacActivity ? 'none' : 'block'};">
+            评议内容 <span style="color: var(--bad);">*</span>
+            <textarea name="review_content" maxlength="200" placeholder="请简要描述您想评议的内容方向" style="width: 100%; min-height: 60px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 14px; resize: vertical;"></textarea>
+          </label>
+
           <button type="submit">提交报名</button>
           <div class="msg" id="form-msg"></div>
         </form>
@@ -1037,6 +1034,30 @@
 
       formContainerEl.innerHTML = formHTML;
       statsPanelEl.style.display = 'block';
+
+      // 调试：检查评议内容字段
+      console.log('=== 报名表单渲染调试 ===');
+      console.log('活动类型:', selectedActivity.activity_type);
+      console.log('isCacActivity:', isCacActivity);
+      console.log('reviewerIsFull:', reviewerIsFull);
+      const reviewContentLabel = document.getElementById('review-content-label');
+      console.log('reviewContentLabel元素:', reviewContentLabel);
+      console.log('reviewContentLabel.display:', reviewContentLabel ? reviewContentLabel.style.display : 'null');
+
+      // 角色切换时显示/隐藏评议内容
+      function updateReviewContentVisibility() {
+        const checkedRadio = document.querySelector('input[name="role"]:checked');
+        if (reviewContentLabel && checkedRadio) {
+          reviewContentLabel.style.display = (checkedRadio.value === '评议员') ? 'block' : 'none';
+        }
+      }
+
+      document.querySelectorAll('input[name="role"]').forEach(radio => {
+        radio.addEventListener('change', updateReviewContentVisibility);
+      });
+
+      // 初始化显示状态
+      updateReviewContentVisibility();
 
       document.getElementById('signup-form').addEventListener('submit', handleSubmit);
     }
@@ -1054,6 +1075,7 @@
         activity_id: selectedActivity.id,
         role: (fd.get('role') || '').trim(),
         phone: (fd.get('phone') || '').trim(),
+        review_content: (fd.get('review_content') || '').trim(),
       };
 
       try {
@@ -1065,11 +1087,11 @@
 
         const data = await res.json();
         if (data.ok) {
-          msgEl.textContent = data.message || '报名成功！';
+          msgEl.textContent = '✅ 报名成功！可在"我的报名"中查看和管理';
           msgEl.className = 'msg msg-ok';
           e.target.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
           manageNameEl.value = payload.name;
-          
+
           // 刷新统计
           await loadActivities();
           await loadMySignups(payload.name);

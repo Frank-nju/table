@@ -86,6 +86,7 @@ SIGNUP_COL_REVIEW_DOC_URL = os.getenv("SIGNUP_COL_REVIEW_DOC_URL", "评议语雀
 SIGNUP_COL_REVIEW_SUBMITTED_AT = os.getenv("SIGNUP_COL_REVIEW_SUBMITTED_AT", "评议提交时间")
 SIGNUP_COL_LAST_REVIEW_REMINDER_AT = os.getenv("SIGNUP_COL_LAST_REVIEW_REMINDER_AT", "上次评议提醒时间")
 LEGACY_SIGNUP_COL_STUDENT_ID = os.getenv("SIGNUP_COL_STUDENT_ID", "学号")
+SIGNUP_COL_REVIEW_CONTENT = os.getenv("SIGNUP_COL_REVIEW_CONTENT", "评议内容")
 
 # ===== 评议评分表字段 =====
 REVIEW_RATING_COL_SIGNUP_ID = os.getenv("REVIEW_RATING_COL_SIGNUP_ID", "评议报名ID")
@@ -869,7 +870,7 @@ def _notify_signup_change(activity, signup_name, role, recipient_email, action):
     _send_email_async(recipient_email, subject, body)
 
 
-def _notify_organizer_signup(activity, signup_name, role):
+def _notify_organizer_signup(activity, signup_name, role, review_content=''):
     organizer_email = _get_activity_creator_email(activity)
     if not organizer_email:
         return
@@ -883,6 +884,8 @@ def _notify_organizer_signup(activity, signup_name, role):
         f"角色：{role}\n"
         f"活动时间：{date} {time}\n"
     )
+    if review_content:
+        body += f"评议内容：{review_content}\n"
     _send_email_async(organizer_email, subject, body)
 
 
@@ -2006,6 +2009,7 @@ def _serialize_signup(signup):
         'role': str(signup.get(SIGNUP_COL_ROLE, '')).strip(),
         'phone': str(signup.get(SIGNUP_COL_PHONE, '')).strip(),
         'email': _get_signup_email(signup),
+        'review_content': str(signup.get(SIGNUP_COL_REVIEW_CONTENT, '')).strip(),
         'review_doc_url': _get_signup_review_doc_url(signup),
         'review_submitted_at': signup.get(SIGNUP_COL_REVIEW_SUBMITTED_AT, ''),
         'activity': details,
@@ -2433,10 +2437,15 @@ def api_signup():
     role = str(data.get("role", "")).strip()  # '评议员' 或 '旁听'
     phone = str(data.get("phone", "")).strip()
     email = str(data.get("email", "")).strip()
-    
+    review_content = str(data.get("review_content", "")).strip()  # 评议内容
+
     # 校验基本字段
     if not name or not activity_id or not role:
         return jsonify({"ok": False, "message": "请完整填写姓名、活动和角色"}), 400
+
+    # 校验：评议员必填评议内容
+    if role == '评议员' and not review_content:
+        return jsonify({"ok": False, "message": "评议员请填写评议内容"}), 400
     
     # 校验活动是否存在
     activity = _get_activity_by_id(activity_id)
@@ -2474,15 +2483,16 @@ def api_signup():
             SIGNUP_COL_ROLE: role,
             SIGNUP_COL_PHONE: phone,
             SIGNUP_COL_EMAIL: email,
+            SIGNUP_COL_REVIEW_CONTENT: review_content if role == '评议员' else '',
         }
-        
+
         try:
             _append_row(SIGNUP_TABLE_NAME, row_data)
         except Exception as e:
             return jsonify({"ok": False, "message": f"报名失败: {str(e)}"}), 500
 
     _notify_signup_change(activity, name, role, email, '报名')
-    _notify_organizer_signup(activity, name, role)
+    _notify_organizer_signup(activity, name, role, review_content)
     accepted_invites = _auto_accept_invites_after_signup(activity_id, name)
     _touch_data_version()
 
@@ -2757,6 +2767,10 @@ def api_group_create():
     execution_plan = _safe_text(data.get('execution_plan', ''))
     description = _safe_text(data.get('description', ''))
     member_names = data.get('member_names', []) or []
+    # 兼容前端传 members 字符串的情况
+    members_str = _safe_text(data.get('members', ''))
+    if members_str and not member_names:
+        member_names = [m.strip() for m in members_str.replace('，', ',').split(',') if m.strip()]
 
     if not group_name or not leader_name or not topic_goal or not time_boundary or not execution_plan:
         return jsonify({"ok": False, "message": "请完整填写组名、组长、主题目标、时间边界、执行方案"}), 400
@@ -3151,10 +3165,14 @@ def api_my_activities(name):
             activity_id = activity.get('_id')
             details = _get_activity_details(activity)
             stats = _get_signup_stats(activity_id)
+            # 获取报名者列表（包含评议内容）
+            signups = _get_activity_signups(activity_id)
+            signups_list = [_serialize_review_task(s) for s in signups]
             my_activities.append({
                 **details,
                 **stats,
                 'review_documents': _get_activity_review_documents(activity_id, include_pending=True),
+                'signups': signups_list,
             })
     
     return jsonify({

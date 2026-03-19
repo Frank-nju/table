@@ -1481,6 +1481,24 @@
               ${activity.closed_at ? `<div style="margin-top: 4px; color: var(--sub);">结项时间：${activity.closed_at}</div>` : ''}
             </div>
 
+            ${activity.signups && activity.signups.length > 0 ? `
+              <div style="margin-bottom: 12px; padding: 8px 12px; background: white; border-radius: 8px; font-size: 13px;">
+                <div style="color: var(--sub); margin-bottom: 6px;">📝 报名详情</div>
+                ${activity.signups.filter(s => s.role === '评议员').map(s => `
+                  <div style="padding: 4px 0; border-bottom: 1px dashed var(--line);">
+                    <span style="font-weight: 500;">${s.name}</span>
+                    <span style="color: var(--primary); font-size: 12px;">评议员</span>
+                    ${s.review_content ? `<div style="color: var(--sub); font-size: 12px; margin-top: 2px;">评议内容：${s.review_content}</div>` : ''}
+                  </div>
+                `).join('')}
+                ${activity.signups.filter(s => s.role === '旁听').length > 0 ? `
+                  <div style="padding: 4px 0; color: var(--sub); font-size: 12px;">
+                    旁听：${activity.signups.filter(s => s.role === '旁听').map(s => s.name).join('、')}
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+
             <div class="activity-actions">
               <button class="btn-secondary" onclick="openEditModal('${activity.id}')">编辑</button>
               ${activity.status !== '已结项' ? `<button class="btn-primary" onclick="closeActivity('${activity.id}')">结项</button>` : ''}
@@ -1574,7 +1592,7 @@
       }
 
       try {
-        const res = await fetch('/api/review-invite', {
+        const res = await fetch('/api/invite-reviewer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
