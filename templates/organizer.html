@@ -1771,6 +1771,8 @@
       try {
         const res = await fetch(`/api/activity/${activityId}`, {
           method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creator_name: currentUserName }),
         });
         const data = await res.json();
         if (data.ok) {
