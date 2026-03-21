@@ -630,12 +630,12 @@
                 <label>活动类型 *</label>
                 <select id="form-activity-type" required>
                   <option value="normal">normal（常规分享）</option>
-                  <option value="cac 有约">cac 有约（组内活动）</option>
+                  <option value="cac有约">cac有约（组内活动）</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label>所属兴趣组（cac 有约必选）</label>
+                <label>所属兴趣组（cac有约必选）</label>
                 <select id="form-group-id">
                   <option value="">不选择</option>
                 </select>
@@ -872,7 +872,7 @@
             <label>活动类型</label>
             <select id="edit-activity-type">
               <option value="normal">normal（常规分享）</option>
-              <option value="cac 有约">cac 有约（组内活动）</option>
+              <option value="cac有约">cac有约（组内活动）</option>
             </select>
           </div>
 
@@ -953,7 +953,7 @@
           <div class="meta-item"><div class="meta-label">⏳ 待结项</div><div class="meta-value">${report.pending_close_count || 0}</div></div>
           <div class="meta-item"><div class="meta-label">⏱️ 准时率</div><div class="meta-value">${Math.round((report.on_time_close_rate || 0) * 100)}%</div></div>
         </div>
-        <div style="margin-top: 12px; color: var(--sub); font-size: 13px;">类型分布：normal ${typeBreakdown.normal || 0} 场，cac 有约 ${typeBreakdown['cac 有约'] || 0} 场</div>
+        <div style="margin-top: 12px; color: var(--sub); font-size: 13px;">类型分布：normal ${typeBreakdown.normal || 0} 场，cac有约 ${typeBreakdown['cac有约'] || 0} 场</div>
       `;
     }
 
@@ -1449,7 +1449,7 @@
                 <div style="margin-top: 6px;">
                   <span class="tag ${activity.status === '已结项' ? (activity.on_time ? '' : 'warn') : 'warn'}">${activity.status || '进行中'}</span>
                   ${activity.status === '已结项' ? `<span class="tag ${activity.on_time ? '' : 'bad'}" style="margin-left: 6px;">${activity.on_time ? '准时结项' : '逾期结项'}</span>` : ''}
-                  <span class="tag" style="margin-left: 6px;">${(activity.activity_type || 'normal') === 'cac 有约' ? 'cac 有约' : 'normal'}</span>
+                  <span class="tag" style="margin-left: 6px;">${(activity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}</span>
                   ${activity.group_name ? `<span class="tag" style="margin-left: 6px;">兴趣组：${activity.group_name}</span>` : ''}
                 </div>
               </div>
@@ -1531,8 +1531,8 @@
         showMsg('create-msg', '❌ 请完整填写必填字段', 'error');
         return;
       }
-      if (payload.activity_type === 'cac 有约' && !payload.group_id) {
-        showMsg('create-msg', '❌ cac 有约 活动必须选择所属兴趣组', 'error');
+      if (payload.activity_type === 'cac有约' && !payload.group_id) {
+        showMsg('create-msg', '❌ cac有约 活动必须选择所属兴趣组', 'error');
         return;
       }
 
