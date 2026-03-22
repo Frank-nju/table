@@ -2067,7 +2067,7 @@ def _list_signups():
 
 def _get_signup_counters_by_activity():
     def build_counters():
-        counters = defaultdict(lambda: {'all': 0, '评议员': 0, '旁听': 0})
+        counters = defaultdict(lambda: defaultdict(int))
         for signup in _list_signups():
             activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
             if not activity_id:
@@ -2076,7 +2076,7 @@ def _get_signup_counters_by_activity():
             counters[activity_id]['all'] += 1
             if role:
                 counters[activity_id][role] += 1
-        return dict(counters)
+        return {k: dict(v) for k, v in counters.items()}
 
     return _cached_build('signup_counters', PROFILE_CACHE_TTL_SECONDS, build_counters)
 
