@@ -46,7 +46,7 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "table_signup").strip()
 MYSQL_CONNECT_TIMEOUT = int(os.getenv("MYSQL_CONNECT_TIMEOUT", "5"))
 MYSQL_READ_TIMEOUT = int(os.getenv("MYSQL_READ_TIMEOUT", "30"))
 MYSQL_WRITE_TIMEOUT = int(os.getenv("MYSQL_WRITE_TIMEOUT", "30"))
-TABLE_ROWS_CACHE_TTL_SECONDS = int(os.getenv("TABLE_ROWS_CACHE_TTL_SECONDS", "8"))
+TABLE_ROWS_CACHE_TTL_SECONDS = int(os.getenv("TABLE_ROWS_CACHE_TTL_SECONDS", "30"))
 
 # ===== 表名配置 =====
 ACTIVITY_TABLE_NAME = os.getenv("ACTIVITY_TABLE_NAME", "分享会活动")
@@ -3186,7 +3186,7 @@ def api_create_output_record():
     """登记站外输出活动，如 CAC有约"""
     data = request.get_json(silent=True) or {}
     name = str(data.get('name', '')).strip()
-    output_type = str(data.get('type', '')).strip()
+    output_type = str(data.get('output_type', '')).strip()
     output_date = str(data.get('date', '')).strip()
     note = str(data.get('note', '')).strip()
     if not name or not output_type or not output_date:
