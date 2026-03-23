@@ -2258,7 +2258,7 @@ def index():
 @app.get("/organizer")
 def organizer():
     """分享者管理页面"""
-    return render_template("organizer.html", time_slot_pairs=_get_time_slot_pairs())
+    return render_template("organizer.html", time_slots=TIME_SLOTS, time_slot_pairs=_get_time_slot_pairs())
 
 
 @app.get("/profile")
