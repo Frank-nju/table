@@ -2145,6 +2145,9 @@
 
     // 页面加载完成后，如果是从个人主页跳转过来的，尝试自动登录
     window.addEventListener('DOMContentLoaded', () => {
+      // 初始化时间选择器
+      updateDateTimeConstraints();
+
       const urlParams = new URLSearchParams(window.location.search);
       const userName = urlParams.get('user');
       if (userName) {
