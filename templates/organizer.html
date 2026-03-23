@@ -647,14 +647,19 @@
                 <input type="date" id="form-date" required />
               </div>
 
-              <div class="form-group">
-                <label>活动时间 *</label>
-                <select id="form-time" required>
-                  <option value="">请选择</option>
-                  {% for pair in time_slot_pairs %}
-                  <option value="{{ pair }}">{{ pair }}</option>
+              <div class="form-group form-full">
+                <label>活动时间 * <span style="color: var(--sub); font-weight: normal; font-size: 12px;">（点击选择一个或连续多个时间块）</span></label>
+                <div id="time-slots-grid" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+                  {% for i in range(time_slots|length - 1) %}
+                  <div class="time-slot" data-start="{{ time_slots[i] }}" data-end="{{ time_slots[i+1] }}" onclick="toggleTimeSlot(this)" style="padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.15s;">
+                    {{ time_slots[i] }}-{{ time_slots[i+1] }}
+                  </div>
                   {% endfor %}
-                </select>
+                </div>
+                <div id="selected-time-display" style="margin-top: 8px; font-size: 13px; color: var(--sub);">
+                  已选择：<span id="selected-time-text">未选择</span>
+                </div>
+                <input type="hidden" id="form-time" />
               </div>
 
               <div class="form-group form-full">
@@ -880,14 +885,9 @@
               <input type="date" id="cac-slot-date" required />
               <select id="cac-slot-time" required>
                 <option value="">选择时间段</option>
-                <option value="14:00-14:30">14:00-14:30</option>
-                <option value="14:30-15:00">14:30-15:00</option>
-                <option value="15:00-15:30">15:00-15:30</option>
-                <option value="15:30-16:00">15:30-16:00</option>
-                <option value="16:00-16:30">16:00-16:30</option>
-                <option value="16:30-17:00">16:30-17:00</option>
-                <option value="17:00-17:30">17:00-17:30</option>
-                <option value="17:30-18:00">17:30-18:00</option>
+                {% for i in range(time_slots|length - 1) %}
+                <option value="{{ time_slots[i] }}-{{ time_slots[i+1] }}">{{ time_slots[i] }}-{{ time_slots[i+1] }}</option>
+                {% endfor %}
               </select>
               <input type="text" id="cac-slot-classroom" placeholder="教室名称" style="flex: 1;" required />
               <button type="submit" class="btn-primary">添加</button>
@@ -1555,45 +1555,128 @@
       }
     }
 
-    // cac有约 时间限制
-    const cacTimeSlots = ['14:00-14:30', '14:30-15:00', '15:00-15:30', '15:30-16:00',
-                          '16:00-16:30', '16:30-17:00', '17:00-17:30', '17:30-18:00'];
+    // ===== 时间块多选逻辑 =====
+    let selectedTimeSlots = [];
+
+    function toggleTimeSlot(el) {
+      const start = el.dataset.start;
+      const end = el.dataset.end;
+      const slotKey = `${start}-${end}`;
+
+      if (el.classList.contains('selected')) {
+        // 取消选择
+        el.classList.remove('selected');
+        el.style.background = '';
+        el.style.color = '';
+        el.style.borderColor = '';
+        selectedTimeSlots = selectedTimeSlots.filter(s => s !== slotKey);
+      } else {
+        // 选择
+        el.classList.add('selected');
+        el.style.background = 'var(--primary)';
+        el.style.color = 'white';
+        el.style.borderColor = 'var(--primary)';
+        selectedTimeSlots.push(slotKey);
+      }
+
+      // 自动合并连续时间块
+      updateTimeDisplay();
+      loadAvailableClassrooms();
+    }
+
+    function mergeTimeSlots(slots) {
+      if (slots.length === 0) return [];
+
+      // 解析时间并排序
+      const parsed = slots.map(s => {
+        const [start, end] = s.split('-');
+        return { start, end, startMin: timeToMinutes(start), endMin: timeToMinutes(end) };
+      }).sort((a, b) => a.startMin - b.startMin);
+
+      const merged = [];
+      let current = parsed[0];
+
+      for (let i = 1; i < parsed.length; i++) {
+        if (parsed[i].startMin === current.endMin) {
+          // 连续，合并
+          current.end = parsed[i].end;
+          current.endMin = parsed[i].endMin;
+        } else {
+          merged.push(`${current.start}-${current.end}`);
+          current = parsed[i];
+        }
+      }
+      merged.push(`${current.start}-${current.end}`);
+      return merged;
+    }
+
+    function timeToMinutes(timeStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function updateTimeDisplay() {
+      const textEl = document.getElementById('selected-time-text');
+      const hiddenInput = document.getElementById('form-time');
+
+      if (selectedTimeSlots.length === 0) {
+        textEl.textContent = '未选择';
+        hiddenInput.value = '';
+      } else {
+        const merged = mergeTimeSlots(selectedTimeSlots);
+        textEl.textContent = merged.join('、');
+        hiddenInput.value = merged.join(',');
+      }
+    }
+
+    function clearTimeSelection() {
+      selectedTimeSlots = [];
+      document.querySelectorAll('.time-slot.selected').forEach(el => {
+        el.classList.remove('selected');
+        el.style.background = '';
+        el.style.color = '';
+        el.style.borderColor = '';
+      });
+      updateTimeDisplay();
+    }
+
+    // CAC有约时间限制：周日14:00-18:00
+    const cacAllowedSlots = ['14:00-14:30', '14:30-15:00', '15:00-15:30', '15:30-16:00',
+                             '16:00-16:30', '16:30-17:00', '17:00-17:30', '17:30-18:00'];
 
     function updateDateTimeConstraints() {
       const activityType = document.getElementById('form-activity-type').value;
       const dateInput = document.getElementById('form-date');
-      const timeSelect = document.getElementById('form-time');
       const groupSelect = document.getElementById('form-group-id');
+      const timeSlotsGrid = document.getElementById('time-slots-grid');
+
+      // 清除之前的选择
+      clearTimeSelection();
 
       if (activityType === 'cac有约') {
         // 隐藏兴趣组选择
         groupSelect.parentElement.style.display = 'none';
-        // 更新时间选项
-        const currentTime = timeSelect.value;
-        timeSelect.innerHTML = '<option value="">请选择</option>';
-        cacTimeSlots.forEach(slot => {
-          const option = document.createElement('option');
-          option.value = slot;
-          option.textContent = slot;
-          if (slot === currentTime) option.selected = true;
-          timeSelect.appendChild(option);
+        // 只显示CAC有约允许的时间块
+        document.querySelectorAll('.time-slot').forEach(el => {
+          const slotKey = `${el.dataset.start}-${el.dataset.end}`;
+          if (cacAllowedSlots.includes(slotKey)) {
+            el.style.display = 'block';
+          } else {
+            el.style.display = 'none';
+          }
         });
       } else {
         // 显示兴趣组选择
         groupSelect.parentElement.style.display = 'block';
-        // 恢复原始时间选项
-        const currentTime = timeSelect.value;
-        timeSelect.innerHTML = '<option value="">请选择</option>';
-        {% for pair in time_slot_pairs %}
-        timeSelect.innerHTML += `<option value="{{ pair }}" ${currentTime === '{{ pair }}' ? 'selected' : ''}>{{ pair }}</option>`;
-        {% endfor %}
+        // 显示所有时间块
+        document.querySelectorAll('.time-slot').forEach(el => {
+          el.style.display = 'block';
+        });
       }
-      // 更新教室下拉选项
       loadAvailableClassrooms();
     }
 
     async function loadAvailableClassrooms() {
-      const activityType = document.getElementById('form-activity-type').value;
       const date = document.getElementById('form-date').value;
       const timeSlot = document.getElementById('form-time').value;
       const select = document.getElementById('form-classroom-select');
@@ -1604,7 +1687,7 @@
       }
 
       try {
-        const res = await fetch(`/api/cac-room-slots?date=${date}&time_slot=${timeSlot}`);
+        const res = await fetch(`/api/cac-room-slots?date=${date}&time_slot=${encodeURIComponent(timeSlot)}`);
         const data = await res.json();
         if (data.ok && data.slots.length > 0) {
           select.innerHTML = '<option value="">选择预设教室（或自定义输入）</option>' +

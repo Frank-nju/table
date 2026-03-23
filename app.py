@@ -159,7 +159,8 @@ REVIEWER_LIMIT = int(os.getenv("REVIEWER_LIMIT", "3"))
 LISTENER_UNLIMITED = os.getenv("LISTENER_UNLIMITED", "true").lower() == "true"
 
 # ===== 时间槽配置 =====
-TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,10:00,11:00,12:00,13:00,14:00,15:00,16:00,17:00,18:00,19:00,20:00,21:00,22:00").split(",") if x.strip()]
+# 半小时一档，从09:00到22:00
+TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00,18:30,19:00,19:30,20:00,20:30,21:00,21:30,22:00").split(",") if x.strip()]
 
 # ===== CAC有约冲突检测配置 =====
 # CAC有约固定在哪一天（0=周一, 1=周二, ..., 4=周五, 6=周日），默认周五
@@ -3622,27 +3623,84 @@ def api_delete_cac_admin(name):
 # ===== CAC教室时间槽相关API =====
 
 def _list_cac_room_slots(date=None, time_slot=None):
-    """获取CAC教室时间槽列表"""
+    """获取CAC教室时间槽列表
+
+    time_slot 可以是单个时间段如 '14:00-14:30' 或合并后的如 '14:00-15:30'
+    当是合并后的时间段时，返回在该时间段内所有半小时槽都可用的教室
+    """
     rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
     print(f"[DEBUG] _list_cac_room_slots: Found {len(rows)} total slots in database")
-    result = []
+
+    # 解析需要的半小时槽列表
+    required_slots = []
+    if time_slot:
+        # 支持多个时间段，用逗号分隔
+        for ts in time_slot.split(','):
+            ts = ts.strip()
+            if not ts:
+                continue
+            start, end = ts.split('-')[0], ts.split('-')[1]
+            # 生成该范围内的所有半小时槽
+            start_h, start_m = int(start.split(':')[0]), int(start.split(':')[1])
+            end_h, end_m = int(end.split(':')[0]), int(end.split(':')[1])
+            current_h, current_m = start_h, start_m
+            while current_h * 60 + current_m < end_h * 60 + end_m:
+                next_h, next_m = current_h, current_m + 30
+                if next_m >= 60:
+                    next_h += 1
+                    next_m -= 60
+                required_slots.append(f"{current_h:02d}:{current_m:02d}-{next_h:02d}:{next_m:02d}")
+                current_h, current_m = next_h, next_m
+
+    print(f"[DEBUG] Required time slots: {required_slots}")
+
+    # 统计每个教室在所有需要的时间槽的可用情况
+    classroom_slots = {}  # {classroom: set of available time_slots}
     for row in rows:
-        slot = {
-            'id': row.get('_id'),
-            'classroom': str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip(),
-            'date': str(row.get(CAC_SLOT_COL_DATE, '')).strip(),
-            'time_slot': str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip(),
-            'status': str(row.get(CAC_SLOT_COL_STATUS, 'available')).strip(),
-            'activity_id': str(row.get(CAC_SLOT_COL_ACTIVITY_ID, '')).strip(),
-            'created_by': str(row.get(CAC_SLOT_COL_CREATED_BY, '')).strip(),
-        }
-        # 按条件筛选
-        if date and slot['date'] != date:
+        slot_date = str(row.get(CAC_SLOT_COL_DATE, '')).strip()
+        slot_time = str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip()
+        slot_status = str(row.get(CAC_SLOT_COL_STATUS, 'available')).strip()
+        slot_classroom = str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip()
+
+        if date and slot_date != date:
             continue
-        if time_slot and slot['time_slot'] != time_slot:
+        if slot_status != 'available':
             continue
-        if slot['status'] == 'available':
-            result.append(slot)
+
+        if slot_classroom not in classroom_slots:
+            classroom_slots[slot_classroom] = set()
+        classroom_slots[slot_classroom].add(slot_time)
+
+    result = []
+    if required_slots:
+        # 找出在所有需要的时间槽都可用的教室
+        required_set = set(required_slots)
+        for classroom, available_slots in classroom_slots.items():
+            if required_set.issubset(available_slots):
+                result.append({
+                    'id': f"{classroom}-{date}-{time_slot}",
+                    'classroom': classroom,
+                    'date': date,
+                    'time_slot': time_slot,
+                    'status': 'available',
+                })
+    else:
+        # 没有特定时间要求，返回所有可用槽
+        for row in rows:
+            slot_date = str(row.get(CAC_SLOT_COL_DATE, '')).strip()
+            if date and slot_date != date:
+                continue
+            slot_status = str(row.get(CAC_SLOT_COL_STATUS, 'available')).strip()
+            if slot_status != 'available':
+                continue
+            result.append({
+                'id': row.get('_id'),
+                'classroom': str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip(),
+                'date': slot_date,
+                'time_slot': str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip(),
+                'status': slot_status,
+            })
+
     print(f"[DEBUG] _list_cac_room_slots: Returning {len(result)} available slots (date={date}, time_slot={time_slot})")
     return result
 
