@@ -46,7 +46,7 @@ MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "table_signup").strip()
 MYSQL_CONNECT_TIMEOUT = int(os.getenv("MYSQL_CONNECT_TIMEOUT", "5"))
 MYSQL_READ_TIMEOUT = int(os.getenv("MYSQL_READ_TIMEOUT", "30"))
 MYSQL_WRITE_TIMEOUT = int(os.getenv("MYSQL_WRITE_TIMEOUT", "30"))
-TABLE_ROWS_CACHE_TTL_SECONDS = int(os.getenv("TABLE_ROWS_CACHE_TTL_SECONDS", "30"))
+TABLE_ROWS_CACHE_TTL_SECONDS = int(os.getenv("TABLE_ROWS_CACHE_TTL_SECONDS", "120"))
 
 # ===== 表名配置 =====
 ACTIVITY_TABLE_NAME = os.getenv("ACTIVITY_TABLE_NAME", "分享会活动")
@@ -57,6 +57,8 @@ USER_PROFILE_TABLE_NAME = os.getenv("USER_PROFILE_TABLE_NAME", "用户档案")
 INTEREST_GROUP_TABLE_NAME = os.getenv("INTEREST_GROUP_TABLE_NAME", "兴趣组")
 GROUP_MEMBER_TABLE_NAME = os.getenv("GROUP_MEMBER_TABLE_NAME", "兴趣组成员")
 REVIEW_INVITE_TABLE_NAME = os.getenv("REVIEW_INVITE_TABLE_NAME", "评议邀请")
+CAC_ADMINS_TABLE_NAME = os.getenv("CAC_ADMINS_TABLE_NAME", "CAC管理员")
+CAC_ROOM_SLOTS_TABLE_NAME = os.getenv("CAC_ROOM_SLOTS_TABLE_NAME", "CAC教室时间槽")
 
 # ===== 活动表字段 =====
 ACTIVITY_COL_DATE = os.getenv("ACTIVITY_COL_DATE", "活动日期")
@@ -138,6 +140,19 @@ INVITE_COL_STATUS = os.getenv("INVITE_COL_STATUS", "状态")
 INVITE_COL_CREATED_AT = os.getenv("INVITE_COL_CREATED_AT", "邀请时间")
 INVITE_COL_UPDATED_AT = os.getenv("INVITE_COL_UPDATED_AT", "状态更新时间")
 INVITE_COL_UPDATED_BY = os.getenv("INVITE_COL_UPDATED_BY", "状态更新人")
+
+# ===== CAC管理员字段 =====
+CAC_ADMIN_COL_NAME = os.getenv("CAC_ADMIN_COL_NAME", "姓名")
+CAC_ADMIN_COL_CREATED_AT = os.getenv("CAC_ADMIN_COL_CREATED_AT", "添加时间")
+
+# ===== CAC教室时间槽字段 =====
+CAC_SLOT_COL_CLASSROOM = os.getenv("CAC_SLOT_COL_CLASSROOM", "教室")
+CAC_SLOT_COL_DATE = os.getenv("CAC_SLOT_COL_DATE", "日期")
+CAC_SLOT_COL_TIME_SLOT = os.getenv("CAC_SLOT_COL_TIME_SLOT", "时间段")
+CAC_SLOT_COL_STATUS = os.getenv("CAC_SLOT_COL_STATUS", "状态")
+CAC_SLOT_COL_ACTIVITY_ID = os.getenv("CAC_SLOT_COL_ACTIVITY_ID", "关联活动ID")
+CAC_SLOT_COL_CREATED_BY = os.getenv("CAC_SLOT_COL_CREATED_BY", "创建者")
+CAC_SLOT_COL_CREATED_AT = os.getenv("CAC_SLOT_COL_CREATED_AT", "创建时间")
 
 # ===== 报名限额配置 =====
 REVIEWER_LIMIT = int(os.getenv("REVIEWER_LIMIT", "3"))
@@ -3235,6 +3250,20 @@ def api_create_activity():
     if activity_type not in {'normal', 'cac有约'}:
         return jsonify({"ok": False, "message": "活动类型必须为 normal 或 cac有约"}), 400
 
+    # cac有约 时间限制验证
+    if activity_type == 'cac有约':
+        from datetime import datetime
+        try:
+            dt = datetime.strptime(date, '%Y-%m-%d')
+        except:
+            return jsonify({"ok": False, "message": "日期格式错误"}), 400
+        if dt.weekday() != 6:  # 0=周一, 6=周日
+            return jsonify({"ok": False, "message": "CAC有约 只能在周日举办"}), 400
+        allowed_slots = ['14:00-14:30', '14:30-15:00', '15:00-15:30', '15:30-16:00',
+                         '16:00-16:30', '16:30-17:00', '17:00-17:30', '17:30-18:00']
+        if time not in allowed_slots:
+            return jsonify({"ok": False, "message": "CAC有约 时间段必须为周日 14:00-18:00（半小时一档）"}), 400
+
     if not _get_user_profile(creator_name) and not creator_email:
         return jsonify({"ok": False, "message": "首次使用请填写邮箱后再创建活动"}), 400
     _upsert_user_profile(creator_name, email=creator_email, role='普通用户')
@@ -3499,6 +3528,168 @@ def api_delete_activity(activity_id):
         return jsonify({"ok": True, "message": msg})
     except Exception as e:
         return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
+
+
+# ===== CAC管理员相关API =====
+
+def _is_cac_admin(name):
+    """检查是否为CAC管理员"""
+    if not name:
+        return False
+    name = str(name).strip()
+    rows = _list_rows(CAC_ADMINS_TABLE_NAME)
+    for row in rows:
+        if str(row.get(CAC_ADMIN_COL_NAME, '')).strip() == name:
+            return True
+    return False
+
+
+def _list_cac_admins():
+    """获取CAC管理员列表"""
+    rows = _list_rows(CAC_ADMINS_TABLE_NAME)
+    return [{'name': str(row.get(CAC_ADMIN_COL_NAME, '')).strip()} for row in rows]
+
+
+@app.get("/api/cac-admins")
+def api_list_cac_admins():
+    """获取CAC管理员列表"""
+    return jsonify({"ok": True, "admins": _list_cac_admins()})
+
+
+@app.post("/api/cac-admin")
+def api_add_cac_admin():
+    """添加CAC管理员"""
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    requester_name = str(data.get("requester_name", "")).strip()
+
+    if not name:
+        return jsonify({"ok": False, "message": "姓名不能为空"}), 400
+
+    # 检查权限：已有管理员或首次初始化（管理员列表为空）
+    existing_admins = _list_cac_admins()
+    if existing_admins and not _is_cac_admin(requester_name):
+        return jsonify({"ok": False, "message": "只有管理员才能添加新管理员"}), 403
+
+    # 检查是否已存在
+    if _is_cac_admin(name):
+        return jsonify({"ok": False, "message": "该用户已是管理员"}), 400
+
+    try:
+        _append_row(CAC_ADMINS_TABLE_NAME, {
+            CAC_ADMIN_COL_NAME: name,
+            CAC_ADMIN_COL_CREATED_AT: _now_iso(),
+        })
+        return jsonify({"ok": True, "message": f"已添加 {name} 为管理员"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"添加失败: {str(e)}"}), 500
+
+
+@app.delete("/api/cac-admin/<name>")
+def api_delete_cac_admin(name):
+    """删除CAC管理员"""
+    name = str(name).strip()
+    requester_name = str(request.get_json(silent=True) or {}).get("requester_name", "").strip()
+
+    if not _is_cac_admin(requester_name):
+        return jsonify({"ok": False, "message": "只有管理员才能删除管理员"}), 403
+
+    rows = _list_rows(CAC_ADMINS_TABLE_NAME)
+    for row in rows:
+        if str(row.get(CAC_ADMIN_COL_NAME, '')).strip() == name:
+            try:
+                base.delete_row(CAC_ADMINS_TABLE_NAME, row.get('_id'))
+                return jsonify({"ok": True, "message": f"已移除 {name} 的管理员权限"})
+            except Exception as e:
+                return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
+
+    return jsonify({"ok": False, "message": "该用户不是管理员"}), 404
+
+
+# ===== CAC教室时间槽相关API =====
+
+def _list_cac_room_slots(date=None, time_slot=None):
+    """获取CAC教室时间槽列表"""
+    rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
+    result = []
+    for row in rows:
+        slot = {
+            'id': row.get('_id'),
+            'classroom': str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip(),
+            'date': str(row.get(CAC_SLOT_COL_DATE, '')).strip(),
+            'time_slot': str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip(),
+            'status': str(row.get(CAC_SLOT_COL_STATUS, 'available')).strip(),
+            'activity_id': str(row.get(CAC_SLOT_COL_ACTIVITY_ID, '')).strip(),
+            'created_by': str(row.get(CAC_SLOT_COL_CREATED_BY, '')).strip(),
+        }
+        # 按条件筛选
+        if date and slot['date'] != date:
+            continue
+        if time_slot and slot['time_slot'] != time_slot:
+            continue
+        if slot['status'] == 'available':
+            result.append(slot)
+    return result
+
+
+@app.get("/api/cac-room-slots")
+def api_list_cac_room_slots():
+    """获取可用教室时间槽"""
+    date = str(request.args.get("date", "")).strip()
+    time_slot = str(request.args.get("time_slot", "")).strip()
+    slots = _list_cac_room_slots(date=date, time_slot=time_slot)
+    return jsonify({"ok": True, "slots": slots})
+
+
+@app.post("/api/cac-room-slot")
+def api_add_cac_room_slot():
+    """管理员添加教室时间槽"""
+    data = request.get_json(silent=True) or {}
+    classroom = str(data.get("classroom", "")).strip()
+    date = str(data.get("date", "")).strip()
+    time_slot = str(data.get("time_slot", "")).strip()
+    requester_name = str(data.get("requester_name", "")).strip()
+
+    if not _is_cac_admin(requester_name):
+        return jsonify({"ok": False, "message": "只有管理员才能添加教室时间槽"}), 403
+
+    if not classroom or not date or not time_slot:
+        return jsonify({"ok": False, "message": "请完整填写教室、日期和时间段"}), 400
+
+    try:
+        _append_row(CAC_ROOM_SLOTS_TABLE_NAME, {
+            CAC_SLOT_COL_CLASSROOM: classroom,
+            CAC_SLOT_COL_DATE: date,
+            CAC_SLOT_COL_TIME_SLOT: time_slot,
+            CAC_SLOT_COL_STATUS: 'available',
+            CAC_SLOT_COL_ACTIVITY_ID: '',
+            CAC_SLOT_COL_CREATED_BY: requester_name,
+            CAC_SLOT_COL_CREATED_AT: _now_iso(),
+        })
+        return jsonify({"ok": True, "message": "教室时间槽添加成功"})
+    except Exception as e:
+        return jsonify({"ok": False, "message": f"添加失败: {str(e)}"}), 500
+
+
+@app.delete("/api/cac-room-slot/<slot_id>")
+def api_delete_cac_room_slot(slot_id):
+    """管理员删除教室时间槽"""
+    data = request.get_json(silent=True) or {}
+    requester_name = str(data.get("requester_name", "")).strip()
+
+    if not _is_cac_admin(requester_name):
+        return jsonify({"ok": False, "message": "只有管理员才能删除教室时间槽"}), 403
+
+    rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
+    for row in rows:
+        if row.get('_id') == slot_id:
+            try:
+                base.delete_row(CAC_ROOM_SLOTS_TABLE_NAME, slot_id)
+                return jsonify({"ok": True, "message": "教室时间槽已删除"})
+            except Exception as e:
+                return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
+
+    return jsonify({"ok": False, "message": "教室时间槽不存在"}), 404
 
 
 _maintenance_thread_started = False

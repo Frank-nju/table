@@ -607,6 +607,7 @@
         <button class="tab-btn" onclick="switchTab('group')">👥 兴趣组管理</button>
         <button class="tab-btn" onclick="switchTab('invite')">✉️ 评议邀请</button>
         <button class="tab-btn" onclick="switchTab('governance')">📈 治理看板</button>
+        <button class="tab-btn" id="cac-admin-tab" onclick="switchTab('cac-admin')" style="display: none;">🏫 CAC管理</button>
       </div>
 
       <!-- 活动列表标签页 -->
@@ -668,7 +669,15 @@
 
               <div class="form-group form-full">
                 <label>活动教室</label>
-                <input type="text" id="form-classroom" placeholder="如：理科楼 404（可后续更新）" />
+                <div id="classroom-normal" style="display: block;">
+                  <input type="text" id="form-classroom" placeholder="如：理科楼 404（可后续更新）" />
+                </div>
+                <div id="classroom-cac" style="display: none;">
+                  <select id="form-classroom-select" onchange="updateCustomClassroom()">
+                    <option value="">请先选择日期和时间</option>
+                  </select>
+                  <input type="text" id="form-classroom-custom" placeholder="或自定义教室" style="margin-top: 8px;" />
+                </div>
               </div>
 
               <div class="form-group form-full">
@@ -851,6 +860,45 @@
           <div class="card-title">评议文档评分</div>
           <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">对已结项活动中他人已提交的评议文档进行评分</div>
           <div id="governance-rating-panel"></div>
+        </div>
+      </div>
+
+      <!-- CAC管理标签页 -->
+      <div id="cac-admin-tab" class="tab-content">
+        <div class="card">
+          <div class="card-title">CAC管理员</div>
+          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">管理可添加教室时间槽的管理员名单</div>
+          <form id="cac-admin-form" style="margin-bottom: 12px;">
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="cac-admin-name" placeholder="输入姓名" style="flex: 1;" />
+              <button type="submit" class="btn-primary">添加管理员</button>
+            </div>
+          </form>
+          <div id="cac-admins-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">教室时间槽管理</div>
+          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">添加已借好的教室和时间段，供分享者创建活动时选择</div>
+          <form id="cac-slot-form" style="margin-bottom: 12px;">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <input type="date" id="cac-slot-date" required />
+              <select id="cac-slot-time" required>
+                <option value="">选择时间段</option>
+                <option value="14:00-14:30">14:00-14:30</option>
+                <option value="14:30-15:00">14:30-15:00</option>
+                <option value="15:00-15:30">15:00-15:30</option>
+                <option value="15:30-16:00">15:30-16:00</option>
+                <option value="16:00-16:30">16:00-16:30</option>
+                <option value="16:30-17:00">16:30-17:00</option>
+                <option value="17:00-17:30">17:00-17:30</option>
+                <option value="17:30-18:00">17:30-18:00</option>
+              </select>
+              <input type="text" id="cac-slot-classroom" placeholder="教室名称" style="flex: 1;" required />
+              <button type="submit" class="btn-primary">添加</button>
+            </div>
+          </form>
+          <div id="cac-slots-list"></div>
         </div>
       </div>
     </div>
@@ -1144,6 +1192,7 @@
       loadMyActivities();
       loadGroups();
       loadGovernanceDashboard();
+      checkCacAdmin();
     }
 
     async function loadGroups() {
@@ -1511,17 +1560,117 @@
       }
     }
 
+    // cac有约 时间限制
+    const cacTimeSlots = ['14:00-14:30', '14:30-15:00', '15:00-15:30', '15:30-16:00',
+                          '16:00-16:30', '16:30-17:00', '17:00-17:30', '17:30-18:00'];
+
+    function updateDateTimeConstraints() {
+      const activityType = document.getElementById('form-activity-type').value;
+      const dateInput = document.getElementById('form-date');
+      const timeSelect = document.getElementById('form-time');
+      const groupSelect = document.getElementById('form-group-id');
+      const classroomNormal = document.getElementById('classroom-normal');
+      const classroomCac = document.getElementById('classroom-cac');
+
+      if (activityType === 'cac有约') {
+        // 隐藏兴趣组选择
+        groupSelect.parentElement.style.display = 'none';
+        // 显示教室下拉选择
+        classroomNormal.style.display = 'none';
+        classroomCac.style.display = 'block';
+        // 更新时间选项
+        const currentTime = timeSelect.value;
+        timeSelect.innerHTML = '<option value="">请选择</option>';
+        cacTimeSlots.forEach(slot => {
+          const option = document.createElement('option');
+          option.value = slot;
+          option.textContent = slot;
+          if (slot === currentTime) option.selected = true;
+          timeSelect.appendChild(option);
+        });
+      } else {
+        // 显示兴趣组选择
+        groupSelect.parentElement.style.display = 'block';
+        // 显示普通教室输入
+        classroomNormal.style.display = 'block';
+        classroomCac.style.display = 'none';
+        // 恢复原始时间选项
+        const currentTime = timeSelect.value;
+        timeSelect.innerHTML = '<option value="">请选择</option>';
+        {% for pair in time_slot_pairs %}
+        timeSelect.innerHTML += `<option value="{{ pair }}" ${currentTime === '{{ pair }}' ? 'selected' : ''}>{{ pair }}</option>`;
+        {% endfor %}
+      }
+      // 更新教室下拉选项
+      loadAvailableClassrooms();
+    }
+
+    async function loadAvailableClassrooms() {
+      const activityType = document.getElementById('form-activity-type').value;
+      const date = document.getElementById('form-date').value;
+      const timeSlot = document.getElementById('form-time').value;
+      const select = document.getElementById('form-classroom-select');
+
+      if (activityType !== 'cac有约' || !date || !timeSlot) {
+        select.innerHTML = '<option value="">请先选择日期和时间</option>';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/cac-room-slots?date=${date}&time_slot=${timeSlot}`);
+        const data = await res.json();
+        if (data.ok && data.slots.length > 0) {
+          select.innerHTML = '<option value="">选择预设教室</option>' +
+            data.slots.map(s => `<option value="${s.classroom}">${s.classroom}</option>`).join('');
+        } else {
+          select.innerHTML = '<option value="">暂无预设教室，请自定义</option>';
+        }
+      } catch (err) {
+        select.innerHTML = '<option value="">加载失败，请自定义</option>';
+      }
+    }
+
+    function updateCustomClassroom() {
+      const select = document.getElementById('form-classroom-select');
+      const customInput = document.getElementById('form-classroom-custom');
+      if (select.value) {
+        customInput.value = select.value;
+      }
+    }
+
+    document.getElementById('form-activity-type').addEventListener('change', updateDateTimeConstraints);
+    document.getElementById('form-date').addEventListener('change', function() {
+      const activityType = document.getElementById('form-activity-type').value;
+      if (activityType === 'cac有约') {
+        const date = this.value;
+        if (date) {
+          const dt = new Date(date);
+          if (dt.getDay() !== 0) {  // 0 = 周日
+            alert('⚠️ CAC有约 只能在周日举办，请选择周日日期');
+          }
+        }
+      }
+      loadAvailableClassrooms();
+    });
+    document.getElementById('form-time').addEventListener('change', loadAvailableClassrooms);
+
     document.getElementById('create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      const activityType = document.getElementById('form-activity-type').value;
+      let classroom = document.getElementById('form-classroom').value.trim();
+      if (activityType === 'cac有约') {
+        classroom = document.getElementById('form-classroom-custom').value.trim();
+      }
+
       const payload = {
-        activity_type: document.getElementById('form-activity-type').value,
+        activity_type: activityType,
         group_id: document.getElementById('form-group-id').value,
         date: document.getElementById('form-date').value,
         time: document.getElementById('form-time').value,
         speakers: document.getElementById('form-speakers').value.trim(),
         topic: document.getElementById('form-topic').value.trim(),
-        classroom: document.getElementById('form-classroom').value.trim(),
+        classroom: classroom,
         videourl: document.getElementById('form-videourl').value.trim(),
         creator_email: document.getElementById('form-creator-email').value.trim(),
         creator_name: currentUserName,
@@ -1782,6 +1931,150 @@
         alert('❌ ' + err.message);
       }
     }
+
+    // ===== CAC管理员功能 =====
+    let isCacAdmin = false;
+
+    async function checkCacAdmin() {
+      try {
+        const res = await fetch('/api/cac-admins');
+        const data = await res.json();
+        if (data.ok) {
+          isCacAdmin = data.admins.some(a => a.name === currentUserName);
+          document.getElementById('cac-admin-tab').style.display = isCacAdmin ? 'block' : 'none';
+          if (isCacAdmin) {
+            loadCacAdmins();
+            loadCacSlots();
+          }
+        }
+      } catch (err) {
+        console.error('Check CAC admin error:', err);
+      }
+    }
+
+    async function loadCacAdmins() {
+      try {
+        const res = await fetch('/api/cac-admins');
+        const data = await res.json();
+        const container = document.getElementById('cac-admins-list');
+        if (!data.ok || !data.admins.length) {
+          container.innerHTML = '<div style="color: var(--sub); font-size: 13px;">暂无管理员</div>';
+          return;
+        }
+        container.innerHTML = data.admins.map(a => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line);">
+            <span>${a.name}</span>
+            <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteCacAdmin('${a.name}')">移除</button>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Load CAC admins error:', err);
+      }
+    }
+
+    async function deleteCacAdmin(name) {
+      if (!confirm(`确认移除 ${name} 的管理员权限？`)) return;
+      try {
+        const res = await fetch(`/api/cac-admin/${encodeURIComponent(name)}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requester_name: currentUserName }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          loadCacAdmins();
+        } else {
+          alert('❌ ' + (data.message || '删除失败'));
+        }
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    async function loadCacSlots() {
+      try {
+        const res = await fetch('/api/cac-room-slots');
+        const data = await res.json();
+        const container = document.getElementById('cac-slots-list');
+        if (!data.ok || !data.slots.length) {
+          container.innerHTML = '<div style="color: var(--sub); font-size: 13px;">暂无教室时间槽</div>';
+          return;
+        }
+        container.innerHTML = data.slots.map(s => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line);">
+            <span>${s.date} ${s.time_slot} · ${s.classroom}</span>
+            <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteCacSlot('${s.id}')">删除</button>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Load CAC slots error:', err);
+      }
+    }
+
+    async function deleteCacSlot(slotId) {
+      if (!confirm('确认删除该教室时间槽？')) return;
+      try {
+        const res = await fetch(`/api/cac-room-slot/${slotId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requester_name: currentUserName }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          loadCacSlots();
+        } else {
+          alert('❌ ' + (data.message || '删除失败'));
+        }
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    document.getElementById('cac-admin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('cac-admin-name').value.trim();
+      if (!name) return;
+      try {
+        const res = await fetch('/api/cac-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, requester_name: currentUserName }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('cac-admin-name').value = '';
+          loadCacAdmins();
+        } else {
+          alert('❌ ' + (data.message || '添加失败'));
+        }
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    });
+
+    document.getElementById('cac-slot-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const date = document.getElementById('cac-slot-date').value;
+      const time_slot = document.getElementById('cac-slot-time').value;
+      const classroom = document.getElementById('cac-slot-classroom').value.trim();
+      if (!date || !time_slot || !classroom) return;
+      try {
+        const res = await fetch('/api/cac-room-slot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date, time_slot, classroom, requester_name: currentUserName }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('cac-slot-classroom').value = '';
+          loadCacSlots();
+        } else {
+          alert('❌ ' + (data.message || '添加失败'));
+        }
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    });
 
     // 页面加载完成后，如果是从个人主页跳转过来的，尝试自动登录
     window.addEventListener('DOMContentLoaded', () => {
