@@ -607,7 +607,7 @@
         <button class="tab-btn" onclick="switchTab('group')">👥 兴趣组管理</button>
         <button class="tab-btn" onclick="switchTab('invite')">✉️ 评议邀请</button>
         <button class="tab-btn" onclick="switchTab('governance')">📈 治理看板</button>
-        <button class="tab-btn" id="cac-admin-tab" onclick="switchTab('cac-admin')" style="display: none;">🏫 CAC管理</button>
+        <button class="tab-btn" id="cac-admin-btn" onclick="switchTab('cac-admin')" style="display: none;">🏫 CAC管理</button>
       </div>
 
       <!-- 活动列表标签页 -->
@@ -1941,7 +1941,7 @@
         const data = await res.json();
         if (data.ok) {
           isCacAdmin = data.admins.some(a => a.name === currentUserName);
-          document.getElementById('cac-admin-tab').style.display = isCacAdmin ? 'block' : 'none';
+          document.getElementById('cac-admin-btn').style.display = isCacAdmin ? 'block' : 'none';
           if (isCacAdmin) {
             loadCacAdmins();
             loadCacSlots();
