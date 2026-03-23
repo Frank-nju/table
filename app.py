@@ -3284,15 +3284,19 @@ def api_create_activity():
             selected_group = _get_interest_group_by_id(creator_memberships[0].get(GROUP_MEMBER_COL_GROUP_ID, ''))
 
     # 检测冲突（仅提示，不拦截创建）
+    # CAC有约完全不参与冲突检测
     warnings = []
-    cac_conflict, cac_msg = _check_cac_conflict(date, time)
-    if cac_conflict:
-        warnings.append(cac_msg)
+    if activity_type != 'cac有约':
+        # 普通活动检测与CAC有约的冲突（可选，当前配置可能不准确，暂时跳过）
+        pass
 
     existing_activities = _list_activities()
     new_range = _parse_time_range(time)
     if new_range:
         for act in existing_activities:
+            # CAC有约不参与普通活动的冲突检测
+            if str(act.get(ACTIVITY_COL_TYPE, '')).strip() == 'cac有约':
+                continue
             if str(act.get(ACTIVITY_COL_DATE, '')) == date:
                 existing_range = _parse_time_range(act.get(ACTIVITY_COL_TIME, ''))
                 if existing_range and _times_overlap(new_range, existing_range):
@@ -3588,22 +3592,31 @@ def api_add_cac_admin():
 @app.delete("/api/cac-admin/<name>")
 def api_delete_cac_admin(name):
     """删除CAC管理员"""
-    name = str(name).strip()
-    requester_name = str(request.get_json(silent=True) or {}).get("requester_name", "").strip()
+    try:
+        name = str(name).strip()
+        data = request.get_json(silent=True) or {}
+        requester_name = str(data.get("requester_name", "")).strip()
 
-    if not _is_cac_admin(requester_name):
-        return jsonify({"ok": False, "message": "只有管理员才能删除管理员"}), 403
+        if not requester_name:
+            return jsonify({"ok": False, "message": "缺少请求者姓名"}), 400
 
-    rows = _list_rows(CAC_ADMINS_TABLE_NAME)
-    for row in rows:
-        if str(row.get(CAC_ADMIN_COL_NAME, '')).strip() == name:
-            try:
-                base.delete_row(CAC_ADMINS_TABLE_NAME, row.get('_id'))
-                return jsonify({"ok": True, "message": f"已移除 {name} 的管理员权限"})
-            except Exception as e:
-                return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
+        if not _is_cac_admin(requester_name):
+            return jsonify({"ok": False, "message": "只有管理员才能删除管理员"}), 403
 
-    return jsonify({"ok": False, "message": "该用户不是管理员"}), 404
+        rows = _list_rows(CAC_ADMINS_TABLE_NAME)
+        for row in rows:
+            if str(row.get(CAC_ADMIN_COL_NAME, '')).strip() == name:
+                try:
+                    base.delete_row(CAC_ADMINS_TABLE_NAME, row.get('_id'))
+                    return jsonify({"ok": True, "message": f"已移除 {name} 的管理员权限"})
+                except Exception as e:
+                    print(f"[ERROR] Delete CAC admin row failed: {e}")
+                    return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
+
+        return jsonify({"ok": False, "message": "该用户不是管理员"}), 404
+    except Exception as e:
+        print(f"[ERROR] api_delete_cac_admin unexpected error: {e}")
+        return jsonify({"ok": False, "message": f"服务器错误: {str(e)}"}), 500
 
 
 # ===== CAC教室时间槽相关API =====
@@ -3611,6 +3624,7 @@ def api_delete_cac_admin(name):
 def _list_cac_room_slots(date=None, time_slot=None):
     """获取CAC教室时间槽列表"""
     rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
+    print(f"[DEBUG] _list_cac_room_slots: Found {len(rows)} total slots in database")
     result = []
     for row in rows:
         slot = {
@@ -3629,6 +3643,7 @@ def _list_cac_room_slots(date=None, time_slot=None):
             continue
         if slot['status'] == 'available':
             result.append(slot)
+    print(f"[DEBUG] _list_cac_room_slots: Returning {len(result)} available slots (date={date}, time_slot={time_slot})")
     return result
 
 
