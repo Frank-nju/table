@@ -1493,7 +1493,7 @@
                 <div style="margin-top: 6px;">
                   <span class="tag ${activity.status === '已结项' ? (activity.on_time ? '' : 'warn') : 'warn'}">${activity.status || '进行中'}</span>
                   ${activity.status === '已结项' ? `<span class="tag ${activity.on_time ? '' : 'bad'}" style="margin-left: 6px;">${activity.on_time ? '准时结项' : '逾期结项'}</span>` : ''}
-                  <span class="tag" style="margin-left: 6px;">${(activity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}</span>
+                  ${(activity.activity_type || 'normal') === 'cac有约' ? '<span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:6px;">☕ cac有约</span>' : '<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:6px;">📋 分享会</span>'}
                   ${activity.group_name ? `<span class="tag" style="margin-left: 6px;">兴趣组：${activity.group_name}</span>` : ''}
                 </div>
               </div>

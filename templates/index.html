@@ -952,7 +952,7 @@
           <div class="activity-time">⏰ ${activity.time || '时间未定'}</div>
           <div class="activity-speakers">👤 ${activity.speakers || '分享者未定'}</div>
           <div class="activity-topic">📌 ${activity.topic || '主题未定'}</div>
-          <div class="activity-date" style="margin-top: 4px;">🏷️ ${(activity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}${activity.group_name ? ` · ${activity.group_name}` : ''}</div>
+          <div class="activity-date" style="margin-top: 4px;">${(activity.activity_type || 'normal') === 'cac有约' ? '<span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:4px;font-size:12px;">☕ cac有约</span>' : '<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:4px;font-size:12px;">📋 分享会</span>'}${activity.group_name ? ` <span style="color:var(--sub);font-size:12px;">· ${activity.group_name}</span>` : ''}</div>
         </div>
       `).join('');
     }
@@ -996,8 +996,8 @@
         <form id="signup-form">
           <input type="hidden" name="activity_id" value="${selectedActivity.id}">
 
-          <div class="tag" style="margin-bottom: 6px; display: inline-block;">
-            ${(selectedActivity.activity_type || 'normal') === 'cac有约' ? 'cac有约' : 'normal'}${selectedActivity.group_name ? ` · ${selectedActivity.group_name}` : ''}
+          <div style="margin-bottom: 6px; display: inline-block;">
+            ${(selectedActivity.activity_type || 'normal') === 'cac有约' ? '<span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:4px;font-size:12px;">☕ cac有约</span>' : '<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:4px;font-size:12px;">📋 分享会</span>'}${selectedActivity.group_name ? ` <span style="color:var(--sub);font-size:12px;">· ${selectedActivity.group_name}</span>` : ''}
           </div>
           
           <label>
@@ -1535,8 +1535,8 @@
     loadActivities();
     manageLoadBtnEl.addEventListener('click', () => loadMySignups());
     
-    // 每30秒刷新一次活动列表
-    setInterval(loadActivities, 30000);
+    // 每120秒刷新一次活动列表
+    setInterval(loadActivities, 120000);
   </script>
 </body>
 </html>
