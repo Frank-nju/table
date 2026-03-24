@@ -194,7 +194,7 @@ CAC_NAME = os.getenv("CAC_NAME", "cac").strip()
 CAC_EMAIL = os.getenv("CAC_EMAIL", "nova@nju.edu.cn").strip()
 PROFILE_EXPLORE_DEFAULT_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_DEFAULT_PAGE_SIZE", "10"))
 PROFILE_EXPLORE_MAX_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_MAX_PAGE_SIZE", "100"))
-PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "20"))
+PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "120"))
 PROFILE_FEED_DEFAULT_LIMIT = int(os.getenv("PROFILE_FEED_DEFAULT_LIMIT", "30"))
 
 class MySQLBase:
@@ -3285,24 +3285,36 @@ def api_create_activity():
             selected_group = _get_interest_group_by_id(creator_memberships[0].get(GROUP_MEMBER_COL_GROUP_ID, ''))
 
     # 检测冲突（仅提示，不拦截创建）
-    # CAC有约完全不参与冲突检测
     warnings = []
-    if activity_type != 'cac有约':
-        # 普通活动检测与CAC有约的冲突（可选，当前配置可能不准确，暂时跳过）
-        pass
-
     existing_activities = _list_activities()
     new_range = _parse_time_range(time)
+    
     if new_range:
         for act in existing_activities:
-            # CAC有约不参与普通活动的冲突检测
-            if str(act.get(ACTIVITY_COL_TYPE, '')).strip() == 'cac有约':
+            existing_date = str(act.get(ACTIVITY_COL_DATE, '')).strip()
+            existing_type = str(act.get(ACTIVITY_COL_TYPE, '')).strip() or 'normal'
+            
+            # 不同日期的活动无需检测冲突
+            if existing_date != date:
                 continue
-            if str(act.get(ACTIVITY_COL_DATE, '')) == date:
-                existing_range = _parse_time_range(act.get(ACTIVITY_COL_TIME, ''))
-                if existing_range and _times_overlap(new_range, existing_range):
-                    existing_topic = str(act.get(ACTIVITY_COL_TOPIC, '')).strip()
-                    warnings.append(f"与已有活动「{existing_topic}」时间重叠，请确认是否继续")
+            
+            existing_range = _parse_time_range(act.get(ACTIVITY_COL_TIME, ''))
+            if not (existing_range and _times_overlap(new_range, existing_range)):
+                continue
+            
+            existing_topic = str(act.get(ACTIVITY_COL_TOPIC, '')).strip()
+            
+            # 规则1：普通活动与普通活动冲突检测
+            if activity_type != 'cac有约' and existing_type != 'cac有约':
+                warnings.append(f"与已有活动「{existing_topic}」（普通活动）时间重叠，请确认是否继续")
+            
+            # 规则2：普通活动与CAC有约冲突检测
+            elif activity_type != 'cac有约' and existing_type == 'cac有约':
+                warnings.append(f"与 CAC有约「{existing_topic}」时间冲突，强烈建议调整时间！")
+            
+            # 规则3：CAC有约与普通活动冲突检测
+            elif activity_type == 'cac有约' and existing_type != 'cac有约':
+                warnings.append(f"与已有活动「{existing_topic}」（普通活动）时间冲突，强烈建议调整时间！")
 
     # 创建活动记录
     row_data = {
