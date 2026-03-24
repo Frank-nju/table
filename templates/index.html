@@ -934,7 +934,10 @@
     }
 
     function renderActivityList() {
-      if (activities.length === 0) {
+      // 过滤掉已结项的活动，只显示进行中和待结项的
+      const activeActivities = activities.filter(activity => activity.status !== '已结项');
+
+      if (activeActivities.length === 0) {
         activityListEl.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">📭</div>
@@ -945,7 +948,7 @@
         return;
       }
 
-      activityListEl.innerHTML = activities.map((activity) => `
+      activityListEl.innerHTML = activeActivities.map((activity) => `
         <div class="activity-item ${selectedActivity && selectedActivity.id === activity.id ? 'selected' : ''}" 
              onclick="selectActivity('${activity.id}')">
           <div class="activity-date">${activity.date || '日期未定'}</div>
