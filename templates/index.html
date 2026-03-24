@@ -934,8 +934,38 @@
     }
 
     function renderActivityList() {
-      // 过滤掉已结项的活动，只显示进行中和待结项的
-      const activeActivities = activities.filter(activity => activity.status !== '已结项');
+      const now = new Date();
+
+      // 过滤条件：
+      // 1. 排除已结项的活动
+      // 2. 排除当前时间之前的活动（根据日期和结束时间判断）
+      const activeActivities = activities.filter(activity => {
+        if (activity.status === '已结项') return false;
+
+        const dateStr = activity.date || '';
+        const timeStr = activity.time || '';
+
+        if (!dateStr) return true; // 日期未定的活动保留
+
+        // 解析时间段的结束时间（格式如 "14:00-16:00"）
+        const timeParts = timeStr.split('-');
+        const endTimeStr = timeParts.length >= 2 ? timeParts[1].trim() : '';
+
+        // 构建活动的结束时间
+        const activityEndTime = new Date(dateStr);
+        if (endTimeStr) {
+          const [hours, minutes] = endTimeStr.split(':').map(Number);
+          if (!isNaN(hours)) {
+            activityEndTime.setHours(hours, minutes || 0, 0, 0);
+          }
+        } else {
+          // 没有时间则默认当天结束
+          activityEndTime.setHours(23, 59, 59, 999);
+        }
+
+        // 只保留当前时间之后的活动
+        return activityEndTime > now;
+      });
 
       if (activeActivities.length === 0) {
         activityListEl.innerHTML = `
