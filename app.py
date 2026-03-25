@@ -184,6 +184,7 @@ BOUNDARY_WEEKLY_REPORT_HOUR = int(os.getenv("BOUNDARY_WEEKLY_REPORT_HOUR", "22")
 BOUNDARY_WEEKLY_REPORT_MINUTE = int(os.getenv("BOUNDARY_WEEKLY_REPORT_MINUTE", "0"))
 ACTIVITY_CLOSE_GRACE_MINUTES = int(os.getenv("ACTIVITY_CLOSE_GRACE_MINUTES", "120"))
 REVIEW_REMINDER_INTERVAL_HOURS = int(os.getenv("REVIEW_REMINDER_INTERVAL_HOURS", "24"))
+REVIEW_REMINDER_HOUR = int(os.getenv("REVIEW_REMINDER_HOUR", "22"))  # 晚上10点发送
 BACKGROUND_SCAN_INTERVAL_SECONDS = int(os.getenv("BACKGROUND_SCAN_INTERVAL_SECONDS", "3600"))
 ROSTER_FILE_PATH = os.getenv("ROSTER_FILE_PATH", os.path.join(os.path.dirname(__file__), "member_roster.local.txt"))
 # Use platform-specific temp directory
@@ -1958,8 +1959,13 @@ def _build_profile_recommendations(name, limit=6):
 
 
 def _run_review_reminder_scan():
+    now = _now()
+    # 只在指定小时执行（默认晚上10点）
+    if now.hour != REVIEW_REMINDER_HOUR:
+        return
+
+    today_str = now.strftime('%Y-%m-%d')
     with _task_lock():
-        reminder_cutoff = _now() - timedelta(hours=REVIEW_REMINDER_INTERVAL_HOURS)
         for signup in _list_signups():
             if _get_signup_role(signup) != '评议员':
                 continue
@@ -1970,8 +1976,9 @@ def _run_review_reminder_scan():
                 continue
             if (_safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal') == 'cac有约':
                 continue
+            # 检查今天是否已发送过
             last_reminder = _get_signup_last_review_reminder_at(signup)
-            if last_reminder and last_reminder > reminder_cutoff:
+            if last_reminder and last_reminder.strftime('%Y-%m-%d') == today_str:
                 continue
             _notify_review_doc_reminder(signup, activity)
             try:
@@ -2596,13 +2603,30 @@ def api_submit_review_doc(signup_id):
     if _get_signup_name(signup) != name:
         return jsonify({"ok": False, "message": "只能提交自己的评议文档"}), 403
 
+    # 检查表中是否有对应列
+    allowed_columns = _get_table_columns(SIGNUP_TABLE_NAME)
+    missing_columns = []
+    if SIGNUP_COL_REVIEW_DOC_URL not in allowed_columns:
+        missing_columns.append(SIGNUP_COL_REVIEW_DOC_URL)
+    if SIGNUP_COL_REVIEW_SUBMITTED_AT not in allowed_columns:
+        missing_columns.append(SIGNUP_COL_REVIEW_SUBMITTED_AT)
+    if missing_columns:
+        print(f"[WARNING] 报名表缺少列: {missing_columns}, 请在数据库中添加这些列")
+
     try:
         _update_row(SIGNUP_TABLE_NAME, signup.get('_id'), {
             SIGNUP_COL_REVIEW_DOC_URL: review_doc_url,
             SIGNUP_COL_REVIEW_SUBMITTED_AT: _now_iso(),
         })
     except Exception as exc:
+        print(f"[ERROR] 评议文档提交失败: {exc}")
         return jsonify({"ok": False, "message": f"评议文档提交失败: {exc}"}), 500
+
+    # 验证是否保存成功
+    refreshed = _get_signup_by_id(signup_id)
+    if refreshed and _get_signup_review_doc_url(refreshed) != review_doc_url:
+        print(f"[WARNING] 评议文档保存验证失败: 期望 {review_doc_url}, 实际 {_get_signup_review_doc_url(refreshed)}")
+        return jsonify({"ok": False, "message": "评议文档保存失败，请检查数据库表结构"}), 500
 
     _touch_data_version()
 
@@ -3454,20 +3478,6 @@ def api_close_activity(activity_id):
         })
     except Exception as exc:
         return jsonify({"ok": False, "message": f"活动结项失败: {exc}"}), 500
-
-    refreshed_activity = _get_activity_by_id(activity_id) or activity
-    activity_type = _safe_text(refreshed_activity.get(ACTIVITY_COL_TYPE, '')) or 'normal'
-    if activity_type != 'cac有约':
-        for reviewer_signup in _get_activity_signups(activity_id, role='评议员'):
-            if _get_signup_review_doc_url(reviewer_signup):
-                continue
-            _notify_review_doc_reminder(reviewer_signup, refreshed_activity)
-            try:
-                _update_row(SIGNUP_TABLE_NAME, reviewer_signup.get('_id'), {
-                    SIGNUP_COL_LAST_REVIEW_REMINDER_AT: _now_iso(),
-                })
-            except Exception as exc:
-                print(f"Update immediate reminder timestamp failed: {exc}")
 
     _touch_data_version()
 
