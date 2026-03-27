@@ -11,6 +11,12 @@ from datetime import datetime, timedelta
 from collections import Counter, defaultdict
 from email.message import EmailMessage
 
+# 自定义异常处理
+from utils import (
+    AppError, DatabaseError, ValidationError, NotFoundError, AuthError, ConflictError,
+    success_response, error_response
+)
+
 # fcntl is only available on Unix/Linux
 if platform.system() != 'Windows':
     import fcntl
@@ -154,6 +160,55 @@ CAC_SLOT_COL_ACTIVITY_ID = os.getenv("CAC_SLOT_COL_ACTIVITY_ID", "关联活动ID
 CAC_SLOT_COL_CREATED_BY = os.getenv("CAC_SLOT_COL_CREATED_BY", "创建者")
 CAC_SLOT_COL_CREATED_AT = os.getenv("CAC_SLOT_COL_CREATED_AT", "创建时间")
 
+# ===== 自动注册列配置 =====
+# 定义每个表需要的列，启动时自动同步到 app_table_columns
+AUTO_REGISTER_COLUMNS = {
+    # 活动表
+    "分享会活动": [
+        "活动日期", "活动时间", "分享者", "活动主题", "活动教室", "线上视频号",
+        "组织者姓名", "组织者邮箱", "活动状态", "结项时间", "准时结项", "结项人",
+        "活动类型", "所属兴趣组ID", "所属兴趣组", "组织者学号", "预期人数",
+    ],
+    # 报名表
+    "分享会报名": [
+        "姓名", "关联活动", "角色", "联系电话", "邮箱", "学号",
+        "评议语雀链接", "评议提交时间", "上次评议提醒时间", "评议内容",
+    ],
+    # 评议评分表
+    "评议评分": [
+        "评议报名ID", "活动ID", "评议者姓名", "评分人姓名", "评分", "权重", "评分备注",
+    ],
+    # 输出活动记录表
+    "输出活动记录": [
+        "姓名", "输出类型", "输出日期", "备注",
+    ],
+    # 用户档案表
+    "用户档案": [
+        "姓名", "邮箱", "角色", "首次使用时间",
+    ],
+    # 兴趣组表
+    "兴趣组": [
+        "组名", "组长", "主题目标", "时间边界", "执行方案", "简介", "状态", "创建时间",
+    ],
+    # 兴趣组成员表
+    "兴趣组成员": [
+        "兴趣组ID", "兴趣组名", "成员姓名", "成员邮箱", "成员身份", "加入时间",
+    ],
+    # 评议邀请表
+    "评议邀请": [
+        "活动ID", "活动主题", "邀请人", "被邀请人", "被邀请邮箱",
+        "邀请来源", "状态", "邀请时间", "状态更新时间", "状态更新人",
+    ],
+    # CAC管理员表
+    "CAC管理员": [
+        "姓名", "添加时间",
+    ],
+    # CAC教室时间槽表
+    "CAC教室时间槽": [
+        "教室", "日期", "时间段", "状态", "关联活动ID", "创建者", "创建时间",
+    ],
+}
+
 # ===== 报名限额配置 =====
 REVIEWER_LIMIT = int(os.getenv("REVIEWER_LIMIT", "3"))
 LISTENER_UNLIMITED = os.getenv("LISTENER_UNLIMITED", "true").lower() == "true"
@@ -184,7 +239,6 @@ BOUNDARY_WEEKLY_REPORT_HOUR = int(os.getenv("BOUNDARY_WEEKLY_REPORT_HOUR", "22")
 BOUNDARY_WEEKLY_REPORT_MINUTE = int(os.getenv("BOUNDARY_WEEKLY_REPORT_MINUTE", "0"))
 ACTIVITY_CLOSE_GRACE_MINUTES = int(os.getenv("ACTIVITY_CLOSE_GRACE_MINUTES", "120"))
 REVIEW_REMINDER_INTERVAL_HOURS = int(os.getenv("REVIEW_REMINDER_INTERVAL_HOURS", "24"))
-REVIEW_REMINDER_HOUR = int(os.getenv("REVIEW_REMINDER_HOUR", "22"))  # 晚上10点发送
 BACKGROUND_SCAN_INTERVAL_SECONDS = int(os.getenv("BACKGROUND_SCAN_INTERVAL_SECONDS", "3600"))
 ROSTER_FILE_PATH = os.getenv("ROSTER_FILE_PATH", os.path.join(os.path.dirname(__file__), "member_roster.local.txt"))
 # Use platform-specific temp directory
@@ -382,7 +436,34 @@ else:
             "并且该 Token 对目标表有读写权限。"
         ) from exc
 
+# 自动注册列到 app_table_columns
+def _auto_register_columns():
+    """启动时自动同步列定义到数据库"""
+    if hasattr(base, '_sync_columns'):
+        for table_name, columns in AUTO_REGISTER_COLUMNS.items():
+            try:
+                base._sync_columns(table_name, columns)
+            except Exception as e:
+                print(f"[WARN] Auto register columns for {table_name} failed: {e}")
+        print("[INFO] Auto register columns completed")
+
+_auto_register_columns()
+
 app = Flask(__name__)
+
+# ===== 全局异常处理器 =====
+@app.errorhandler(AppError)
+def handle_app_error(error):
+    """统一处理自定义异常"""
+    return jsonify({"ok": False, "message": error.message, "code": error.code}), error.status_code
+
+@app.errorhandler(404)
+def handle_404(error):
+    return jsonify({"ok": False, "message": "资源不存在", "code": "NOT_FOUND"}), 404
+
+@app.errorhandler(500)
+def handle_500(error):
+    return jsonify({"ok": False, "message": "服务器内部错误", "code": "INTERNAL_ERROR"}), 500
 
 # Protect check+insert in single-process deployment to reduce race conditions.
 submit_lock = threading.Lock()
@@ -1959,13 +2040,8 @@ def _build_profile_recommendations(name, limit=6):
 
 
 def _run_review_reminder_scan():
-    now = _now()
-    # 只在指定小时执行（默认晚上10点）
-    if now.hour != REVIEW_REMINDER_HOUR:
-        return
-
-    today_str = now.strftime('%Y-%m-%d')
     with _task_lock():
+        reminder_cutoff = _now() - timedelta(hours=REVIEW_REMINDER_INTERVAL_HOURS)
         for signup in _list_signups():
             if _get_signup_role(signup) != '评议员':
                 continue
@@ -1976,9 +2052,8 @@ def _run_review_reminder_scan():
                 continue
             if (_safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal') == 'cac有约':
                 continue
-            # 检查今天是否已发送过
             last_reminder = _get_signup_last_review_reminder_at(signup)
-            if last_reminder and last_reminder.strftime('%Y-%m-%d') == today_str:
+            if last_reminder and last_reminder > reminder_cutoff:
                 continue
             _notify_review_doc_reminder(signup, activity)
             try:
@@ -2281,11 +2356,14 @@ def healthz():
 
 @app.get("/api/activities")
 def api_activities():
-    """获取所有活动列表和统计信息"""
+    """获取所有活动列表和统计信息（仅返回非已结项的活动）"""
     activities = _list_activities()
     result = []
-    
+
     for activity in activities:
+        # 跳过已结项的活动
+        if _activity_is_closed(activity):
+            continue
         activity_id = activity.get('_id')
         details = _get_activity_details(activity)
         stats = _get_signup_stats(activity_id)
@@ -2603,30 +2681,13 @@ def api_submit_review_doc(signup_id):
     if _get_signup_name(signup) != name:
         return jsonify({"ok": False, "message": "只能提交自己的评议文档"}), 403
 
-    # 检查表中是否有对应列
-    allowed_columns = _get_table_columns(SIGNUP_TABLE_NAME)
-    missing_columns = []
-    if SIGNUP_COL_REVIEW_DOC_URL not in allowed_columns:
-        missing_columns.append(SIGNUP_COL_REVIEW_DOC_URL)
-    if SIGNUP_COL_REVIEW_SUBMITTED_AT not in allowed_columns:
-        missing_columns.append(SIGNUP_COL_REVIEW_SUBMITTED_AT)
-    if missing_columns:
-        print(f"[WARNING] 报名表缺少列: {missing_columns}, 请在数据库中添加这些列")
-
     try:
         _update_row(SIGNUP_TABLE_NAME, signup.get('_id'), {
             SIGNUP_COL_REVIEW_DOC_URL: review_doc_url,
             SIGNUP_COL_REVIEW_SUBMITTED_AT: _now_iso(),
         })
     except Exception as exc:
-        print(f"[ERROR] 评议文档提交失败: {exc}")
         return jsonify({"ok": False, "message": f"评议文档提交失败: {exc}"}), 500
-
-    # 验证是否保存成功
-    refreshed = _get_signup_by_id(signup_id)
-    if refreshed and _get_signup_review_doc_url(refreshed) != review_doc_url:
-        print(f"[WARNING] 评议文档保存验证失败: 期望 {review_doc_url}, 实际 {_get_signup_review_doc_url(refreshed)}")
-        return jsonify({"ok": False, "message": "评议文档保存失败，请检查数据库表结构"}), 500
 
     _touch_data_version()
 
@@ -3478,6 +3539,20 @@ def api_close_activity(activity_id):
         })
     except Exception as exc:
         return jsonify({"ok": False, "message": f"活动结项失败: {exc}"}), 500
+
+    refreshed_activity = _get_activity_by_id(activity_id) or activity
+    activity_type = _safe_text(refreshed_activity.get(ACTIVITY_COL_TYPE, '')) or 'normal'
+    if activity_type != 'cac有约':
+        for reviewer_signup in _get_activity_signups(activity_id, role='评议员'):
+            if _get_signup_review_doc_url(reviewer_signup):
+                continue
+            _notify_review_doc_reminder(reviewer_signup, refreshed_activity)
+            try:
+                _update_row(SIGNUP_TABLE_NAME, reviewer_signup.get('_id'), {
+                    SIGNUP_COL_LAST_REVIEW_REMINDER_AT: _now_iso(),
+                })
+            except Exception as exc:
+                print(f"Update immediate reminder timestamp failed: {exc}")
 
     _touch_data_version()
 
