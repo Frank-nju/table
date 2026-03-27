@@ -96,6 +96,43 @@ class TestSignupService(unittest.TestCase):
             self.assertIn('name', serialized)
 
 
+class TestGroupService(unittest.TestCase):
+    """测试兴趣组服务"""
+
+    def test_list_groups(self):
+        """测试列出兴趣组"""
+        from services.group import list_interest_groups
+        groups = list_interest_groups()
+        self.assertIsInstance(groups, list)
+
+    def test_serialize_group(self):
+        """测试序列化兴趣组"""
+        from services.group import list_interest_groups, serialize_interest_group
+        groups = list_interest_groups()
+        if groups:
+            serialized = serialize_interest_group(groups[0])
+            self.assertIsInstance(serialized, dict)
+            self.assertIn('id', serialized)
+            self.assertIn('name', serialized)
+
+
+class TestCACAdminService(unittest.TestCase):
+    """测试CAC管理服务"""
+
+    def test_list_cac_admins(self):
+        """测试列出CAC管理员"""
+        from services.cac_admin import list_cac_admins
+        admins = list_cac_admins()
+        self.assertIsInstance(admins, list)
+
+    def test_is_cac_admin(self):
+        """测试检查是否是管理员"""
+        from services.cac_admin import is_cac_admin
+        # 测试一个不存在的用户
+        result = is_cac_admin("不存在的用户_12345")
+        self.assertFalse(result)
+
+
 class TestUtils(unittest.TestCase):
     """测试工具模块"""
 

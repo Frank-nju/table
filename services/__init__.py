@@ -16,6 +16,10 @@ from services.signup import (
     get_signups_by_activity, count_signups_by_activity as count_signups,
     serialize_signup, create_signup, delete_signup, update_signup_review_doc
 )
+from services.cac_admin import (
+    list_cac_admins, is_cac_admin, add_cac_admin, remove_cac_admin,
+    list_cac_room_slots, add_cac_room_slot, remove_cac_room_slot
+)
 
 __all__ = [
     # 邮件服务
@@ -29,4 +33,7 @@ __all__ = [
     "list_signups", "get_signup_by_id", "get_signup_name", "get_signup_email",
     "get_signups_by_activity", "count_signups",
     "serialize_signup", "create_signup", "delete_signup", "update_signup_review_doc",
+    # CAC 管理服务
+    "list_cac_admins", "is_cac_admin", "add_cac_admin", "remove_cac_admin",
+    "list_cac_room_slots", "add_cac_room_slot", "remove_cac_room_slot",
 ]
