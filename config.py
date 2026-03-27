@@ -184,6 +184,12 @@ PROFILE_EXPLORE_MAX_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_MAX_PAGE_SIZE", "
 PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "120"))
 PROFILE_FEED_DEFAULT_LIMIT = int(os.getenv("PROFILE_FEED_DEFAULT_LIMIT", "30"))
 
+# ===== 边界预警配置 =====
+BOUNDARY_LOOKBACK_DAYS = int(os.getenv("BOUNDARY_LOOKBACK_DAYS", "14"))
+
+# ===== CAC 配置 =====
+CAC_NAME = os.getenv("CAC_NAME", "cac").strip()
+
 # ===== 其他配置 =====
 TASK_LOCK_FILE = os.path.join(tempfile.gettempdir(), "table_signup_task.lock")
 ACTIVITY_CLOSE_GRACE_MINUTES = int(os.getenv("ACTIVITY_CLOSE_GRACE_MINUTES", "1440"))  # 24小时

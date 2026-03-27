@@ -12,7 +12,7 @@ from config import (
     CAC_ADMIN_COL_NAME, CAC_ADMIN_COL_CREATED_AT,
     CAC_SLOT_COL_DATE, CAC_SLOT_COL_TIME_SLOT, CAC_SLOT_COL_CLASSROOM,
     CAC_SLOT_COL_STATUS, CAC_SLOT_COL_ACTIVITY_ID, CAC_SLOT_COL_CREATED_BY,
-    CAC_SLOT_COL_CREATED_AT
+    CAC_SLOT_COL_CREATED_AT, CAC_NAME
 )
 from models import db
 from utils import ValidationError, NotFoundError, AuthError
@@ -30,6 +30,12 @@ def is_cac_admin(name):
     """检查是否是CAC管理员"""
     admins = list_cac_admins()
     return any(a['name'] == name for a in admins)
+
+
+def is_cac_user(name):
+    """检查是否是CAC系统用户"""
+    text = str(name).strip().lower() if name else ''
+    return text == str(CAC_NAME).strip().lower() or text == "cac"
 
 
 def add_cac_admin(name, requester_name=None):

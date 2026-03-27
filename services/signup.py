@@ -53,6 +53,11 @@ def get_signup_role(signup):
     return _safe_text(signup.get(SIGNUP_COL_ROLE, ''))
 
 
+def get_signup_review_doc_url(signup):
+    """获取评议文档链接"""
+    return _safe_text(signup.get(SIGNUP_COL_REVIEW_DOC_URL, ''))
+
+
 def get_signups_by_activity(activity_id, role=None):
     """获取活动的报名列表"""
     signups = list_signups()

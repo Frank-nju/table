@@ -151,5 +151,111 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(response["ok"])
 
 
+class TestProfileService(unittest.TestCase):
+    """测试用户档案服务"""
+
+    def test_list_profiles(self):
+        """测试列出用户档案"""
+        from services.profile import list_user_profiles
+        profiles = list_user_profiles()
+        self.assertIsInstance(profiles, list)
+
+    def test_get_profile(self):
+        """测试获取用户档案"""
+        from services.profile import get_user_profile
+        # 测试不存在的用户
+        profile = get_user_profile("不存在的用户_12345")
+        self.assertIsNone(profile)
+
+
+class TestInviteService(unittest.TestCase):
+    """测试评议邀请服务"""
+
+    def test_list_invites(self):
+        """测试列出邀请"""
+        from services.invite import list_review_invites
+        invites = list_review_invites()
+        self.assertIsInstance(invites, list)
+
+    def test_serialize_invite(self):
+        """测试序列化邀请"""
+        from services.invite import list_review_invites, serialize_review_invite
+        invites = list_review_invites()
+        if invites:
+            serialized = serialize_review_invite(invites[0])
+            self.assertIsInstance(serialized, dict)
+            self.assertIn('id', serialized)
+
+
+class TestRatingService(unittest.TestCase):
+    """测试评议评分服务"""
+
+    def test_list_ratings(self):
+        """测试列出评分"""
+        from services.rating import list_review_ratings
+        ratings = list_review_ratings()
+        self.assertIsInstance(ratings, list)
+
+    def test_serialize_rating(self):
+        """测试序列化评分"""
+        from services.rating import list_review_ratings, serialize_rating
+        ratings = list_review_ratings()
+        if ratings:
+            serialized = serialize_rating(ratings[0])
+            self.assertIsInstance(serialized, dict)
+            self.assertIn('id', serialized)
+            self.assertIn('score', serialized)
+
+
+class TestStatsService(unittest.TestCase):
+    """测试统计服务"""
+
+    def test_build_share_leaderboard(self):
+        """测试构建分享排行榜"""
+        from services.stats import build_share_leaderboard
+        leaderboard = build_share_leaderboard()
+        self.assertIsInstance(leaderboard, list)
+
+    def test_build_participation_leaderboard(self):
+        """测试构建参与排行榜"""
+        from services.stats import build_participation_leaderboard
+        leaderboard = build_participation_leaderboard()
+        self.assertIsInstance(leaderboard, list)
+
+    def test_build_punctuality_leaderboard(self):
+        """测试构建准时率排行榜"""
+        from services.stats import build_punctuality_leaderboard
+        leaderboard = build_punctuality_leaderboard()
+        self.assertIsInstance(leaderboard, list)
+
+
+class TestCacheUtils(unittest.TestCase):
+    """测试缓存工具"""
+
+    def test_cached_build(self):
+        """测试缓存构建"""
+        from utils.cache import cached_build, clear_cache
+
+        call_count = 0
+
+        def builder():
+            nonlocal call_count
+            call_count += 1
+            return {"value": call_count}
+
+        # 第一次调用
+        result1 = cached_build("test_key", 60, builder)
+        self.assertEqual(result1["value"], 1)
+
+        # 第二次调用应该使用缓存
+        result2 = cached_build("test_key", 60, builder)
+        self.assertEqual(result2["value"], 1)
+
+        # 清除缓存后再调用
+        clear_cache("test_key")
+        result3 = cached_build("test_key", 60, builder)
+        self.assertEqual(result3["value"], 2)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
