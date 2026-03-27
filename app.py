@@ -17,6 +17,12 @@ from utils import (
     success_response, error_response
 )
 
+# 路由蓝图
+from routes import (
+    activity_bp, signup_bp, cac_bp, group_bp,
+    profile_bp, invite_bp, stats_bp
+)
+
 # fcntl is only available on Unix/Linux
 if platform.system() != 'Windows':
     import fcntl
@@ -450,6 +456,15 @@ def _auto_register_columns():
 _auto_register_columns()
 
 app = Flask(__name__)
+
+# ===== 注册路由蓝图 =====
+app.register_blueprint(activity_bp)
+app.register_blueprint(signup_bp)
+app.register_blueprint(cac_bp)
+app.register_blueprint(group_bp)
+app.register_blueprint(profile_bp)
+app.register_blueprint(invite_bp)
+app.register_blueprint(stats_bp)
 
 # ===== 全局异常处理器 =====
 @app.errorhandler(AppError)
@@ -2475,23 +2490,6 @@ def api_activities_filter():
     return jsonify(payload)
 
 
-@app.get("/api/leaderboards")
-def api_leaderboards():
-    """获取各类榜单与边界预警"""
-    _, review_quality_ranking = _build_review_quality_stats()
-    boundary_stats = _build_boundary_stats()
-    return jsonify({
-        "ok": True,
-        "leaderboards": {
-            "sharing": _build_share_leaderboard(),
-            "participation": _build_participation_leaderboard(),
-            "review_quality": review_quality_ranking,
-            "punctuality": _build_punctuality_leaderboard(),
-        },
-        "boundary_watch": boundary_stats,
-    })
-
-
 @app.get("/api/admin/dashboard")
 def api_admin_dashboard():
     payload = _cached_build(
@@ -2756,78 +2754,11 @@ def api_rate_review():
     return jsonify({"ok": True, "message": "评分已提交", "weight": weight})
 
 
-@app.get("/api/stats")
-def api_stats():
-    """获取全局统计信息和预警"""
-    inactive = _detect_inactive_members()
-    violations = _detect_boundary_violations()
-
-    activities = _list_activities()
-    activities_details = [_get_activity_details(a) for a in activities]
-    time_conflicts = _detect_time_conflicts(activities_details)
-    boundary_watch = _build_boundary_stats()
-
-    return jsonify({
-        "ok": True,
-        "inactive_groups": inactive,
-        "boundary_violations": violations,
-        "boundary_watch": boundary_watch,
-        "time_conflicts": {
-            "count": len(time_conflicts),
-            "conflicts": time_conflicts,
-        },
-    })
-
-
 @app.post("/api/admin/init-phase1-schema")
 def api_init_phase1_schema():
     result = _ensure_phase1_schema()
     status_code = 200 if result.get("ok") else 500
     return jsonify(result), status_code
-
-
-@app.post("/api/profile/upsert")
-def api_profile_upsert():
-    data = request.get_json(silent=True) or {}
-    name = _safe_text(data.get('name', ''))
-    email = _safe_text(data.get('email', ''))
-    role = _safe_text(data.get('role', '')) or '普通用户'
-    if not name:
-        return jsonify({"ok": False, "message": "姓名不能为空"}), 400
-    if not _get_user_profile(name) and not email:
-        return jsonify({"ok": False, "message": "首次使用必须填写邮箱"}), 400
-
-    profile = _upsert_user_profile(name, email=email, role=role)
-    if not profile:
-        return jsonify({"ok": False, "message": "用户档案保存失败"}), 500
-    _touch_data_version()
-    return jsonify({
-        "ok": True,
-        "profile": {
-            "id": str(profile.get('_id')),
-            "name": _safe_text(profile.get(USER_COL_NAME, '')),
-            "email": _safe_text(profile.get(USER_COL_EMAIL, '')),
-            "role": _safe_text(profile.get(USER_COL_ROLE, '')),
-            "first_seen_at": _safe_text(profile.get(USER_COL_FIRST_SEEN_AT, '')),
-        }
-    })
-
-
-@app.get("/api/profile/<name>")
-def api_profile_get(name):
-    profile = _get_user_profile(name)
-    if not profile:
-        return jsonify({"ok": False, "message": "用户档案不存在"}), 404
-    return jsonify({
-        "ok": True,
-        "profile": {
-            "id": str(profile.get('_id')),
-            "name": _safe_text(profile.get(USER_COL_NAME, '')),
-            "email": _safe_text(profile.get(USER_COL_EMAIL, '')),
-            "role": _safe_text(profile.get(USER_COL_ROLE, '')),
-            "first_seen_at": _safe_text(profile.get(USER_COL_FIRST_SEEN_AT, '')),
-        }
-    })
 
 
 @app.get("/api/groups")
@@ -2999,83 +2930,6 @@ def api_group_leave(group_id):
     _notify_group_membership_change(group, member_name, _get_user_email(member_name), '退出')
     _touch_data_version()
     return jsonify({"ok": True, "message": "已退出兴趣组", "group": _serialize_interest_group(group)})
-
-
-@app.post("/api/invite-reviewer")
-def api_invite_reviewer():
-    data = request.get_json(silent=True) or {}
-    activity_id = _safe_text(data.get('activity_id', ''))
-    inviter_name = _safe_text(data.get('inviter_name', ''))
-    invitee_name = _safe_text(data.get('invitee_name', ''))
-    invitee_email = _safe_text(data.get('invitee_email', ''))
-    source_type = _safe_text(data.get('source_type', '分享者指定')) or '分享者指定'
-
-    if not activity_id or not inviter_name or not invitee_name:
-        return jsonify({"ok": False, "message": "请完整填写活动、邀请人和被邀请人"}), 400
-    if source_type not in {'开放报名', '分享者指定', 'CAC特邀'}:
-        return jsonify({"ok": False, "message": "邀请来源必须为 开放报名、分享者指定 或 CAC特邀"}), 400
-
-    activity = _get_activity_by_id(activity_id)
-    if not activity:
-        return jsonify({"ok": False, "message": "活动不存在"}), 404
-
-    topic = _safe_text(activity.get(ACTIVITY_COL_TOPIC, ''))
-    _upsert_user_profile(invitee_name, email=invitee_email, role='普通用户')
-    final_email = _get_user_email(invitee_name)
-
-    row_data = {
-        INVITE_COL_ACTIVITY_ID: activity_id,
-        INVITE_COL_ACTIVITY_TOPIC: topic,
-        INVITE_COL_INVITER_NAME: inviter_name,
-        INVITE_COL_INVITEE_NAME: invitee_name,
-        INVITE_COL_INVITEE_EMAIL: final_email,
-        INVITE_COL_SOURCE_TYPE: source_type,
-        INVITE_COL_STATUS: '已发送',
-        INVITE_COL_CREATED_AT: _now_iso(),
-        INVITE_COL_UPDATED_AT: _now_iso(),
-        INVITE_COL_UPDATED_BY: inviter_name,
-    }
-
-    try:
-        created = _append_row(REVIEW_INVITE_TABLE_NAME, row_data)
-    except Exception as exc:
-        return jsonify({"ok": False, "message": f"评议邀请保存失败: {exc}"}), 500
-
-    if final_email:
-        subject = f"[CAC 分享会] 评议邀请：{topic}"
-        body = (
-            f"{invitee_name}，您好：\n\n"
-            f"{inviter_name} 通过“{source_type}”邀请您参与活动《{topic}》评议。\n"
-            "请登录系统确认并报名。"
-        )
-        _send_email_async(final_email, subject, body)
-
-    _touch_data_version()
-
-    return jsonify({"ok": True, "message": "评议邀请已发送", "invite": _serialize_review_invite(created if isinstance(created, dict) else row_data)})
-
-
-@app.get("/api/activity/<activity_id>/invites")
-def api_activity_invites(activity_id):
-    invites = []
-    for invite in _list_review_invites():
-        if _safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')) == str(activity_id):
-            invites.append(_serialize_review_invite(invite))
-    invites.sort(key=lambda item: (item.get('created_at', ''), item.get('invitee_name', '')))
-    return jsonify({"ok": True, "invites": invites})
-
-
-@app.get("/api/my-invites/<name>")
-def api_my_invites(name):
-    target = _safe_text(name)
-    if not target:
-        return jsonify({"ok": False, "message": "姓名不能为空"}), 400
-    invites = []
-    for invite in _list_review_invites():
-        if _safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) == target:
-            invites.append(_serialize_review_invite(invite))
-    invites.sort(key=lambda item: (item.get('created_at', ''), item.get('activity_topic', '')))
-    return jsonify({"ok": True, "invites": invites})
 
 
 @app.get("/api/profile-summary/<name>")

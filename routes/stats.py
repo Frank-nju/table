@@ -36,19 +36,15 @@ def api_leaderboards():
 @stats_bp.get("/stats")
 def api_stats():
     """获取统计数据"""
-    from services.activity import list_activities, count_signups_by_activity
-    from services.signup import list_signups
-    from services.group import list_interest_groups
+    from services.activity import list_activities
+    from services.stats import build_boundary_stats
 
+    # TODO: 需要迁移更多辅助函数来完善此接口
     activities = list_activities()
-    signups = list_signups()
-    groups = list_interest_groups()
+    boundary_watch = build_boundary_stats()
 
     return jsonify({
         "ok": True,
-        "stats": {
-            "total_activities": len(activities),
-            "total_signups": len(signups),
-            "total_groups": len(groups),
-        }
+        "total_activities": len(activities),
+        "boundary_watch": boundary_watch,
     })
