@@ -75,9 +75,14 @@ const getStatusType = (status) => {
                 >
                   <div class="activity-header">
                     <h3>{{ activity.topic || '未命名活动' }}</h3>
-                    <el-tag :type="getStatusType(activity.status)">
-                      {{ activity.status || '报名中' }}
-                    </el-tag>
+                    <div class="tags">
+                      <el-tag v-if="activity.activity_type === 'cac有约'" type="warning" size="small">
+                        CAC有约
+                      </el-tag>
+                      <el-tag :type="getStatusType(activity.status)">
+                        {{ activity.status || '报名中' }}
+                      </el-tag>
+                    </div>
                   </div>
 
                   <div class="activity-info">
@@ -205,6 +210,11 @@ const getStatusType = (status) => {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
+}
+
+.tags {
+  display: flex;
+  gap: 8px;
 }
 
 .activity-info {

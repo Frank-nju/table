@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { activityApi, signupApi } from '../api'
 import { useUserStore } from '../stores/user'
@@ -17,6 +17,21 @@ const signupForm = ref({
   phone: '',
   email: '',
   reviewContent: ''
+})
+
+// 根据活动类型计算可选角色
+const roleOptions = computed(() => {
+  if (activity.value?.activity_type === 'cac有约') {
+    return [{ value: '参与者', label: '参与者' }, { value: '旁听', label: '旁听' }]
+  }
+  return [{ value: '评议员', label: '评议员（需提交评议）' }, { value: '旁听', label: '旁听' }]
+})
+
+// 监听活动加载后设置默认角色
+watch(activity, (newVal) => {
+  if (newVal) {
+    signupForm.value.role = newVal.activity_type === 'cac有约' ? '参与者' : '评议员'
+  }
 })
 
 onMounted(async () => {
@@ -99,7 +114,9 @@ const handleSubmit = async () => {
                 {{ activity.creator_name }}
               </el-descriptions-item>
               <el-descriptions-item label="活动类型">
-                {{ activity.type || '普通分享' }}
+                <el-tag :type="activity.activity_type === 'cac有约' ? 'warning' : 'info'">
+                  {{ activity.activity_type === 'cac有约' ? 'CAC有约' : '普通分享' }}
+                </el-tag>
               </el-descriptions-item>
             </el-descriptions>
 
@@ -130,10 +147,9 @@ const handleSubmit = async () => {
 
               <el-form-item label="角色">
                 <el-radio-group v-model="signupForm.role">
-                  <el-radio value="评议员">
-                    评议员（需提交评议）
+                  <el-radio v-for="opt in roleOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
                   </el-radio>
-                  <el-radio value="旁听">旁听</el-radio>
                 </el-radio-group>
               </el-form-item>
 
