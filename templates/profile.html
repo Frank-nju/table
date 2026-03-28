@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CAC 个人主页</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --text: #1a202c;
+      --sub: #718096;
+      --line: #e2e8f0;
+      --ok: #10b981;
+      --ok-light: #d1fae5;
+      --warn: #f59e0b;
+      --warn-light: #fef3c7;
+      --bad: #ef4444;
+      --bad-light: #fee2e2;
+      --primary: #0891b2;
+      --primary-light: #06b6d4;
+      --primary-gradient: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+      --secondary: #7c3aed;
+      --secondary-gradient: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1600px 800px at 10% -20%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+        radial-gradient(1200px 600px at 100% 10%, rgba(124, 58, 237, 0.12) 0%, transparent 45%),
+        radial-gradient(800px 400px at 50% 100%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        var(--bg);
+      min-height: 100vh;
+      padding: 32px 24px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 24px;
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card h2, .card h3 {
+      margin: 0 0 16px;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card h2::before, .card h3::before {
+      content: '';
+      width: 4px;
+      height: 20px;
+      background: var(--primary-gradient);
+      border-radius: 2px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .kpi {
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      transition: all 0.25s ease;
+    }
+
+    .kpi:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary);
+    }
+
+    .kpi-title {
+      color: var(--sub);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 800;
+      background: var(--primary-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(6, 182, 212, 0.05) 100%);
+      color: var(--primary);
+      font-weight: 600;
+      border: 1px solid rgba(6, 182, 212, 0.2);
+    }
+
+    .tag.ok {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+      color: var(--ok);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .tag.warn {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%);
+      color: var(--warn);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .tag.bad {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+      color: var(--bad);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    .list-item {
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: var(--card);
+      margin-bottom: 10px;
+      transition: all 0.25s ease;
+    }
+
+    .list-item:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .list-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    input, select {
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 15px;
+      background: #fff;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    input:hover, select:hover {
+      border-color: #cbd5e1;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.15);
+    }
+
+    button {
+      border: 0;
+      color: white;
+      background: var(--primary-gradient);
+      font-weight: 700;
+      cursor: pointer;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-size: 15px;
+      box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button.secondary {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      box-shadow: 0 4px 14px rgba(100, 116, 139, 0.3);
+    }
+
+    button.secondary:hover {
+      background: linear-gradient(135deg, #475569 0%, #334155 100%);
+      box-shadow: 0 6px 20px rgba(100, 116, 139, 0.4);
+    }
+
+    button.danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+    }
+
+    button.danger:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+    }
+
+    .muted {
+      color: var(--sub);
+      font-size: 13px;
+    }
+
+    .task-card {
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: var(--card);
+      margin-bottom: 10px;
+      transition: all 0.25s ease;
+    }
+
+    .task-card:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+      transform: translateX(4px);
+    }
+
+    .task-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .task-title {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .task-detail {
+      color: var(--sub);
+      font-size: 13px;
+      margin-top: 8px;
+      line-height: 1.7;
+    }
+
+    .reason-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .task-inline-input {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--sub);
+    }
+
+    .empty-state-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 900px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      input, select {
+        min-width: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h2 style="margin:0 0 16px; font-size: 22px;">🧭 CAC 二三期 · 个人工作台</h2>
+      <div class="toolbar">
+        <input id="name-input" type="text" placeholder="输入姓名查看个人战绩" style="flex: 1; min-width: 200px;" />
+        <button id="load-btn">加载主页</button>
+        <a href="/" style="color: var(--primary); text-decoration: none; font-weight: 600; padding: 8px 16px;">返回报名页</a>
+      </div>
+      <div id="msg" class="muted" style="margin-top: 12px;"></div>
+    </div>
+
+    <div id="dashboard" style="display:none;">
+      <div class="card">
+        <h3 id="title" style="margin-top:0;"></h3>
+        <div id="meta" class="muted"></div>
+      </div>
+
+      <div class="card">
+        <div class="row" id="kpis"></div>
+      </div>
+
+      <div class="row">
+        <div class="card">
+          <h3 style="margin-top:0;">📝 最近报名</h3>
+          <div id="recent-signups"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;">📨 最近邀请</h3>
+          <div id="recent-invites"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="card" id="account-card">
+          <h3 style="margin-top:0;">⚙️ 账号设置</h3>
+          <div class="toolbar">
+            <input id="email-input" type="email" placeholder="填写或更新邮箱" style="flex: 1;" />
+            <button id="save-email-btn" class="secondary">保存邮箱</button>
+          </div>
+          <div id="email-msg" class="muted" style="margin-top: 12px;"></div>
+        </div>
+        <div class="card" id="groups-card">
+          <h3 style="margin-top:0;">👥 兴趣组管理</h3>
+          <div id="group-manage-list"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="card">
+          <h3 style="margin-top:0;">📋 待处理事项</h3>
+          <div id="profile-tasks"></div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0;">💡 推荐活动</h3>
+          <div id="profile-recommendations"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">🔍 活动探索</h3>
+        <div class="toolbar" style="margin-bottom: 16px;">
+          <select id="f-type">
+            <option value="">全部类型</option>
+            <option value="normal">normal</option>
+            <option value="cac有约">cac有约</option>
+          </select>
+          <select id="f-group">
+            <option value="">全部兴趣组</option>
+          </select>
+          <select id="f-state">
+            <option value="">全部状态</option>
+            <option value="进行中">进行中</option>
+            <option value="待结项">待结项</option>
+            <option value="已结项">已结项</option>
+          </select>
+          <select id="f-sort-by">
+            <option value="date">按日期</option>
+            <option value="topic">按主题</option>
+            <option value="state">按状态</option>
+          </select>
+          <select id="f-sort-order">
+            <option value="desc">降序</option>
+            <option value="asc">升序</option>
+          </select>
+          <input id="f-keyword" type="text" placeholder="主题/分享者关键词" style="flex: 1; min-width: 150px;" />
+          <button id="f-load-btn">筛选</button>
+        </div>
+        <div id="explore-list"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">📰 个人动态流</h3>
+        <div class="toolbar" style="margin-bottom: 16px;">
+          <select id="feed-type">
+            <option value="">全部动态</option>
+            <option value="signup">报名</option>
+            <option value="invite">邀请</option>
+            <option value="created_activity">创建活动</option>
+          </select>
+          <input id="feed-keyword" type="text" placeholder="动态关键词" style="flex: 1; min-width: 150px;" />
+          <button id="feed-load-btn" class="secondary">刷新动态</button>
+        </div>
+        <div id="profile-feed"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const inputEl = document.getElementById('name-input');
+    const loadBtnEl = document.getElementById('load-btn');
+    const msgEl = document.getElementById('msg');
+    const dashboardEl = document.getElementById('dashboard');
+    const emailInputEl = document.getElementById('email-input');
+    const saveEmailBtnEl = document.getElementById('save-email-btn');
+    const emailMsgEl = document.getElementById('email-msg');
+    const groupManageListEl = document.getElementById('group-manage-list');
+    const fTypeEl = document.getElementById('f-type');
+    const fGroupEl = document.getElementById('f-group');
+    const fStateEl = document.getElementById('f-state');
+    const fSortByEl = document.getElementById('f-sort-by');
+    const fSortOrderEl = document.getElementById('f-sort-order');
+    const fKeywordEl = document.getElementById('f-keyword');
+    const fLoadBtnEl = document.getElementById('f-load-btn');
+    const exploreListEl = document.getElementById('explore-list');
+    const profileFeedEl = document.getElementById('profile-feed');
+    const feedTypeEl = document.getElementById('feed-type');
+    const feedKeywordEl = document.getElementById('feed-keyword');
+    const feedLoadBtnEl = document.getElementById('feed-load-btn');
+    const profileTasksEl = document.getElementById('profile-tasks');
+    const profileRecommendationsEl = document.getElementById('profile-recommendations');
+
+    let currentName = '';
+    let allGroups = [];
+    let explorePage = 1;
+    const explorePageSize = 10;
+    let currentExploreItems = [];
+    let exploreDebounceTimer = null;
+    let feedDebounceTimer = null;
+    let pendingExploreActivityId = '';
+
+    function persistUiStateToUrl() {
+      const params = new URLSearchParams();
+      if ((inputEl.value || '').trim()) params.set('name', (inputEl.value || '').trim());
+      if (fTypeEl.value) params.set('activity_type', fTypeEl.value);
+      if (fGroupEl.value) params.set('group_id', fGroupEl.value);
+      if (fStateEl.value) params.set('state', fStateEl.value);
+      if (fSortByEl.value) params.set('sort_by', fSortByEl.value);
+      if (fSortOrderEl.value) params.set('sort_order', fSortOrderEl.value);
+      if ((fKeywordEl.value || '').trim()) params.set('keyword', (fKeywordEl.value || '').trim());
+      if (feedTypeEl.value) params.set('feed_type', feedTypeEl.value);
+      if ((feedKeywordEl.value || '').trim()) params.set('feed_keyword', (feedKeywordEl.value || '').trim());
+      params.set('page', String(explorePage));
+      const next = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState({}, '', next);
+    }
+
+    function restoreUiStateFromUrl() {
+      const params = new URLSearchParams(window.location.search || '');
+      const name = (params.get('name') || '').trim();
+      const activityType = params.get('activity_type') || '';
+      const groupId = params.get('group_id') || '';
+      const state = params.get('state') || '';
+      const sortBy = params.get('sort_by') || 'date';
+      const sortOrder = params.get('sort_order') || 'desc';
+      const keyword = params.get('keyword') || '';
+      const feedType = params.get('feed_type') || '';
+      const feedKeyword = params.get('feed_keyword') || '';
+      const page = Number(params.get('page') || '1');
+
+      if (name) inputEl.value = name;
+      fTypeEl.value = activityType;
+      fStateEl.value = state;
+      fSortByEl.value = sortBy;
+      fSortOrderEl.value = sortOrder;
+      fKeywordEl.value = keyword;
+      feedTypeEl.value = feedType;
+      feedKeywordEl.value = feedKeyword;
+      explorePage = Number.isInteger(page) && page > 0 ? page : 1;
+
+      return { groupId };
+    }
+
+    function scheduleRealtimeExploreReload(resetPage) {
+      if (resetPage) {
+        explorePage = 1;
+      }
+      if (exploreDebounceTimer) {
+        clearTimeout(exploreDebounceTimer);
+      }
+      exploreDebounceTimer = setTimeout(() => {
+        loadExploreActivities();
+      }, 280);
+    }
+
+    function scheduleRealtimeFeedReload() {
+      if (feedDebounceTimer) {
+        clearTimeout(feedDebounceTimer);
+      }
+      feedDebounceTimer = setTimeout(() => {
+        loadProfileFeed();
+      }, 280);
+    }
+
+    function setMsg(text) {
+      msgEl.textContent = text || '';
+    }
+
+    function kpi(title, value, extra='') {
+      return `<div class="kpi"><div class="kpi-title">${title}</div><div class="kpi-value">${value}</div><div class="muted" style="margin-top: 6px;">${extra}</div></div>`;
+    }
+
+    function renderSummary(summary) {
+      const metrics = summary.metrics || {};
+      const ranks = summary.ranks || {};
+      const groups = (summary.profile || {}).groups || [];
+      currentName = summary.name || '';
+
+      document.getElementById('title').textContent = `${summary.name} 的个人主页`;
+      document.getElementById('meta').innerHTML = [
+        summary.is_cac ? '<span class="tag warn">CAC 账号</span>' : '<span class="tag">成员账号</span>',
+        (summary.profile && summary.profile.email) ? `<span class="tag">邮箱：${summary.profile.email}</span>` : '<span class="tag bad">未设置邮箱</span>',
+        groups.length ? `<span class="tag ok">兴趣组：${groups.map(g => `${g.name}(${g.member_role})`).join(' / ')}</span>` : '<span class="tag warn">未加入兴趣组</span>'
+      ].join(' ');
+
+      emailInputEl.value = (summary.profile && summary.profile.email) || '';
+
+      document.getElementById('kpis').innerHTML = [
+        kpi('分享次数', metrics.share_count || 0, `榜单名次：${ranks.sharing || '-'}`),
+        kpi('参与次数', metrics.participation_count || 0, `榜单名次：${ranks.participation || '-'}`),
+        kpi('评议质量', metrics.review_quality_score || 0, `名次：${ranks.review_quality || '-'}，评分数：${metrics.review_quality_rating_count || 0}`),
+        kpi('准时结项率', `${Math.round((metrics.punctuality_rate || 0) * 100)}%`, `名次：${ranks.punctuality || '-'}，结项数：${metrics.punctuality_closed_count || 0}`),
+        kpi(`近${metrics.boundary_lookback_days || 14}天输出`, metrics.output_count_recent || 0, metrics.boundary_ok ? '<span class="tag ok">边界达标</span>' : '<span class="tag bad">边界未达标</span>')
+      ].join('');
+
+      const signups = summary.recent_signups || [];
+      document.getElementById('recent-signups').innerHTML = signups.length
+        ? signups.map(item => `<div class="list-item"><div style="font-weight: 700; color: var(--text); margin-bottom: 6px;">${(item.activity || {}).topic || '未命名活动'}</div><div class="muted">${(item.activity || {}).date || ''} ${(item.activity || {}).time || ''} · 角色：${item.role || '-'} · 状态：${item.activity_state || '-'}</div></div>`).join('')
+        : '<div class="empty-state"><div class="empty-state-icon">📭</div><div>暂无报名记录</div></div>';
+
+      const invites = summary.recent_invites || [];
+      document.getElementById('recent-invites').innerHTML = invites.length
+        ? invites.map(item => {
+            const status = item.status || '-';
+            const canAct = status === '已发送';
+            return `<div class="list-item"><div style="font-weight: 700; color: var(--text); margin-bottom: 6px;">${item.activity_topic || '未命名活动'}</div><div class="muted">来源：${item.source_type || '-'} · 状态：${status} · 更新人：${item.updated_by || '-'}</div>${canAct ? `<div class="toolbar" style="margin-top:10px;"><button onclick="updateMyInviteStatus('${item.id}', '已接受')">接受邀请</button><button class="danger" onclick="updateMyInviteStatus('${item.id}', '已拒绝')">拒绝邀请</button></div>` : ''}</div>`;
+          }).join('')
+        : '<div class="empty-state"><div class="empty-state-icon">📭</div><div>暂无邀请记录</div></div>';
+
+      dashboardEl.style.display = 'block';
+    }
+
+    function renderGroupManage(summary) {
+      const myGroups = new Set(((summary.profile || {}).groups || []).map(item => item.id));
+      if (!allGroups.length) {
+        groupManageListEl.innerHTML = '<div class="muted">暂无兴趣组</div>';
+        return;
+      }
+      groupManageListEl.innerHTML = allGroups.map(group => {
+        const joined = myGroups.has(group.id);
+        const role = (group.members || []).find(item => item.name === currentName)?.role || '';
+        const canLeave = joined && role !== '组长';
+        return `
+          <div class="list-item">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+              <div>
+                <div style="font-weight: 700; color: var(--text);">${group.name || '(未命名兴趣组)'}</div>
+                <div class="muted">组长：${group.leader_name || '-'} · 成员：${group.member_count || 0}</div>
+              </div>
+              <span class="tag">${group.status || '活跃'}</span>
+            </div>
+            <div class="toolbar" style="margin-top:10px;">
+              ${joined ? '<span class="tag ok">已加入</span>' : ''}
+              ${role === '组长' ? '<span class="tag warn">我是组长</span>' : ''}
+              ${!joined ? `<button class="secondary" onclick="joinGroupFromProfile('${group.id}')">加入</button>` : ''}
+              ${canLeave ? `<button class="danger" onclick="leaveGroupFromProfile('${group.id}')">退出</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadGroupsAndRender(summary) {
+      const restored = restoreUiStateFromUrl();
+      try {
+        const res = await fetch('/api/groups', { cache: 'no-store' });
+        const data = await res.json();
+        allGroups = data.ok ? (data.groups || []) : [];
+      } catch (err) {
+        allGroups = [];
+      }
+      fGroupEl.innerHTML = ['<option value="">全部兴趣组</option>']
+        .concat(allGroups.map(group => `<option value="${group.id}">${group.name}</option>`))
+        .join('');
+      if (restored.groupId) {
+        fGroupEl.value = restored.groupId;
+      }
+      renderGroupManage(summary);
+    }
+
+    function renderProfileFeed(events) {
+      if (!events || !events.length) {
+        profileFeedEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>暂无动态记录</div></div>';
+        return;
+      }
+      profileFeedEl.innerHTML = events.map(event => `
+        <div class="list-item">
+          <div class="toolbar" style="justify-content:space-between; align-items:flex-start; gap:12px;">
+            <div><strong style="color: var(--text);">${event.title || '未命名事件'}</strong> <span class="tag">${event.type || 'event'}</span></div>
+            ${(event.meta && event.meta.activity_id) ? `<button class="secondary" onclick="jumpToActivityContext('${event.meta.activity_id}', '${event.meta.activity_type || ''}', '${event.meta.activity_topic || ''}', '${event.meta.state || ''}')">查看活动</button>` : ''}
+          </div>
+          <div class="muted" style="margin-top: 8px;">${event.ts || '-'} · ${event.detail || '-'}</div>
+        </div>
+      `).join('');
+    }
+
+    function scrollToCard(cardId) {
+      const target = document.getElementById(cardId);
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function handleWorkbenchAction(action) {
+      if (action === 'open_account') {
+        scrollToCard('account-card');
+        emailInputEl.focus();
+        return;
+      }
+      if (action === 'open_groups') {
+        scrollToCard('groups-card');
+        return;
+      }
+      if (action === 'browse_activities') {
+        scrollToCard('explore-list');
+        return;
+      }
+    }
+
+    function renderProfileTasks(tasks) {
+      if (!tasks || !tasks.length) {
+        profileTasksEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><div>当前没有待处理事项</div></div>';
+        return;
+      }
+      profileTasksEl.innerHTML = tasks.map(task => {
+        if (task.action === 'respond_invite' && task.invite_id) {
+          return `
+            <div class="task-card">
+              <div class="task-title">${task.title || '待处理事项'}</div>
+              <div class="task-detail">${task.detail || ''}</div>
+              <div class="toolbar" style="margin-top:10px;">
+                <button onclick="updateMyInviteStatus('${task.invite_id}', '已接受')">接受</button>
+                <button class="danger" onclick="updateMyInviteStatus('${task.invite_id}', '已拒绝')">拒绝</button>
+                ${task.activity_id ? `<button class="secondary" onclick="jumpToActivityContext('${task.activity_id}', '${task.activity_type || ''}', '${task.activity_topic || ''}', '${task.state || ''}')">查看活动</button>` : ''}
+              </div>
+            </div>
+          `;
+        }
+        if (task.type === 'review_doc' && task.signup_id) {
+          return `
+            <div class="task-card">
+              <div class="task-title">${task.title || '待处理事项'}</div>
+              <div class="task-detail">${task.detail || ''}</div>
+              <div class="toolbar" style="margin-top:10px; align-items:flex-end;">
+                <input class="task-inline-input" id="task-review-url-${task.signup_id}" type="url" placeholder="粘贴语雀评议链接" style="flex: 1;" />
+                <button onclick="submitTaskReviewDoc('${task.signup_id}')">提交文档</button>
+                ${task.activity_id ? `<button class="secondary" onclick="jumpToActivityContext('${task.activity_id}', '${task.activity_type || ''}', '${task.activity_topic || ''}', '${task.state || ''}')">查看活动</button>` : ''}
+              </div>
+              <div class="muted" id="task-review-msg-${task.signup_id}" style="margin-top:8px;"></div>
+            </div>
+          `;
+        }
+        if (task.type === 'close_activity' && task.activity_id) {
+          return `
+            <div class="task-card">
+              <div class="task-title">${task.title || '待处理事项'}</div>
+              <div class="task-detail">${task.detail || ''}</div>
+              <div class="toolbar" style="margin-top:10px;">
+                <button onclick="closeActivityFromWorkbench('${task.activity_id}')">立即结项</button>
+                <button class="secondary" onclick="jumpToActivityContext('${task.activity_id}', '${task.activity_type || ''}', '${task.activity_topic || ''}', '${task.state || ''}')">查看活动</button>
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="task-card">
+            <div class="task-title">${task.title || '待处理事项'}</div>
+            <div class="task-detail">${task.detail || ''}</div>
+            <div class="toolbar" style="margin-top:10px;">
+              ${task.activity_id ? `<button onclick="jumpToActivityContext('${task.activity_id}', '${task.activity_type || ''}', '${task.activity_topic || ''}', '${task.state || ''}')">${task.action_label || '查看活动'}</button>` : `<button class="secondary" onclick="handleWorkbenchAction('${task.action || ''}')">${task.action_label || '去处理'}</button>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderProfileRecommendations(items) {
+      if (!items || !items.length) {
+        profileRecommendationsEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💡</div><div>当前没有明显匹配的推荐活动</div></div>';
+        return;
+      }
+      profileRecommendationsEl.innerHTML = items.map(item => `
+        <div class="task-card">
+          <div class="task-title">${item.topic || '未命名活动'}</div>
+          <div class="task-detail">${item.date || ''} ${item.time || ''} · 分享者：${item.speakers || '-'} · 建议角色：${item.recommended_role || '-'}</div>
+          <div class="reason-list">
+            ${(item.reasons || []).map(reason => `<span class="tag">${reason}</span>`).join('')}
+            ${item.group_name ? `<span class="tag ok">${item.group_name}</span>` : ''}
+            <span class="tag ${item.state === '进行中' ? 'ok' : 'warn'}">${item.state || '-'}</span>
+          </div>
+          <div class="toolbar" style="margin-top:10px; align-items:flex-end;">
+            <div><div class="muted">角色</div><select id="rec-role-${item.activity_id}">${roleOptionsByType(item.activity_type || 'normal').map(role => `<option value="${role}" ${role === item.recommended_role ? 'selected' : ''}>${role}</option>`).join('')}</select></div>
+            <div><div class="muted">邮箱</div><input id="rec-email-${item.activity_id}" type="email" placeholder="默认使用主页邮箱" value="${emailInputEl.value || ''}" /></div>
+            <div><div class="muted">电话</div><input id="rec-phone-${item.activity_id}" type="text" placeholder="可选" /></div>
+            <button onclick="signupFromRecommendation('${item.activity_id}')">直接报名</button>
+            <button class="secondary" onclick="jumpToActivityContext('${item.activity_id}', '${item.activity_type || ''}', '${item.topic || ''}', '${item.state || ''}')">查看活动</button>
+          </div>
+          <div class="muted" id="rec-msg-${item.activity_id}" style="margin-top:8px;"></div>
+        </div>
+      `).join('');
+    }
+
+    async function loadProfileTasks() {
+      if (!currentName) {
+        profileTasksEl.innerHTML = '<div class="muted">请先加载个人主页</div>';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/profile-tasks/${encodeURIComponent(currentName)}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          profileTasksEl.innerHTML = `<div class="muted">加载失败：${data.message || '未知错误'}</div>`;
+          return;
+        }
+        renderProfileTasks(data.tasks || []);
+      } catch (err) {
+        profileTasksEl.innerHTML = `<div class="muted">加载失败：${err.message}</div>`;
+      }
+    }
+
+    async function loadProfileRecommendations() {
+      if (!currentName) {
+        profileRecommendationsEl.innerHTML = '<div class="muted">请先加载个人主页</div>';
+        return;
+      }
+      try {
+        const res = await fetch(`/api/profile-recommendations/${encodeURIComponent(currentName)}?limit=6`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          profileRecommendationsEl.innerHTML = `<div class="muted">加载失败：${data.message || '未知错误'}</div>`;
+          return;
+        }
+        renderProfileRecommendations(data.recommendations || []);
+      } catch (err) {
+        profileRecommendationsEl.innerHTML = `<div class="muted">加载失败：${err.message}</div>`;
+      }
+    }
+
+    async function submitTaskReviewDoc(signupId) {
+      if (!currentName || !signupId) return;
+      const input = document.getElementById(`task-review-url-${signupId}`);
+      const msg = document.getElementById(`task-review-msg-${signupId}`);
+      const reviewDocUrl = ((input && input.value) || '').trim();
+      if (!reviewDocUrl) {
+        if (msg) msg.textContent = '请先填写语雀链接';
+        return;
+      }
+      if (msg) msg.textContent = '提交中...';
+      try {
+        const res = await fetch(`/api/signup/${signupId}/review-doc`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: currentName, review_doc_url: reviewDocUrl }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          if (msg) msg.textContent = data.message || '提交失败';
+          return;
+        }
+        if (msg) msg.textContent = data.message || '评议文档已提交';
+        await loadProfile();
+      } catch (err) {
+        if (msg) msg.textContent = err.message;
+      }
+    }
+
+    async function closeActivityFromWorkbench(activityId) {
+      if (!currentName || !activityId) return;
+      if (!confirm('确认立即结项该活动？')) return;
+      try {
+        const res = await fetch(`/api/activity/${activityId}/close`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creator_name: currentName }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          alert('❌ ' + (data.message || '结项失败'));
+          return;
+        }
+        alert(`✅ ${data.message || '活动已结项'}（${data.on_time ? '准时结项' : '逾期结项'}）`);
+        await loadProfile();
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    async function signupFromRecommendation(activityId) {
+      if (!currentName || !activityId) return;
+      const roleEl = document.getElementById(`rec-role-${activityId}`);
+      const emailEl = document.getElementById(`rec-email-${activityId}`);
+      const phoneEl = document.getElementById(`rec-phone-${activityId}`);
+      const msgEl = document.getElementById(`rec-msg-${activityId}`);
+      const role = ((roleEl && roleEl.value) || '').trim();
+      const email = ((emailEl && emailEl.value) || emailInputEl.value || '').trim();
+      const phone = ((phoneEl && phoneEl.value) || '').trim();
+      if (msgEl) msgEl.textContent = '报名中...';
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: currentName, email, phone, activity_id: activityId, role }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          if (msgEl) msgEl.textContent = '❌ ' + (data.message || '报名失败');
+          return;
+        }
+        if (msgEl) msgEl.textContent = '✅ ' + (data.message || '报名成功');
+        await loadProfile();
+      } catch (err) {
+        if (msgEl) msgEl.textContent = '❌ ' + err.message;
+      }
+    }
+
+    async function loadProfileFeed() {
+      if (!currentName) {
+        profileFeedEl.innerHTML = '<div class="muted">请先加载个人主页</div>';
+        return;
+      }
+      try {
+        const params = new URLSearchParams();
+        params.set('limit', '30');
+        if (feedTypeEl.value) params.set('type', feedTypeEl.value);
+        if ((feedKeywordEl.value || '').trim()) params.set('keyword', (feedKeywordEl.value || '').trim());
+        persistUiStateToUrl();
+        const res = await fetch(`/api/profile-feed/${encodeURIComponent(currentName)}?${params.toString()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          profileFeedEl.innerHTML = `<div class="muted">加载失败：${data.message || '未知错误'}</div>`;
+          return;
+        }
+        renderProfileFeed(data.events || []);
+      } catch (err) {
+        profileFeedEl.innerHTML = `<div class="muted">加载失败：${err.message}</div>`;
+      }
+    }
+
+    function focusExploreActivityCard(activityId) {
+      if (!activityId) return;
+      const card = document.querySelector(`[data-activity-id="${activityId}"]`);
+      if (!card) return;
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card.style.outline = '2px solid var(--primary)';
+      setTimeout(() => { card.style.outline = ''; }, 1800);
+    }
+
+    function jumpToActivityContext(activityId, activityType, activityTopic, state) {
+      if (activityType) fTypeEl.value = activityType;
+      if (state) fStateEl.value = state;
+      if (activityTopic) fKeywordEl.value = activityTopic;
+      explorePage = 1;
+      pendingExploreActivityId = activityId || '';
+      persistUiStateToUrl();
+      loadExploreActivities(1).then(() => { focusExploreActivityCard(activityId); });
+    }
+
+    async function joinGroupFromProfile(groupId) {
+      if (!currentName) return;
+      let payload = { name: currentName };
+      let res = await fetch(`/api/group/${groupId}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      let data = await res.json();
+      if (!data.ok && (data.message || '').includes('首次使用请填写邮箱')) {
+        const email = (prompt('首次加入兴趣组需要邮箱，请输入邮箱：') || '').trim();
+        if (!email) return;
+        payload = { name: currentName, email };
+        res = await fetch(`/api/group/${groupId}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        data = await res.json();
+      }
+      if (!data.ok) {
+        alert('❌ ' + (data.message || '加入失败'));
+        return;
+      }
+      await loadProfile();
+    }
+
+    async function leaveGroupFromProfile(groupId) {
+      if (!currentName) return;
+      if (!confirm('确认退出该兴趣组？')) return;
+      const res = await fetch(`/api/group/${groupId}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: currentName }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert('❌ ' + (data.message || '退出失败'));
+        return;
+      }
+      await loadProfile();
+    }
+
+    async function saveEmail() {
+      if (!currentName) {
+        emailMsgEl.textContent = '请先加载个人主页';
+        return;
+      }
+      const email = (emailInputEl.value || '').trim();
+      const res = await fetch('/api/profile/upsert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: currentName, email }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        emailMsgEl.textContent = '保存失败：' + (data.message || '未知错误');
+        return;
+      }
+      emailMsgEl.textContent = '邮箱已保存';
+      await loadProfile();
+    }
+
+    function roleOptionsByType(activityType) {
+      if (activityType === 'cac有约') return ['参与者', '旁听'];
+      return ['评议员', '旁听'];
+    }
+
+    function renderQuickSignupInline(activity) {
+      const id = activity.id;
+      const options = roleOptionsByType(activity.activity_type || 'normal')
+        .map(role => `<option value="${role}">${role}</option>`).join('');
+      return `
+        <div class="toolbar" style="margin-top: 10px; align-items: flex-end;">
+          <div><div class="muted">角色</div><select id="qs-role-${id}">${options}</select></div>
+          <div><div class="muted">邮箱</div><input id="qs-email-${id}" type="email" placeholder="可选" style="min-width: 180px;" /></div>
+          <div><div class="muted">电话</div><input id="qs-phone-${id}" type="text" placeholder="可选" style="min-width: 120px;" /></div>
+          <button onclick="quickSignupFromExplore('${id}')">提交报名</button>
+        </div>
+        <div id="qs-msg-${id}" class="muted" style="margin-top: 6px;"></div>
+      `;
+    }
+
+    async function quickSignupFromExplore(activityId) {
+      if (!currentName) return;
+      const roleEl = document.getElementById(`qs-role-${activityId}`);
+      const emailEl = document.getElementById(`qs-email-${activityId}`);
+      const phoneEl = document.getElementById(`qs-phone-${activityId}`);
+      const msgEl = document.getElementById(`qs-msg-${activityId}`);
+      if (!roleEl || !msgEl) return;
+      const role = (roleEl.value || '').trim();
+      const email = ((emailEl && emailEl.value) || emailInputEl.value || '').trim();
+      const phone = ((phoneEl && phoneEl.value) || '').trim();
+      msgEl.textContent = '提交中...';
+      try {
+        const res = await fetch('/api/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: currentName, email, phone, activity_id: activityId, role }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          msgEl.textContent = '❌ ' + (data.message || '报名失败');
+          return;
+        }
+        msgEl.textContent = '✅ ' + (data.message || '报名成功');
+        await loadProfile();
+      } catch (err) {
+        msgEl.textContent = '❌ ' + err.message;
+      }
+    }
+
+    function renderExplorePagination(total, page, pageSize, hasNext) {
+      const totalPages = Math.max(1, Math.ceil((total || 0) / pageSize));
+      return `
+        <div class="toolbar" style="margin-top: 16px; justify-content: space-between;">
+          <div class="muted">共 ${total || 0} 条，第 ${page}/${totalPages} 页</div>
+          <div class="toolbar">
+            <button class="secondary" ${page <= 1 ? 'disabled' : ''} onclick="changeExplorePage(${page - 1})">上一页</button>
+            <button class="secondary" ${hasNext ? '' : 'disabled'} onclick="changeExplorePage(${page + 1})">下一页</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadExploreActivities(pageArg) {
+      if (Number.isInteger(pageArg) && pageArg > 0) explorePage = pageArg;
+      const params = new URLSearchParams();
+      if (fTypeEl.value) params.set('activity_type', fTypeEl.value);
+      if (fGroupEl.value) params.set('group_id', fGroupEl.value);
+      if (fStateEl.value) params.set('state', fStateEl.value);
+      if (fSortByEl.value) params.set('sort_by', fSortByEl.value);
+      if (fSortOrderEl.value) params.set('sort_order', fSortOrderEl.value);
+      if ((fKeywordEl.value || '').trim()) params.set('keyword', (fKeywordEl.value || '').trim());
+      params.set('page', String(explorePage));
+      params.set('page_size', String(explorePageSize));
+      persistUiStateToUrl();
+
+      exploreListEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div>加载中...</div></div>';
+      try {
+        const res = await fetch(`/api/activities/filter?${params.toString()}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          exploreListEl.innerHTML = `<div class="muted">筛选失败：${data.message || '未知错误'}</div>`;
+          return;
+        }
+        const items = data.activities || [];
+        currentExploreItems = items;
+        if (!items.length) {
+          exploreListEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>没有匹配活动</div></div>';
+          return;
+        }
+        const listHtml = items.map(item => `
+          <div class="list-item" data-activity-id="${item.id || ''}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+              <div style="flex: 1;">
+                <div style="font-weight: 700; color: var(--text);">${item.topic || '未命名活动'}</div>
+                <div class="muted" style="margin-top: 4px;">${item.date || ''} ${item.time || ''} · 分享者：${item.speakers || '-'} · 状态：${item.status || '-'}</div>
+              </div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <span class="tag">${item.activity_type || 'normal'}</span>
+                ${item.group_name ? `<span class="tag ok">${item.group_name}</span>` : ''}
+              </div>
+            </div>
+            ${renderQuickSignupInline(item)}
+          </div>
+        `).join('');
+        const pagerHtml = renderExplorePagination(data.total || 0, data.page || explorePage, data.page_size || explorePageSize, Boolean(data.has_next));
+        exploreListEl.innerHTML = listHtml + pagerHtml;
+        if (pendingExploreActivityId) {
+          focusExploreActivityCard(pendingExploreActivityId);
+          pendingExploreActivityId = '';
+        }
+      } catch (err) {
+        exploreListEl.innerHTML = `<div class="muted">筛选失败：${err.message}</div>`;
+      }
+    }
+
+    function changeExplorePage(nextPage) {
+      if (!nextPage || nextPage < 1) return;
+      loadExploreActivities(nextPage);
+    }
+
+    async function loadProfile() {
+      const name = (inputEl.value || '').trim();
+      if (!name) {
+        setMsg('请输入姓名');
+        return;
+      }
+      setMsg('加载中...');
+      try {
+        const res = await fetch(`/api/profile-summary/${encodeURIComponent(name)}`, { cache: 'no-store' });
+        const data = await res.json();
+        if (!data.ok) {
+          setMsg(data.message || '加载失败');
+          dashboardEl.style.display = 'none';
+          return;
+        }
+        renderSummary(data.summary || {});
+        await loadGroupsAndRender(data.summary || {});
+        await loadProfileTasks();
+        await loadProfileRecommendations();
+        await loadExploreActivities();
+        await loadProfileFeed();
+        setMsg('加载完成');
+      } catch (err) {
+        setMsg('加载失败：' + err.message);
+      }
+    }
+
+    async function updateMyInviteStatus(inviteId, status) {
+      if (!currentName || !inviteId || !status) return;
+      try {
+        const res = await fetch(`/api/invite/${inviteId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ operator_name: currentName, status }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          alert('❌ ' + (data.message || '操作失败'));
+          return;
+        }
+        await loadProfile();
+      } catch (err) {
+        alert('❌ ' + err.message);
+      }
+    }
+
+    loadBtnEl.addEventListener('click', loadProfile);
+    saveEmailBtnEl.addEventListener('click', saveEmail);
+    fLoadBtnEl.addEventListener('click', loadExploreActivities);
+    fTypeEl.addEventListener('change', () => scheduleRealtimeExploreReload(true));
+    fGroupEl.addEventListener('change', () => scheduleRealtimeExploreReload(true));
+    fStateEl.addEventListener('change', () => scheduleRealtimeExploreReload(true));
+    fSortByEl.addEventListener('change', () => scheduleRealtimeExploreReload(true));
+    fSortOrderEl.addEventListener('change', () => scheduleRealtimeExploreReload(true));
+    fKeywordEl.addEventListener('input', () => scheduleRealtimeExploreReload(true));
+    feedLoadBtnEl.addEventListener('click', loadProfileFeed);
+    feedTypeEl.addEventListener('change', scheduleRealtimeFeedReload);
+    feedKeywordEl.addEventListener('input', scheduleRealtimeFeedReload);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadProfile();
+    });
+
+    (() => {
+      const restored = restoreUiStateFromUrl();
+      if ((inputEl.value || '').trim()) loadProfile();
+      if (restored.groupId) fGroupEl.value = restored.groupId;
+    })();
+
+    window.joinGroupFromProfile = joinGroupFromProfile;
+    window.leaveGroupFromProfile = leaveGroupFromProfile;
+    window.updateMyInviteStatus = updateMyInviteStatus;
+    window.quickSignupFromExplore = quickSignupFromExplore;
+    window.changeExplorePage = changeExplorePage;
+    window.jumpToActivityContext = jumpToActivityContext;
+    window.handleWorkbenchAction = handleWorkbenchAction;
+    window.submitTaskReviewDoc = submitTaskReviewDoc;
+    window.closeActivityFromWorkbench = closeActivityFromWorkbench;
+    window.signupFromRecommendation = signupFromRecommendation;
+  </script>
+</body>
+</html>
