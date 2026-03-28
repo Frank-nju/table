@@ -47,6 +47,13 @@ timeout /t 1 >nul
 start "" pythonw.exe app.py
 
 echo.
+echo ===== 运行测试 =====
+py -3 -m pytest tests/ -v --tb=short -q 2>nul
+if %errorlevel% neq 0 (
+    echo 测试失败，请检查！
+)
+
+echo.
 echo ===== 完成 =====
 echo 服务已后台运行
 timeout /t 2 >nul
