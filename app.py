@@ -3595,11 +3595,39 @@ def api_delete_cac_admin(name):
 
 # ===== CAC教室时间槽相关API =====
 
-def _list_cac_room_slots(date=None, time_slot=None):
+def _is_slot_expired(date_str, time_slot):
+    """检查时间槽是否已过期"""
+    from datetime import datetime, timedelta
+    try:
+        today = datetime.now().date()
+        slot_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        # 日期已过
+        if slot_date < today:
+            return True
+
+        # 日期是今天，检查时间
+        if slot_date == today:
+            # 解析时间槽的结束时间
+            parts = time_slot.split('-')
+            if len(parts) == 2:
+                end_time = parts[1].strip()
+                now = datetime.now()
+                end_h, end_m = int(end_time.split(':')[0]), int(end_time.split(':')[1])
+                slot_end = now.replace(hour=end_h, minute=end_m, second=0, microsecond=0)
+                if now > slot_end:
+                    return True
+        return False
+    except Exception:
+        return False
+
+
+def _list_cac_room_slots(date=None, time_slot=None, include_expired=False):
     """获取CAC教室时间槽列表
 
     time_slot 可以是单个时间段如 '14:00-14:30' 或合并后的如 '14:00-15:30'
     当是合并后的时间段时，返回在该时间段内所有半小时槽都可用的教室
+    include_expired: 是否包含已过期的时间槽
     """
     rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
     print(f"[DEBUG] _list_cac_room_slots: Found {len(rows)} total slots in database")
@@ -3640,6 +3668,10 @@ def _list_cac_room_slots(date=None, time_slot=None):
         if slot_status != 'available':
             continue
 
+        # 过滤过期时间槽
+        if not include_expired and _is_slot_expired(slot_date, slot_time):
+            continue
+
         if slot_classroom not in classroom_slots:
             classroom_slots[slot_classroom] = set()
         classroom_slots[slot_classroom].add(slot_time)
@@ -3666,11 +3698,17 @@ def _list_cac_room_slots(date=None, time_slot=None):
             slot_status = str(row.get(CAC_SLOT_COL_STATUS, 'available')).strip()
             if slot_status != 'available':
                 continue
+            slot_time = str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip()
+
+            # 过滤过期时间槽
+            if not include_expired and _is_slot_expired(slot_date, slot_time):
+                continue
+
             result.append({
                 'id': row.get('_id'),
                 'classroom': str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip(),
                 'date': slot_date,
-                'time_slot': str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip(),
+                'time_slot': slot_time,
                 'status': slot_status,
             })
 
@@ -3736,6 +3774,38 @@ def api_delete_cac_room_slot(slot_id):
                 return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
 
     return jsonify({"ok": False, "message": "教室时间槽不存在"}), 404
+
+
+@app.post("/api/cac-room-slots/cleanup")
+def api_cleanup_expired_slots():
+    """清理过期的教室时间槽"""
+    data = request.get_json(silent=True) or {}
+    requester_name = str(data.get("requester_name", "")).strip()
+
+    if not _is_cac_admin(requester_name):
+        return jsonify({"ok": False, "message": "只有管理员才能清理时间槽"}), 403
+
+    rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
+    deleted_count = 0
+
+    for row in rows:
+        slot_date = str(row.get(CAC_SLOT_COL_DATE, '')).strip()
+        slot_time = str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip()
+        slot_id = row.get('_id')
+
+        if _is_slot_expired(slot_date, slot_time):
+            try:
+                base.delete_row(CAC_ROOM_SLOTS_TABLE_NAME, slot_id)
+                deleted_count += 1
+            except Exception:
+                pass
+
+    _touch_data_version()
+    return jsonify({
+        "ok": True,
+        "message": f"已清理 {deleted_count} 个过期时间槽",
+        "deleted_count": deleted_count
+    })
 
 
 _maintenance_thread_started = False

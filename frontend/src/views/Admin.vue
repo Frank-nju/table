@@ -306,6 +306,22 @@ const saveOperatorName = () => {
   localStorage.setItem('operatorName', operatorName.value)
 }
 
+// 清理过期时间槽
+const handleCleanupSlots = async () => {
+  if (!operatorName.value.trim()) {
+    ElMessage.warning('请先在右上角填写操作者姓名')
+    return
+  }
+  try {
+    await ElMessageBox.confirm('确定要清理所有过期的时间槽吗？', '清理确认', { type: 'warning' })
+    const res = await cacApi.cleanupExpiredSlots({ requester_name: operatorName.value })
+    ElMessage.success(res.message)
+    await loadRoomSlots()
+  } catch (e) {
+    if (e !== 'cancel') {}
+  }
+}
+
 const formatDate = (date) => {
   if (!date) return ''
   return new Date(date).toLocaleDateString('zh-CN')
@@ -455,10 +471,16 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
         <div class="card">
           <div class="card-header">
             <h2>可用时间槽</h2>
-            <el-button type="primary" @click="slotDialogVisible = true">
-              <el-icon><Plus /></el-icon>
-              添加时间槽
-            </el-button>
+            <div class="header-buttons">
+              <el-button type="warning" @click="handleCleanupSlots">
+                <el-icon><Delete /></el-icon>
+                清理过期
+              </el-button>
+              <el-button type="primary" @click="slotDialogVisible = true">
+                <el-icon><Plus /></el-icon>
+                添加时间槽
+              </el-button>
+            </div>
           </div>
 
           <el-table :data="roomSlots" style="width: 100%">
@@ -687,6 +709,11 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
 .card-header h2 {
   margin: 0;
   font-size: 18px;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 8px;
 }
 
 .classroom-hint {

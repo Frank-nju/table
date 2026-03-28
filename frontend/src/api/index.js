@@ -92,7 +92,8 @@ export const cacApi = {
   removeAdmin: (name, data) => api.delete(`/cac-admin/${name}`, { data }),
   listRoomSlots: (params) => api.get('/cac-room-slots', { params }),
   addRoomSlot: (data) => api.post('/cac-room-slot', data),
-  removeRoomSlot: (id, data) => api.delete(`/cac-room-slot/${id}`, { data })
+  removeRoomSlot: (id, data) => api.delete(`/cac-room-slot/${id}`, { data }),
+  cleanupExpiredSlots: (data) => api.post('/cac-room-slots/cleanup', data)
 }
 
 export default api
