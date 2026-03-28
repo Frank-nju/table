@@ -30,7 +30,7 @@ else:
     fcntl = None
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 try:
     from seatable_api import Base
 except Exception:
@@ -46,6 +46,9 @@ except Exception:
 
 
 load_dotenv()
+
+# Vue 前端构建产物目录
+DIST_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'dist')
 
 SERVER_URL = os.getenv("SEATABLE_SERVER_URL", "https://table.nju.edu.cn").rstrip("/")
 API_TOKEN = os.getenv("SEATABLE_API_TOKEN", "")
@@ -2346,22 +2349,22 @@ def _detect_boundary_violations():
 
 
 # ===== Flask 路由 =====
+
+# Vue 单页应用路由（所有前端页面都由 Vue 处理）
 @app.get("/")
-def index():
-    """主页"""
-    return render_template("index.html", time_slots=TIME_SLOTS)
-
-
-@app.get("/organizer")
-def organizer():
-    """分享者管理页面"""
-    return render_template("organizer.html", time_slots=TIME_SLOTS, time_slot_pairs=_get_time_slot_pairs())
-
-
+@app.get("/admin")
 @app.get("/profile")
-def profile_page():
-    """个人主页（二期）"""
-    return render_template("profile.html")
+@app.get("/activity/<activity_id>")
+def serve_vue_app(activity_id=None):
+    """服务 Vue 单页应用"""
+    return send_from_directory(DIST_DIR, 'index.html')
+
+
+# 静态资源路由
+@app.get("/assets/<path:filename>")
+def serve_assets(filename):
+    """服务前端静态资源"""
+    return send_from_directory(os.path.join(DIST_DIR, 'assets'), filename)
 
 
 @app.get("/healthz")
