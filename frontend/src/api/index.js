@@ -89,10 +89,10 @@ export const inviteApi = {
 export const cacApi = {
   listAdmins: () => api.get('/cac-admins'),
   addAdmin: (data) => api.post('/cac-admin', data),
-  removeAdmin: (name) => api.delete(`/cac-admin/${name}`),
+  removeAdmin: (name, data) => api.delete(`/cac-admin/${name}`, { data }),
   listRoomSlots: (params) => api.get('/cac-room-slots', { params }),
   addRoomSlot: (data) => api.post('/cac-room-slot', data),
-  removeRoomSlot: (id) => api.delete(`/cac-room-slot/${id}`)
+  removeRoomSlot: (id, data) => api.delete(`/cac-room-slot/${id}`, { data })
 }
 
 export default api

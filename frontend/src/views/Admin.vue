@@ -2,6 +2,9 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { activityApi, statsApi, cacApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '../stores/user'
+
+const userStore = useUserStore()
 
 const loading = ref(true)
 const activities = ref([])
@@ -231,8 +234,9 @@ const handleAddAdmin = async () => {
     ElMessage.warning('请输入姓名')
     return
   }
+  const requesterName = userStore.name || 'admin'
   try {
-    await cacApi.addAdmin({ name: adminForm.value.name, requester_name: 'admin' })
+    await cacApi.addAdmin({ name: adminForm.value.name, requester_name: requesterName })
     ElMessage.success('管理员添加成功')
     adminDialogVisible.value = false
     adminForm.value.name = ''
@@ -241,9 +245,10 @@ const handleAddAdmin = async () => {
 }
 
 const handleRemoveAdmin = async (name) => {
+  const requesterName = userStore.name || 'admin'
   try {
     await ElMessageBox.confirm(`确定要移除管理员 "${name}" 吗？`, '移除确认', { type: 'warning' })
-    await cacApi.removeAdmin(name)
+    await cacApi.removeAdmin(name, { requester_name: requesterName })
     ElMessage.success('管理员已移除')
     await loadCacAdmins()
   } catch (e) {
@@ -257,12 +262,13 @@ const handleAddSlot = async () => {
     ElMessage.warning('请填写完整信息')
     return
   }
+  const requesterName = userStore.name || 'admin'
   try {
     await cacApi.addRoomSlot({
       date: formatDateForApi(slotForm.value.date),
       time_slot: slotForm.value.time_slot,
       classroom: slotForm.value.classroom,
-      requester_name: 'admin'
+      requester_name: requesterName
     })
     ElMessage.success('时间槽添加成功')
     slotDialogVisible.value = false
@@ -272,9 +278,10 @@ const handleAddSlot = async () => {
 }
 
 const handleRemoveSlot = async (id) => {
+  const requesterName = userStore.name || 'admin'
   try {
     await ElMessageBox.confirm('确定要删除这个时间槽吗？', '删除确认', { type: 'warning' })
-    await cacApi.removeRoomSlot(id)
+    await cacApi.removeRoomSlot(id, { requester_name: requesterName })
     ElMessage.success('时间槽已删除')
     await loadRoomSlots()
   } catch (e) {
