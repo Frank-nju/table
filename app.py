@@ -3223,37 +3223,56 @@ def api_create_activity():
         elif len(creator_memberships) == 1:
             selected_group = _get_interest_group_by_id(creator_memberships[0].get(GROUP_MEMBER_COL_GROUP_ID, ''))
 
-    # 检测冲突（仅提示，不拦截创建）
+    # 检测冲突
     warnings = []
+    classroom_conflict = False
+    classroom_conflict_msg = ""
     existing_activities = _list_activities()
     new_range = _parse_time_range(time)
-    
+
     if new_range:
         for act in existing_activities:
             existing_date = str(act.get(ACTIVITY_COL_DATE, '')).strip()
             existing_type = str(act.get(ACTIVITY_COL_TYPE, '')).strip() or 'normal'
-            
+            existing_classroom = str(act.get(ACTIVITY_COL_CLASSROOM, '')).strip()
+
             # 不同日期的活动无需检测冲突
             if existing_date != date:
                 continue
-            
+
             existing_range = _parse_time_range(act.get(ACTIVITY_COL_TIME, ''))
             if not (existing_range and _times_overlap(new_range, existing_range)):
                 continue
-            
+
             existing_topic = str(act.get(ACTIVITY_COL_TOPIC, '')).strip()
-            
-            # 规则1：普通活动与普通活动冲突检测
-            if activity_type != 'cac有约' and existing_type != 'cac有约':
+
+            # 教室冲突检测（CAC有约和普通活动各自独立检测）
+            if classroom and existing_classroom == classroom:
+                # 同类型活动的教室冲突 - 强制拦截
+                if activity_type == existing_type:
+                    classroom_conflict = True
+                    classroom_conflict_msg = f"教室「{classroom}」在该时间段已被同类型活动「{existing_topic}」占用，请选择其他教室或时间"
+                # 不同类型活动之间的教室冲突 - 仅警告
+                else:
+                    type_label = 'CAC有约' if existing_type == 'cac有约' else '普通活动'
+                    warnings.append(f"教室「{classroom}」在该时间段已被{type_label}「{existing_topic}」占用，请确认是否继续")
+
+            # 时间冲突检测（不涉及教室）
+            # 规则1：普通活动与普通活动时间冲突 - 仅警告
+            if activity_type != 'cac有约' and existing_type != 'cac有约' and not classroom:
                 warnings.append(f"与已有活动「{existing_topic}」（普通活动）时间重叠，请确认是否继续")
-            
-            # 规则2：普通活动与CAC有约冲突检测
-            elif activity_type != 'cac有约' and existing_type == 'cac有约':
+
+            # 规则2：普通活动与CAC有约时间冲突 - 仅警告（不同类型各自独立）
+            elif activity_type != 'cac有约' and existing_type == 'cac有约' and not classroom:
                 warnings.append(f"与 CAC有约「{existing_topic}」时间冲突，强烈建议调整时间！")
-            
-            # 规则3：CAC有约与普通活动冲突检测
-            elif activity_type == 'cac有约' and existing_type != 'cac有约':
+
+            # 规则3：CAC有约与普通活动时间冲突 - 仅警告（不同类型各自独立）
+            elif activity_type == 'cac有约' and existing_type != 'cac有约' and not classroom:
                 warnings.append(f"与已有活动「{existing_topic}」（普通活动）时间冲突，强烈建议调整时间！")
+
+    # 教室冲突强制拦截
+    if classroom_conflict:
+        return jsonify({"ok": False, "message": classroom_conflict_msg}), 409
 
     # 创建活动记录
     row_data = {

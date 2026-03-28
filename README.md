@@ -1,216 +1,261 @@
-# CAC 分享会系统（MySQL 驱动）
+# CAC 分享会报名系统
 
-面向社团活动的轻量管理系统，支持三类入口：
+面向社团活动的轻量管理系统，支持活动创建、报名、评议闭环和组织治理。
 
-- 首页报名：`/`
-- 分享者工作台：`/organizer`
-- 个人工作台：`/profile`
+## 技术栈
 
-系统以 MySQL 作为主数据库，后端为 Flask，前端为原生 HTML + JavaScript，适合在校内服务器快速部署和持续迭代。
+| 层级 | 技术 |
+|-----|------|
+| 前端 | Vue 3 + Vite + Element Plus + Pinia |
+| 后端 | Flask (模块化架构) |
+| 数据库 | MySQL / SeaTable |
+| 部署 | Gunicorn + Nginx |
 
-## 功能总览
+## 项目结构
 
-### 1. 活动与报名
+```
+table-main/
+├── app.py                 # Flask 主应用入口
+├── config.py              # 配置常量
+├── models/                # 数据模型层
+│   ├── database.py        # 数据库操作封装
+│   └── __init__.py
+├── services/              # 业务逻辑层
+│   ├── activity.py        # 活动业务
+│   ├── signup.py          # 报名业务
+│   ├── cac_admin.py       # CAC管理
+│   ├── stats.py           # 统计服务
+│   └── ...
+├── routes/                # API 路由层
+│   ├── activity.py        # 活动 API
+│   ├── signup.py          # 报名 API
+│   ├── cac.py             # CAC管理 API
+│   └── ...
+├── utils/                 # 工具函数
+├── frontend/              # Vue 3 前端
+│   ├── src/
+│   │   ├── api/           # API 封装
+│   │   ├── views/         # 页面组件
+│   │   ├── stores/        # Pinia 状态
+│   │   └── router/        # 路由配置
+│   ├── dist/              # 构建产物
+│   └── vite.config.js
+├── templates/             # 旧版前端（已废弃）
+├── deploy/                # 部署配置
+└── tests/                 # 单元测试
+```
 
-- 活动创建、编辑、删除、结项
-- 支持 `normal` 与 `cac有约` 两类活动
-- 角色报名：评议员 / 旁听 / 参与者（按活动类型约束）
-- 评议员名额限制、旁听可放开
+## 功能模块
 
-### 2. 评议闭环
+### 1. 活动管理
+- 创建/编辑/删除活动
+- 支持普通活动和 CAC有约 两种类型
+- 时间选择（半小时一档，支持合并）
+- 教室联动（自动查询可用教室）
+- 冲突检测（同类型活动教室冲突强制拦截）
 
-- 评议员可提交评议文档链接（语雀等）
-- 评议文档可被他人评分
-- 自动汇总评议质量、评分数量、待交文档预警
+### 2. 报名系统
+- 角色报名：评议员（限制3人）/ 旁听
+- 评议员需提交评议内容方向
+- 支持取消报名
 
-### 3. 组织治理
+### 3. CAC 管理
+- CAC 管理员维护
+- 教室时间槽预设
+- 时间槽状态追踪（可用/已预约）
 
-- 治理看板（`/organizer`）聚合：
-  - 月报
-  - 兴趣组健康度
-  - 评议质量预警
-  - 边界预警
-  - 时间冲突检测
-- 支持兴趣组、兴趣组成员、评议邀请等管理能力
+### 4. 治理看板
+- 分享/参与排行榜
+- 边界预警（成员活跃度）
+- 时间冲突检测报告
 
-### 4. 个人工作台
+### 5. 个人中心
+- 个人信息展示
+- 我的报名记录
+- 我的邀请记录
 
-- 个人战绩汇总、动态流、探索活动
-- 待办任务聚合（邀请处理、补交评议、结项等）
-- 推荐活动与快速报名
+## 快速启动
 
-## 技术架构
-
-- 后端：Flask
-- 数据层：MySQL（内置 JSON 行存储 + 索引）
-- 模板：Jinja2
-- 部署：Gunicorn + systemd + Nginx（见 `deploy/`）
-
-关键文件：
-
-- `app.py`：核心业务与 API
-- `templates/index.html`：首页
-- `templates/organizer.html`：分享者与治理看板
-- `templates/profile.html`：个人工作台
-
-## 快速启动（本地）
-
-### 1. 安装依赖
+### 1. 后端
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+# 安装依赖
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
 pip install -r requirements.txt
-```
 
-### 2. 配置环境变量
-
-```bash
+# 配置环境变量
 cp .env.example .env
-```
+# 编辑 .env 配置数据库连接
 
-至少确保以下配置正确：
-
-- `DB_BACKEND=mysql`
-- `MYSQL_HOST`
-- `MYSQL_PORT`
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
-- `MYSQL_DATABASE`
-
-说明：应用会在首次启动时自动创建所需物理表（`app_rows`、`app_table_columns`），无需手工建业务表。
-
-### 3. 启动服务
-
-```bash
+# 启动服务
 python app.py
 ```
 
-默认访问：`http://127.0.0.1:8080`
+后端运行在 `http://localhost:8080`
 
-健康检查：`GET /healthz`
-
-### 4. 历史数据迁移（SeaTable -> MySQL）
-
-若你已有线上 SeaTable 历史数据，可先在 `.env` 中同时填好 `SEATABLE_*` 与 `MYSQL_*`，然后执行：
+### 2. 前端
 
 ```bash
-python scripts/migrate_seatable_to_mysql.py
+cd frontend
+npm install
+npm run dev
 ```
 
-迁移后将 `DB_BACKEND=mysql` 保持开启并重启服务。
+前端运行在 `http://localhost:5173`，自动代理到后端。
 
-## 生产部署
-
-项目内置部署模板：
-
-- `deploy/deploy_prod.sh`
-- `deploy/systemd/table-signup.service`
-- `deploy/nginx/table-signup.conf`
-- `deploy/env/table-signup.env.example`
-
-典型流程：
+### 3. 生产构建
 
 ```bash
-sudo bash deploy/deploy_prod.sh /opt/table
-sudo vim /etc/table-signup.env
-sudo systemctl restart table-signup
-sudo systemctl status table-signup --no-pager
+cd frontend
+npm run build
 ```
 
-## 逻辑数据表（由应用管理）
+构建产物在 `frontend/dist/`，由后端提供静态文件服务。
 
-系统默认使用以下逻辑表名：
+## 环境配置
 
-- `分享会活动`
-- `分享会报名`
-- `评议评分`
-- `输出活动记录`
-- `用户档案`
-- `兴趣组`
-- `兴趣组成员`
-- `评议邀请`
+### 必要配置
 
-注意：字段名可通过环境变量覆盖，历史 SeaTable 配置仍可兼容迁移。
+```env
+# 数据库
+DB_BACKEND=mysql
+MYSQL_HOST=127.0.0.1
+MYSQL_PORT=3306
+MYSQL_USER=table_user
+MYSQL_PASSWORD=your_password
+MYSQL_DATABASE=table_signup
+```
 
-## 主要页面
+### 可选配置
 
-- `/`：报名与我的报名/邀请、榜单与预警
-- `/organizer`：创建活动、管理活动、治理看板
-- `/profile`：个人画像、任务、推荐、探索与动态
+```env
+# 邮件通知
+SMTP_HOST=smtp.example.com
+SMTP_USER=noreply@example.com
+SMTP_PASSWORD=***
 
-## 主要 API（按模块）
+# CAC有约配置
+CAC_FIXED_WEEKDAY=6      # 周日 = 6
+CAC_FIXED_TIME=14:00-18:00
+```
 
-### 基础
+## API 概览
 
-- `GET /healthz`
-- `GET /api/activities`
-- `GET /api/activities/filter`
-- `GET /api/activity/<activity_id>`
+### 活动
+| 方法 | 路径 | 说明 |
+|-----|------|------|
+| GET | `/api/activities` | 活动列表 |
+| GET | `/api/activity/<id>` | 活动详情 |
+| POST | `/api/activity` | 创建活动 |
+| PUT | `/api/activity/<id>` | 编辑活动 |
+| DELETE | `/api/activity/<id>` | 删除活动 |
+| POST | `/api/activity/<id>/close` | 结项活动 |
 
-### 报名与评议
+### 报名
+| 方法 | 路径 | 说明 |
+|-----|------|------|
+| POST | `/api/signup` | 创建报名 |
+| DELETE | `/api/signup/<id>` | 取消报名 |
+| GET | `/api/my-signups/<name>` | 我的报名 |
 
-- `POST /api/signup`
-- `GET /api/my-signups/<name>`
-- `DELETE /api/signup/<signup_id>`
-- `POST /api/signup/<signup_id>/review-doc`
-- `POST /api/review-rating`
-- `GET /api/reviewer-submitted-docs`
+### CAC 管理
+| 方法 | 路径 | 说明 |
+|-----|------|------|
+| GET | `/api/cac-admins` | 管理员列表 |
+| POST | `/api/cac-admin` | 添加管理员 |
+| DELETE | `/api/cac-admin/<name>` | 移除管理员 |
+| GET | `/api/cac-room-slots` | 时间槽列表 |
+| POST | `/api/cac-room-slot` | 添加时间槽 |
+| DELETE | `/api/cac-room-slot/<id>` | 删除时间槽 |
 
-### 分享者与活动管理
+### 统计
+| 方法 | 路径 | 说明 |
+|-----|------|------|
+| GET | `/api/stats` | 统计数据 |
+| GET | `/api/leaderboards` | 排行榜 |
 
-- `GET /api/my-activities/<name>`
-- `POST /api/activity`
-- `PUT /api/activity/<activity_id>`
-- `POST /api/activity/<activity_id>/close`
-- `DELETE /api/activity/<activity_id>`
-- `POST /api/output-record`
+## 页面路由
 
-### 兴趣组与邀请
+| 路径 | 页面 | 说明 |
+|-----|------|------|
+| `/` | Home | 首页、活动列表、排行榜 |
+| `/activity/:id` | ActivityDetail | 活动详情、报名表单 |
+| `/admin` | Admin | 管理后台 |
+| `/profile` | Profile | 个人中心 |
 
-- `GET /api/groups`
-- `GET /api/group/<group_id>`
-- `GET /api/my-groups/<name>`
-- `POST /api/group`
-- `POST /api/group/<group_id>/join`
-- `POST /api/group/<group_id>/leave`
-- `POST /api/invite-reviewer`
-- `GET /api/activity/<activity_id>/invites`
-- `GET /api/my-invites/<name>`
-- `POST /api/invite/<invite_id>/status`
+## 冲突检测规则
 
-### 治理与个人工作台
+| 场景 | 行为 |
+|-----|------|
+| 同类型活动 + 同教室 + 时间重叠 | 🚫 强制拦截 |
+| 不同类型活动 + 同教室 + 时间重叠 | ⚠️ 仅警告 |
+| 时间重叠（无教室冲突） | ⚠️ 仅警告 |
 
-- `GET /api/stats`
-- `GET /api/leaderboards`
-- `GET /api/admin/dashboard`
-- `POST /api/admin/init-phase1-schema`
-- `POST /api/profile/upsert`
-- `GET /api/profile/<name>`
-- `GET /api/profile-summary/<name>`
-- `GET /api/profile-feed/<name>`
-- `GET /api/profile-tasks/<name>`
-- `GET /api/profile-recommendations/<name>`
+## 数据表
 
-## 开发约定
+系统自动管理以下逻辑表：
 
-- 所有写操作在成功后会触发内部缓存版本更新
-- 部分读接口带短 TTL 缓存，减少重复查询压力
-- 活动与报名统计已改为聚合缓存，降低大数据量导出/列表时卡顿
-- 前端不引入框架，优先保持可读与低维护成本
+| 表名 | 说明 |
+|-----|------|
+| 分享会活动 | 活动信息 |
+| 分享会报名 | 报名记录 |
+| CAC管理员 | 管理员名单 |
+| CAC教室时间槽 | 预设时间槽 |
+| 评议评分 | 评分记录 |
+| 用户档案 | 用户信息 |
+| 兴趣组 | 兴趣组信息 |
+| 兴趣组成员 | 成员关系 |
+| 评议邀请 | 邀请记录 |
 
-## 测试数据策略
+## 文档
 
-- 建议直接写入独立 MySQL 测试库，而非本地文件
-- 通过统一标记（例如 `[MVPTEST-YYYYMMDD]`）隔离测试数据
-- 演示后按标记回收，避免污染长期统计
+| 文件 | 说明 |
+|-----|------|
+| [SETUP_GUIDE.md](SETUP_GUIDE.md) | 部署验收手册 |
+| [CHANGELOG.md](CHANGELOG.md) | 版本变更记录 |
+| [frontend/VUE_DEV_GUIDE.md](frontend/VUE_DEV_GUIDE.md) | 前端开发规范 |
+| [deploy/DEPLOY_WINDOWS.md](deploy/DEPLOY_WINDOWS.md) | Windows 部署指南 |
 
-## 文档目录
+## 开发命令
 
-- `README.md`：项目总览、架构、部署与 API 总入口（本文件）
-- `SETUP_GUIDE.md`：从 0 到可运行的操作手册
-- `CHANGELOG.md`：版本与重要变更记录
+```bash
+# 后端开发
+python app.py              # 启动开发服务器
 
-## 许可与说明
+# 前端开发
+cd frontend
+npm run dev                # 启动开发服务器
+npm run build              # 构建生产版本
 
-本仓库当前未显式附加开源许可证；如需公开发布，建议补充 LICENSE 与贡献指南。
+# 测试
+python tests/test_modules.py
+
+# 代码检查
+pylint app.py services/ routes/
+```
+
+## 更新部署
+
+```bash
+# 拉取代码
+git pull
+
+# 更新依赖
+pip install -r requirements.txt
+cd frontend && npm install
+
+# 构建前端
+npm run build
+
+# 重启后端
+ps aux | grep python | grep -v grep | awk '{print $1}' | xargs -r kill -9
+python app.py &
+```
+
+**数据完全兼容**：代码更新不影响数据库中的数据，表名和列名未变化。
+
+## 许可证
+
+本项目未附加开源许可证。
