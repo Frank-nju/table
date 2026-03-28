@@ -2,9 +2,6 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { activityApi, statsApi, cacApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useUserStore } from '../stores/user'
-
-const userStore = useUserStore()
 
 const loading = ref(true)
 const activities = ref([])
@@ -14,6 +11,9 @@ const roomSlots = ref([])
 
 // 当前选中的标签
 const activeTab = ref('activities')
+
+// 操作者姓名（用于权限验证）
+const operatorName = ref(localStorage.getItem('operatorName') || '')
 
 // 时间点选项（半小时一档）
 const timePointOptions = [
@@ -230,13 +230,16 @@ const resetCreateForm = () => {
 
 // ===== CAC管理员管理 =====
 const handleAddAdmin = async () => {
+  if (!operatorName.value.trim()) {
+    ElMessage.warning('请先在右上角填写操作者姓名')
+    return
+  }
   if (!adminForm.value.name.trim()) {
     ElMessage.warning('请输入姓名')
     return
   }
-  const requesterName = userStore.name || 'admin'
   try {
-    await cacApi.addAdmin({ name: adminForm.value.name, requester_name: requesterName })
+    await cacApi.addAdmin({ name: adminForm.value.name, requester_name: operatorName.value })
     ElMessage.success('管理员添加成功')
     adminDialogVisible.value = false
     adminForm.value.name = ''
@@ -245,10 +248,13 @@ const handleAddAdmin = async () => {
 }
 
 const handleRemoveAdmin = async (name) => {
-  const requesterName = userStore.name || 'admin'
+  if (!operatorName.value.trim()) {
+    ElMessage.warning('请先在右上角填写操作者姓名')
+    return
+  }
   try {
     await ElMessageBox.confirm(`确定要移除管理员 "${name}" 吗？`, '移除确认', { type: 'warning' })
-    await cacApi.removeAdmin(name, { requester_name: requesterName })
+    await cacApi.removeAdmin(name, { requester_name: operatorName.value })
     ElMessage.success('管理员已移除')
     await loadCacAdmins()
   } catch (e) {
@@ -258,17 +264,20 @@ const handleRemoveAdmin = async (name) => {
 
 // ===== 教室时间槽管理 =====
 const handleAddSlot = async () => {
+  if (!operatorName.value.trim()) {
+    ElMessage.warning('请先在右上角填写操作者姓名')
+    return
+  }
   if (!slotForm.value.date || !slotForm.value.time_slot) {
     ElMessage.warning('请填写完整信息')
     return
   }
-  const requesterName = userStore.name || 'admin'
   try {
     await cacApi.addRoomSlot({
       date: formatDateForApi(slotForm.value.date),
       time_slot: slotForm.value.time_slot,
       classroom: slotForm.value.classroom,
-      requester_name: requesterName
+      requester_name: operatorName.value
     })
     ElMessage.success('时间槽添加成功')
     slotDialogVisible.value = false
@@ -278,15 +287,23 @@ const handleAddSlot = async () => {
 }
 
 const handleRemoveSlot = async (id) => {
-  const requesterName = userStore.name || 'admin'
+  if (!operatorName.value.trim()) {
+    ElMessage.warning('请先在右上角填写操作者姓名')
+    return
+  }
   try {
     await ElMessageBox.confirm('确定要删除这个时间槽吗？', '删除确认', { type: 'warning' })
-    await cacApi.removeRoomSlot(id, { requester_name: requesterName })
+    await cacApi.removeRoomSlot(id, { requester_name: operatorName.value })
     ElMessage.success('时间槽已删除')
     await loadRoomSlots()
   } catch (e) {
     if (e !== 'cancel') {}
   }
+}
+
+// 保存操作者姓名
+const saveOperatorName = () => {
+  localStorage.setItem('operatorName', operatorName.value)
 }
 
 const formatDate = (date) => {
@@ -308,7 +325,18 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
 
 <template>
   <div class="page-container">
-    <h1 class="page-title">管理后台</h1>
+    <div class="page-header">
+      <h1 class="page-title">管理后台</h1>
+      <div class="operator-input">
+        <span style="margin-right: 8px; color: #64748b;">操作者：</span>
+        <el-input
+          v-model="operatorName"
+          placeholder="输入管理员姓名"
+          style="width: 150px;"
+          @change="saveOperatorName"
+        />
+      </div>
+    </div>
 
     <!-- 统计卡片 -->
     <el-row :gutter="16" style="margin-bottom: 24px">
@@ -589,6 +617,24 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
 </template>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.operator-input {
+  display: flex;
+  align-items: center;
+}
+
 .stat-card {
   background: white;
   border-radius: 12px;
