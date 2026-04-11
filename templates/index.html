@@ -811,6 +811,9 @@
     <div class="welcome-hint" style="text-align: center; padding: 20px 16px; color: var(--sub); font-size: 15px;">
       👋 欢迎使用 CAC 分享会系统，选择下方活动即可开始报名
     </div>
+    <div id="debug-info" style="text-align: center; padding: 10px 16px; color: var(--primary); font-size: 12px; background: var(--ok-light); border-radius: var(--radius); margin-bottom: 20px;">
+      加载中...
+    </div>
 
     <div class="main-grid">
       <!-- 左侧：活动列表 -->
@@ -894,6 +897,7 @@
   </div>
 
   <script>
+    console.log('Script loaded!');
     const activityListEl = document.getElementById('activity-list');
     const formContainerEl = document.getElementById('form-container');
     const statsPanelEl = document.getElementById('stats-panel');
@@ -910,13 +914,28 @@
 
     let activities = [];
     let selectedActivity = null;
+    
+    // 页面加载时调用
+    window.onload = function() {
+      console.log('Window loaded, calling loadActivities...');
+      loadActivities();
+    };
 
     async function loadActivities() {
+      const debugEl = document.getElementById('debug-info');
+      debugEl.textContent = '加载活动中...';
+      
       try {
         const res = await fetch('/api/activities', { cache: 'no-store' });
+        debugEl.textContent = '获取活动数据...';
+        
         const data = await res.json();
+        debugEl.textContent = '处理活动数据...';
+        
         if (data.ok) {
           activities = data.activities || [];
+          debugEl.textContent = `找到 ${activities.length} 个活动`;
+          
           if (selectedActivity) {
             selectedActivity = activities.find((activity) => activity.id === selectedActivity.id) || null;
           }
@@ -927,14 +946,18 @@
           }
           loadWarnings();
           loadLeaderboards();
+        } else {
+          debugEl.textContent = '获取活动数据失败';
         }
       } catch (e) {
+        debugEl.textContent = `加载失败: ${e.message}`;
         console.error('Load activities failed:', e);
       }
     }
 
     function renderActivityList() {
       const now = new Date();
+      console.log('Current time:', now);
 
       // 过滤条件：
       // 1. 排除已结项的活动
@@ -947,12 +970,13 @@
 
         if (!dateStr) return true; // 日期未定的活动保留
 
-        // 解析时间段的结束时间（格式如 "14:00-16:00"）
+        // 解析时间段的结束时间（格式如 "14:00-16:00" 或 "14：00-14：30"）
         const timeParts = timeStr.split('-');
-        const endTimeStr = timeParts.length >= 2 ? timeParts[1].trim() : '';
+        const endTimeStr = timeParts.length >= 2 ? timeParts[1].trim().replace(/\uff1a/g, ':') : '';
 
-        // 构建活动的结束时间
-        const activityEndTime = new Date(dateStr);
+        // 构建活动的结束时间（使用本地时间）
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const activityEndTime = new Date(year, month - 1, day);
         if (endTimeStr) {
           const [hours, minutes] = endTimeStr.split(':').map(Number);
           if (!isNaN(hours)) {
@@ -963,9 +987,13 @@
           activityEndTime.setHours(23, 59, 59, 999);
         }
 
+        // 调试信息
+        console.log('Activity:', activity.topic, 'Date:', dateStr, 'Time:', timeStr, 'End time:', activityEndTime, 'Now:', now, 'Should show:', activityEndTime > now);
+
         // 只保留当前时间之后的活动
         return activityEndTime > now;
       });
+      console.log('Total activities:', activities.length, 'Active activities:', activeActivities.length);
 
       if (activeActivities.length === 0) {
         activityListEl.innerHTML = `
