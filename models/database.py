@@ -7,12 +7,9 @@
 import json
 import threading
 import uuid
-import pymysql
-from pymysql import cursors
+import sqlite3
 
 from config import (
-    MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE,
-    MYSQL_CONNECT_TIMEOUT, MYSQL_READ_TIMEOUT, MYSQL_WRITE_TIMEOUT,
     AUTO_REGISTER_COLUMNS
 )
 from utils import DatabaseError
@@ -40,69 +37,55 @@ class Database:
         self._auto_register_columns()
         self._initialized = True
 
-    def _connect(self, database=None):
+    def _connect(self):
         """创建数据库连接"""
-        return pymysql.connect(
-            host=MYSQL_HOST,
-            port=MYSQL_PORT,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            database=database,
-            charset="utf8mb4",
-            autocommit=True,
-            cursorclass=cursors.DictCursor,
-            connect_timeout=MYSQL_CONNECT_TIMEOUT,
-            read_timeout=MYSQL_READ_TIMEOUT,
-            write_timeout=MYSQL_WRITE_TIMEOUT,
+        return sqlite3.connect(
+            'table_signup.db',
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
         )
 
     def _get_conn(self):
         """获取当前线程的数据库连接"""
         conn = getattr(self._local, "conn", None)
-        if conn is None or not getattr(conn, "open", False):
-            conn = self._connect(MYSQL_DATABASE)
+        if conn is None:
+            conn = self._connect()
+            conn.row_factory = sqlite3.Row
             self._local.conn = conn
-        else:
-            conn.ping(reconnect=True)
         return conn
 
     def _bootstrap(self):
         """初始化数据库和表结构"""
-        server_conn = self._connect(None)
+        conn = self._connect()
         try:
-            with server_conn.cursor() as cursor:
-                cursor.execute(
-                    f"CREATE DATABASE IF NOT EXISTS `{MYSQL_DATABASE}` "
-                    "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-                )
-        finally:
-            server_conn.close()
-
-        conn = self._connect(MYSQL_DATABASE)
-        try:
-            with conn.cursor() as cursor:
+            cursor = conn.cursor()
+            try:
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS app_rows (
-                        table_name VARCHAR(191) NOT NULL,
-                        row_id VARCHAR(64) NOT NULL,
-                        row_data JSON NOT NULL,
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        PRIMARY KEY (table_name, row_id),
-                        KEY idx_table_updated (table_name, updated_at)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                        table_name TEXT NOT NULL,
+                        row_id TEXT NOT NULL,
+                        row_data TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (table_name, row_id)
+                    )
                     """
                 )
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS app_table_columns (
-                        table_name VARCHAR(191) NOT NULL,
-                        column_name VARCHAR(191) NOT NULL,
+                        table_name TEXT NOT NULL,
+                        column_name TEXT NOT NULL,
                         PRIMARY KEY (table_name, column_name)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                    )
                     """
                 )
+                # 创建索引
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_table_updated ON app_rows (table_name, updated_at)"
+                )
+            finally:
+                cursor.close()
         finally:
             conn.close()
 
@@ -112,11 +95,16 @@ class Database:
         if not clean_columns:
             return
         conn = self._get_conn()
-        with conn.cursor() as cursor:
-            cursor.executemany(
-                "INSERT IGNORE INTO app_table_columns (table_name, column_name) VALUES (%s, %s)",
-                [(table_name, column_name) for column_name in clean_columns],
-            )
+        cursor = conn.cursor()
+        try:
+            for column_name in clean_columns:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO app_table_columns (table_name, column_name) VALUES (?, ?)",
+                    (table_name, column_name)
+                )
+            conn.commit()
+        finally:
+            cursor.close()
 
     def _auto_register_columns(self):
         """启动时自动注册列"""
@@ -132,41 +120,47 @@ class Database:
     def list_rows(self, table_name):
         """获取表中所有行"""
         conn = self._get_conn()
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()
+        try:
             cursor.execute(
-                "SELECT row_id, row_data FROM app_rows WHERE table_name=%s ORDER BY created_at ASC",
+                "SELECT row_id, row_data FROM app_rows WHERE table_name=? ORDER BY created_at ASC",
                 (table_name,),
             )
             rows = cursor.fetchall() or []
+        finally:
+            cursor.close()
         result = []
         for row in rows:
-            payload = row.get("row_data")
+            payload = row["row_data"]
             if isinstance(payload, str):
                 try:
                     payload = json.loads(payload)
                 except json.JSONDecodeError:
                     continue
             if isinstance(payload, dict):
-                payload["_id"] = row.get("row_id")
+                payload["_id"] = row["row_id"]
                 result.append(payload)
         return result
 
     def get_row(self, table_name, row_id):
         """获取单行"""
         conn = self._get_conn()
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()
+        try:
             cursor.execute(
-                "SELECT row_id, row_data FROM app_rows WHERE table_name=%s AND row_id=%s",
+                "SELECT row_id, row_data FROM app_rows WHERE table_name=? AND row_id=?",
                 (table_name, row_id),
             )
             row = cursor.fetchone()
+        finally:
+            cursor.close()
         if not row:
             return None
-        payload = row.get("row_data")
+        payload = row["row_data"]
         if isinstance(payload, str):
             payload = json.loads(payload)
         if isinstance(payload, dict):
-            payload["_id"] = row.get("row_id")
+            payload["_id"] = row["row_id"]
         return payload
 
     def append_row(self, table_name, row_data):
@@ -175,11 +169,15 @@ class Database:
         payload = dict(row_data or {})
         payload.pop("_id", None)
         conn = self._get_conn()
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()
+        try:
             cursor.execute(
-                "INSERT INTO app_rows (table_name, row_id, row_data) VALUES (%s, %s, %s)",
+                "INSERT INTO app_rows (table_name, row_id, row_data) VALUES (?, ?, ?)",
                 (table_name, row_id, json.dumps(payload, ensure_ascii=False)),
             )
+            conn.commit()
+        finally:
+            cursor.close()
         return row_id
 
     def update_row(self, table_name, row_id, row_data):
@@ -187,32 +185,43 @@ class Database:
         payload = dict(row_data or {})
         payload.pop("_id", None)
         conn = self._get_conn()
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()
+        try:
             cursor.execute(
-                "UPDATE app_rows SET row_data=%s WHERE table_name=%s AND row_id=%s",
+                "UPDATE app_rows SET row_data=?, updated_at=CURRENT_TIMESTAMP WHERE table_name=? AND row_id=?",
                 (json.dumps(payload, ensure_ascii=False), table_name, row_id),
             )
+            conn.commit()
             return cursor.rowcount > 0
+        finally:
+            cursor.close()
 
     def delete_row(self, table_name, row_id):
         """删除行"""
         conn = self._get_conn()
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()
+        try:
             cursor.execute(
-                "DELETE FROM app_rows WHERE table_name=%s AND row_id=%s",
+                "DELETE FROM app_rows WHERE table_name=? AND row_id=?",
                 (table_name, row_id),
             )
+            conn.commit()
             return cursor.rowcount > 0
+        finally:
+            cursor.close()
 
     def get_registered_columns(self, table_name):
         """获取已注册的列"""
         conn = self._get_conn()
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()
+        try:
             cursor.execute(
-                "SELECT column_name FROM app_table_columns WHERE table_name=%s",
+                "SELECT column_name FROM app_table_columns WHERE table_name=?",
                 (table_name,),
             )
-            return {row.get("column_name") for row in (cursor.fetchall() or [])}
+            return {row["column_name"] for row in (cursor.fetchall() or [])}
+        finally:
+            cursor.close()
 
 
 # 单例实例

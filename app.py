@@ -44,6 +44,13 @@ try:
 except Exception:
     pymysql = None
 
+# 导入SQLite数据库实现
+try:
+    from models.database import Database
+except Exception as e:
+    print(f"Warning: Failed to import SQLite database: {e}")
+    Database = None
+
 
 load_dotenv()
 
@@ -431,6 +438,55 @@ class MySQLBase:
 
 if DB_BACKEND == "mysql":
     base = MySQLBase()
+elif DB_BACKEND == "sqlite":
+    if Database is None:
+        raise RuntimeError("SQLite数据库实现不可用")
+    db_instance = Database()
+    # 包装SQLite数据库实例以匹配base接口
+    class SQLiteBase:
+        def __init__(self, db_instance):
+            self.db = db_instance
+        
+        def list_rows(self, table_name):
+            return self.db.list_rows(table_name)
+        
+        def append_row(self, table_name, row_data):
+            row_id = self.db.append_row(table_name, row_data)
+            # 构建返回格式以匹配其他后端
+            result = dict(row_data)
+            result.pop("_id", None)
+            result["_id"] = row_id
+            return result
+        
+        def update_row(self, table_name, row_id, row_data):
+            success = self.db.update_row(table_name, row_id, row_data)
+            if not success:
+                raise RuntimeError(f"记录不存在: {table_name}/{row_id}")
+            # 构建返回格式以匹配其他后端
+            result = dict(row_data)
+            result.pop("_id", None)
+            result["_id"] = row_id
+            return result
+        
+        def delete_row(self, table_name, row_id):
+            self.db.delete_row(table_name, row_id)
+        
+        def list_columns(self, table_name):
+            columns = self.db.get_registered_columns(table_name)
+            return [{"name": col} for col in columns]
+        
+        def add_table(self, table_name, *args):
+            return {"name": table_name, "ok": True}
+        
+        def insert_column(self, table_name, column_name, *args):
+            # 同步列定义
+            self.db._sync_columns(table_name, [column_name])
+            return {"table": table_name, "column": column_name, "ok": True}
+        
+        def _sync_columns(self, table_name, columns):
+            self.db._sync_columns(table_name, columns)
+    
+    base = SQLiteBase(db_instance)
 else:
     if Base is None:
         raise RuntimeError("未安装 seatable-api，无法使用 seatable 后端")
@@ -2350,21 +2406,23 @@ def _detect_boundary_violations():
 
 # ===== Flask 路由 =====
 
-# Vue 单页应用路由（所有前端页面都由 Vue 处理）
+# 旧版前端路由
 @app.get("/")
-@app.get("/admin")
+def serve_index():
+    """服务首页"""
+    return render_template('index.html')
+
+@app.get("/organizer")
+def serve_organizer():
+    """服务管理后台"""
+    time_slots = TIME_SLOTS
+    time_slot_pairs = _get_time_slot_pairs()
+    return render_template('organizer.html', time_slots=time_slots, time_slot_pairs=time_slot_pairs)
+
 @app.get("/profile")
-@app.get("/activity/<activity_id>")
-def serve_vue_app(activity_id=None):
-    """服务 Vue 单页应用"""
-    return send_from_directory(DIST_DIR, 'index.html')
-
-
-# 静态资源路由
-@app.get("/assets/<path:filename>")
-def serve_assets(filename):
-    """服务前端静态资源"""
-    return send_from_directory(os.path.join(DIST_DIR, 'assets'), filename)
+def serve_profile():
+    """服务个人中心"""
+    return render_template('profile.html')
 
 
 @app.get("/healthz")
