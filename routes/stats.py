@@ -19,18 +19,20 @@ stats_bp = Blueprint('stats', __name__, url_prefix='/api')
 @stats_bp.get("/leaderboards")
 def api_leaderboards():
     """获取各类榜单与边界预警"""
-    _, review_quality_ranking = build_review_quality_stats()
-    boundary_stats = build_boundary_stats()
-    return jsonify({
-        "ok": True,
-        "leaderboards": {
-            "sharing": build_share_leaderboard(),
-            "participation": build_participation_leaderboard(),
-            "review_quality": review_quality_ranking,
-            "punctuality": build_punctuality_leaderboard(),
-        },
-        "boundary_watch": boundary_stats,
-    })
+    def build_payload():
+        _, review_quality_ranking = build_review_quality_stats()
+        boundary_stats = build_boundary_stats()
+        return {
+            "ok": True,
+            "leaderboards": {
+                "sharing": build_share_leaderboard(),
+                "participation": build_participation_leaderboard(),
+                "review_quality": review_quality_ranking,
+                "punctuality": build_punctuality_leaderboard(),
+            },
+            "boundary_watch": boundary_stats,
+        }
+    return jsonify(cached_build("api_leaderboards_payload", 30, build_payload))
 
 
 @stats_bp.get("/stats")

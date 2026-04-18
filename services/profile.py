@@ -8,15 +8,21 @@ from datetime import datetime
 
 from config import (
     USER_PROFILE_TABLE_NAME,
-    USER_COL_NAME, USER_COL_EMAIL, USER_COL_ROLE, USER_COL_FIRST_SEEN_AT
+    USER_COL_NAME, USER_COL_EMAIL, USER_COL_ROLE, USER_COL_FIRST_SEEN_AT,
+    TABLE_ROWS_CACHE_TTL_SECONDS
 )
 from models import db
-from utils import ValidationError, NotFoundError
+from utils import ValidationError, NotFoundError, safe_text
+from utils.versioned_cache import cached_build, touch_version
 
 
 def list_user_profiles():
-    """获取所有用户档案"""
-    return db.list_rows(USER_PROFILE_TABLE_NAME)
+    """获取所有用户档案（带版本缓存）"""
+    return cached_build(
+        'user_profiles',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: db.list_rows(USER_PROFILE_TABLE_NAME) or [],
+    )
 
 
 def get_user_profile(name):
@@ -53,6 +59,7 @@ def upsert_user_profile(name, email='', role='普通用户'):
         if role:
             update_data[USER_COL_ROLE] = role
         db.update_row(USER_PROFILE_TABLE_NAME, profile.get('_id'), update_data)
+        touch_version()
         return get_user_profile(name)
     else:
         # 创建新档案
@@ -66,6 +73,7 @@ def upsert_user_profile(name, email='', role='普通用户'):
             USER_COL_FIRST_SEEN_AT: datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
         result = db.append_row(USER_PROFILE_TABLE_NAME, row_data)
+        touch_version()
         return result
 
 
@@ -89,7 +97,6 @@ def get_profile_summary(name):
         raise NotFoundError("用户档案不存在")
 
     # 统计参与的活动
-    from services.activity import list_activities
     from services.signup import list_signups, get_signup_name
 
     signups = list_signups()
@@ -109,11 +116,3 @@ def get_profile_summary(name):
         }
     }
 
-
-# ===== 辅助函数 =====
-
-def _safe_text(value):
-    """安全获取文本"""
-    if value is None:
-        return ''
-    return str(value).strip()

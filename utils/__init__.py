@@ -4,6 +4,10 @@
 统一管理应用中的异常类型和处理方式
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # ===== 自定义异常类 =====
 
 class AppError(Exception):
@@ -62,7 +66,7 @@ def safe_execute(default=None, log_error=True):
                 return func(*args, **kwargs)
             except Exception as exc:
                 if log_error:
-                    print(f"[ERROR] {func.__name__}: {exc}")
+                    logger.error("%s: %s", func.__name__, exc)
                 return default() if callable(default) else default
         return wrapper
     return decorator
@@ -79,7 +83,7 @@ def handle_db_error(func):
         except Exception as exc:
             # 捕获 pymysql 异常
             error_msg = str(exc)
-            print(f"[DB_ERROR] {func.__name__}: {error_msg}")
+            logger.error("[DB_ERROR] %s: %s", func.__name__, error_msg)
             raise DatabaseError(f"数据库操作失败: {error_msg}")
     return wrapper
 
@@ -97,3 +101,16 @@ def success_response(data=None, message="操作成功"):
 def error_response(message: str, code: str = "ERROR", status_code: int = 400):
     """构建错误响应"""
     return {"ok": False, "message": message, "code": code}, status_code
+
+
+# ===== 通用辅助函数 =====
+
+from utils.helpers import safe_text, safe_bool
+
+__all__ = [
+    "AppError", "DatabaseError", "ValidationError", "NotFoundError",
+    "AuthError", "ConflictError",
+    "safe_execute", "handle_db_error",
+    "success_response", "error_response",
+    "safe_text", "safe_bool",
+]

@@ -16,26 +16,36 @@ from config import (
     ACTIVITY_COL_ON_TIME, ACTIVITY_COL_CLOSER_NAME, ACTIVITY_COL_TYPE,
     ACTIVITY_COL_GROUP_ID, ACTIVITY_COL_GROUP_NAME, ACTIVITY_COL_EXPECTED_ATTENDANCE,
     SIGNUP_COL_ACTIVITY_ID, SIGNUP_COL_ROLE,
-    REVIEWER_LIMIT, ACTIVITY_CLOSE_GRACE_MINUTES
+    REVIEWER_LIMIT, ACTIVITY_CLOSE_GRACE_MINUTES, TABLE_ROWS_CACHE_TTL_SECONDS
 )
 from models import db
-from utils import NotFoundError, ValidationError
+from utils import NotFoundError, ValidationError, safe_text, safe_bool
+from utils.versioned_cache import cached_build, touch_version
 
 
 def list_activities():
-    """获取所有活动列表"""
-    return db.list_rows(ACTIVITY_TABLE_NAME)
+    """获取所有活动列表（带版本缓存）"""
+    return cached_build(
+        'activities',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: db.list_rows(ACTIVITY_TABLE_NAME) or [],
+    )
 
 
 def get_activity_by_id(activity_id):
-    """根据ID获取活动"""
+    """根据ID获取活动（O(1) 索引查找）"""
     if not activity_id:
         return None
-    activities = list_activities()
-    for activity in activities:
-        if activity.get('_id') == activity_id:
-            return activity
-    return None
+    return get_activity_index().get(str(activity_id))
+
+
+def get_activity_index():
+    """获取活动ID索引字典（O(1) 查找，带版本缓存）"""
+    return cached_build(
+        'activity_index',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: {str(a.get('_id', '')): a for a in (db.list_rows(ACTIVITY_TABLE_NAME) or [])},
+    )
 
 
 def get_activity_details(activity):
@@ -44,39 +54,39 @@ def get_activity_details(activity):
         return {}
     return {
         'id': activity.get('_id'),
-        'date': _safe_text(activity.get(ACTIVITY_COL_DATE, '')),
-        'time': _safe_text(activity.get(ACTIVITY_COL_TIME, '')),
-        'speakers': _safe_text(activity.get(ACTIVITY_COL_SPEAKERS, '')),
-        'topic': _safe_text(activity.get(ACTIVITY_COL_TOPIC, '')),
-        'classroom': _safe_text(activity.get(ACTIVITY_COL_CLASSROOM, '')),
-        'videourl': _safe_text(activity.get(ACTIVITY_COL_VIDEOURL, '')),
-        'creator_name': _safe_text(activity.get(ACTIVITY_COL_CREATOR_NAME, '')),
-        'creator_email': _safe_text(activity.get(ACTIVITY_COL_CREATOR_EMAIL, '')),
-        'status': _safe_text(activity.get(ACTIVITY_COL_STATUS, '进行中')),
-        'closed_at': _safe_text(activity.get(ACTIVITY_COL_CLOSED_AT, '')),
-        'closer_name': _safe_text(activity.get(ACTIVITY_COL_CLOSER_NAME, '')),
+        'date': safe_text(activity.get(ACTIVITY_COL_DATE, '')),
+        'time': safe_text(activity.get(ACTIVITY_COL_TIME, '')),
+        'speakers': safe_text(activity.get(ACTIVITY_COL_SPEAKERS, '')),
+        'topic': safe_text(activity.get(ACTIVITY_COL_TOPIC, '')),
+        'classroom': safe_text(activity.get(ACTIVITY_COL_CLASSROOM, '')),
+        'videourl': safe_text(activity.get(ACTIVITY_COL_VIDEOURL, '')),
+        'creator_name': safe_text(activity.get(ACTIVITY_COL_CREATOR_NAME, '')),
+        'creator_email': safe_text(activity.get(ACTIVITY_COL_CREATOR_EMAIL, '')),
+        'status': safe_text(activity.get(ACTIVITY_COL_STATUS, '进行中')),
+        'closed_at': safe_text(activity.get(ACTIVITY_COL_CLOSED_AT, '')),
+        'closer_name': safe_text(activity.get(ACTIVITY_COL_CLOSER_NAME, '')),
         'on_time': activity.get(ACTIVITY_COL_ON_TIME),
-        'activity_type': _safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal',
-        'group_id': _safe_text(activity.get(ACTIVITY_COL_GROUP_ID, '')),
-        'group_name': _safe_text(activity.get(ACTIVITY_COL_GROUP_NAME, '')),
+        'activity_type': safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal',
+        'group_id': safe_text(activity.get(ACTIVITY_COL_GROUP_ID, '')),
+        'group_name': safe_text(activity.get(ACTIVITY_COL_GROUP_NAME, '')),
         'expected_attendance': activity.get(ACTIVITY_COL_EXPECTED_ATTENDANCE, 0),
     }
 
 
 def get_activity_creator_name(activity):
     """获取活动创建者姓名"""
-    return _safe_text(activity.get(ACTIVITY_COL_CREATOR_NAME, ''))
+    return safe_text(activity.get(ACTIVITY_COL_CREATOR_NAME, ''))
 
 
 def get_activity_creator_email(activity):
     """获取活动创建者邮箱"""
-    return _safe_text(activity.get(ACTIVITY_COL_CREATOR_EMAIL, ''))
+    return safe_text(activity.get(ACTIVITY_COL_CREATOR_EMAIL, ''))
 
 
 def activity_is_closed(activity):
     """检查活动是否已结项"""
-    return _safe_bool(activity.get(ACTIVITY_COL_ON_TIME)) or \
-           _safe_text(activity.get(ACTIVITY_COL_STATUS, '')) == '已结项' or \
+    return safe_bool(activity.get(ACTIVITY_COL_ON_TIME)) or \
+           safe_text(activity.get(ACTIVITY_COL_STATUS, '')) == '已结项' or \
            bool(get_activity_closed_at(activity))
 
 
@@ -99,8 +109,8 @@ def get_activity_state(activity):
 
 def get_activity_end_datetime(activity):
     """获取活动结束时间"""
-    date_str = _safe_text(activity.get(ACTIVITY_COL_DATE, ''))
-    time_str = _safe_text(activity.get(ACTIVITY_COL_TIME, ''))
+    date_str = safe_text(activity.get(ACTIVITY_COL_DATE, ''))
+    time_str = safe_text(activity.get(ACTIVITY_COL_TIME, ''))
     if not date_str or not time_str:
         return None
     try:
@@ -168,8 +178,9 @@ def create_activity(data):
         ACTIVITY_COL_EXPECTED_ATTENDANCE: data.get('expected_attendance', 0),
     }
 
-    row_id = db.append_row(ACTIVITY_TABLE_NAME, row_data)
-    return row_id
+    result = db.append_row(ACTIVITY_TABLE_NAME, row_data)
+    touch_version()
+    return str(result.get('_id', ''))
 
 
 def update_activity(activity_id, data, creator_name=None):
@@ -198,6 +209,7 @@ def update_activity(activity_id, data, creator_name=None):
 
     if update_data:
         db.update_row(ACTIVITY_TABLE_NAME, activity_id, {**activity, **update_data})
+        touch_version()
     return True
 
 
@@ -213,12 +225,15 @@ def delete_activity(activity_id, creator_name=None):
     # 检查是否有报名
     signup_count = count_signups_by_activity(activity_id)
     if signup_count > 0:
-        # 删除所有报名
         signups = get_activity_signups(activity_id)
         for signup in signups:
             db.delete_row(SIGNUP_TABLE_NAME, signup.get('_id'))
+        touch_version()
 
-    return db.delete_row(ACTIVITY_TABLE_NAME, activity_id)
+    result = db.delete_row(ACTIVITY_TABLE_NAME, activity_id)
+    if result:
+        touch_version()
+    return result
 
 
 def close_activity(activity_id, closer_name):
@@ -241,26 +256,9 @@ def close_activity(activity_id, closer_name):
         ACTIVITY_COL_CLOSER_NAME: closer_name,
     }
 
-    return db.update_row(ACTIVITY_TABLE_NAME, activity_id, {**activity, **update_data})
-
-
-# ===== 辅助函数 =====
-
-def _safe_text(value):
-    """安全获取文本"""
-    if value is None:
-        return ''
-    return str(value).strip()
-
-
-def _safe_bool(value):
-    """安全获取布尔值"""
-    if value is None:
-        return False
-    if isinstance(value, bool):
-        return value
-    return str(value).lower() in ('true', '1', 'yes')
-
+    result = db.update_row(ACTIVITY_TABLE_NAME, activity_id, {**activity, **update_data})
+    touch_version()
+    return result
 
 def _parse_datetime(dt_str):
     """解析日期时间"""

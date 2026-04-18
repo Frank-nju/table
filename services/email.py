@@ -4,6 +4,7 @@
 封装业务逻辑服务，如邮件发送等
 """
 
+import logging
 import smtplib
 import threading
 from email.message import EmailMessage
@@ -12,6 +13,8 @@ from config import (
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_SSL,
     SENDER_EMAIL, SENDER_NAME
 )
+
+logger = logging.getLogger(__name__)
 
 
 class EmailService:
@@ -26,7 +29,7 @@ class EmailService:
     def send(recipient, subject, body):
         """发送邮件"""
         if not EmailService.is_configured():
-            print("[WARN] Email not configured, skip sending")
+            logger.warning("Email not configured, skip sending")
             return False
 
         msg = EmailMessage()
@@ -47,7 +50,7 @@ class EmailService:
                     smtp.send_message(msg)
             return True
         except Exception as e:
-            print(f"[ERROR] Send email failed: {e}")
+            logger.error("Send email failed: %s", e)
             return False
 
     @staticmethod

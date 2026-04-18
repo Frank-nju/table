@@ -8,18 +8,18 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 
 from config import (
-    ACTIVITY_COL_SPEAKERS, ACTIVITY_COL_DATE, ACTIVITY_COL_CREATOR_NAME,
-    SIGNUP_COL_ACTIVITY_ID, SIGNUP_COL_REVIEW_SUBMITTED_AT,
-    OUTPUT_RECORD_COL_DATE, OUTPUT_RECORD_COL_TYPE, OUTPUT_RECORD_COL_NAME,
-    BOUNDARY_LOOKBACK_DAYS
+    ACTIVITY_COL_SPEAKERS, ACTIVITY_COL_DATE, ACTIVITY_COL_CREATOR_NAME, ACTIVITY_COL_TIME,
+    ACTIVITY_COL_ON_TIME, ACTIVITY_COL_STATUS, ACTIVITY_COL_CLOSED_AT,
+    SIGNUP_COL_ACTIVITY_ID,
+    OUTPUT_RECORD_TABLE_NAME, OUTPUT_RECORD_COL_DATE, OUTPUT_RECORD_COL_TYPE, OUTPUT_RECORD_COL_NAME,
+    BOUNDARY_LOOKBACK_DAYS, ACTIVITY_CLOSE_GRACE_MINUTES
 )
 from models import db
 from services.activity import (
-    list_activities, get_activity_by_id, activity_is_closed,
-    get_activity_state, get_activity_details
+    list_activities, get_activity_by_id, activity_is_closed
 )
 from services.signup import (
-    list_signups, get_signup_name, get_signup_role, get_signup_review_doc_url
+    list_signups, get_signup_name, get_signup_role
 )
 from services.cac_admin import is_cac_user
 from services.profile import list_user_profiles
@@ -147,8 +147,6 @@ def build_boundary_stats():
 
 def _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS):
     """构建产出统计"""
-    from models import OUTPUT_RECORD_TABLE_NAME, OUTPUT_RECORD_COL_DATE, OUTPUT_RECORD_COL_TYPE, OUTPUT_RECORD_COL_NAME
-
     output_counter = Counter()
 
     for activity in list_activities():
@@ -163,12 +161,12 @@ def _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS):
         if activity and _within_lookback(activity.get(ACTIVITY_COL_DATE, ''), lookback_days=lookback_days):
             output_counter[get_signup_name(signup)] += 1
 
-    for record in db.list_rows('产出记录'):
-        if not _within_lookback(record.get('日期', ''), lookback_days=lookback_days):
+    for record in db.list_rows(OUTPUT_RECORD_TABLE_NAME):
+        if not _within_lookback(record.get(OUTPUT_RECORD_COL_DATE, ''), lookback_days=lookback_days):
             continue
-        record_type = str(record.get('类型', '')).strip()
+        record_type = str(record.get(OUTPUT_RECORD_COL_TYPE, '')).strip()
         if record_type in {'分享', '评议', 'CAC有约'}:
-            name = str(record.get('姓名', '')).strip()
+            name = str(record.get(OUTPUT_RECORD_COL_NAME, '')).strip()
             if name:
                 output_counter[name] += 1
 
@@ -211,15 +209,58 @@ def _parse_date(date_value):
 
 
 def _compute_activity_on_time(activity):
-    """计算活动是否准时"""
+    """计算活动是否准时结项（含宽限期）"""
     if not activity:
         return False
-    # 简化实现：检查活动是否在计划日期之前或当天关闭
-    activity_date = _parse_date(activity.get(ACTIVITY_COL_DATE, ''))
-    if not activity_date:
+
+    # 检查是否已结项
+    on_time_flag = str(activity.get(ACTIVITY_COL_ON_TIME, '')).strip().lower()
+    if on_time_flag in ('true', '1', 'yes'):
+        return True
+    status = str(activity.get(ACTIVITY_COL_STATUS, '')).strip()
+    if status == '已结项':
+        # 已结项但没有 on_time 标记，尝试用时间计算
+        pass
+    elif status != '已结项':
+        return False  # 未结项的活动谈不上准时
+
+    # 用结项时间和活动结束时间对比
+    closed_at = _parse_datetime(activity.get(ACTIVITY_COL_CLOSED_AT, ''))
+    end_at = _get_activity_end_datetime(activity)
+    if not closed_at or not end_at:
         return False
-    # 这里需要更复杂的逻辑，暂时返回 True
-    return True
+    return closed_at <= end_at + timedelta(minutes=ACTIVITY_CLOSE_GRACE_MINUTES)
+
+
+def _parse_datetime(dt_str):
+    """解析日期时间"""
+    if not dt_str:
+        return None
+    text = str(dt_str).strip()
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M'):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def _get_activity_end_datetime(activity):
+    """获取活动结束时间"""
+    if not activity:
+        return None
+    date_str = str(activity.get(ACTIVITY_COL_DATE, '')).strip()
+    time_str = str(activity.get(ACTIVITY_COL_TIME, '')).strip()
+    if not date_str or not time_str:
+        return None
+    try:
+        time_parts = time_str.split('-')
+        if len(time_parts) >= 2:
+            end_time = time_parts[-1].strip()
+            return datetime.strptime(f"{date_str} {end_time}", "%Y-%m-%d %H:%M")
+    except (ValueError, IndexError):
+        pass
+    return None
 
 
 def _collect_known_member_names():

@@ -8,15 +8,21 @@ from config import (
     REVIEW_RATING_TABLE_NAME,
     REVIEW_RATING_COL_SIGNUP_ID, REVIEW_RATING_COL_ACTIVITY_ID,
     REVIEW_RATING_COL_REVIEWER_NAME, REVIEW_RATING_COL_RATER_NAME,
-    REVIEW_RATING_COL_SCORE, REVIEW_RATING_COL_WEIGHT, REVIEW_RATING_COL_COMMENT
+    REVIEW_RATING_COL_SCORE, REVIEW_RATING_COL_WEIGHT, REVIEW_RATING_COL_COMMENT,
+    TABLE_ROWS_CACHE_TTL_SECONDS
 )
 from models import db
 from utils import ValidationError, NotFoundError
+from utils.versioned_cache import cached_build, touch_version
 
 
 def list_review_ratings():
-    """获取所有评议评分"""
-    return db.list_rows(REVIEW_RATING_TABLE_NAME)
+    """获取所有评议评分（带版本缓存）"""
+    return cached_build(
+        'review_ratings',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: db.list_rows(REVIEW_RATING_TABLE_NAME) or [],
+    )
 
 
 def get_rating_by_id(rating_id):
@@ -72,4 +78,5 @@ def create_review_rating(signup_id, activity_id, reviewer_name, rater_name, scor
     }
 
     result = db.append_row(REVIEW_RATING_TABLE_NAME, row_data)
+    touch_version()
     return serialize_rating(result)

@@ -5,6 +5,7 @@
 """
 
 import json
+import logging
 import threading
 import uuid
 import pymysql
@@ -16,6 +17,8 @@ from config import (
     AUTO_REGISTER_COLUMNS
 )
 from utils import DatabaseError
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -68,6 +71,9 @@ class Database:
 
     def _bootstrap(self):
         """初始化数据库和表结构"""
+        # 校验数据库名，防止 SQL 注入
+        if not MYSQL_DATABASE or not MYSQL_DATABASE.isidentifier():
+            raise ValueError(f"Invalid database name: {MYSQL_DATABASE!r}")
         server_conn = self._connect(None)
         try:
             with server_conn.cursor() as cursor:
@@ -124,8 +130,8 @@ class Database:
             try:
                 self._sync_columns(table_name, columns)
             except Exception as e:
-                print(f"[WARN] Auto register columns for {table_name} failed: {e}")
-        print("[INFO] Auto register columns completed")
+                logger.warning("Auto register columns for %s failed: %s", table_name, e)
+        logger.info("Auto register columns completed")
 
     # ===== CRUD 操作 =====
 
@@ -180,7 +186,9 @@ class Database:
                 "INSERT INTO app_rows (table_name, row_id, row_data) VALUES (%s, %s, %s)",
                 (table_name, row_id, json.dumps(payload, ensure_ascii=False)),
             )
-        return row_id
+        # 写入后同步列定义，确保后续 _filter_append_row_data 不会过滤新列
+        self._sync_columns(table_name, payload.keys())
+        return {"_id": row_id, **payload}
 
     def update_row(self, table_name, row_id, row_data):
         """更新行"""
@@ -192,7 +200,10 @@ class Database:
                 "UPDATE app_rows SET row_data=%s WHERE table_name=%s AND row_id=%s",
                 (json.dumps(payload, ensure_ascii=False), table_name, row_id),
             )
-            return cursor.rowcount > 0
+            affected = cursor.rowcount > 0
+        # 写入后同步列定义
+        self._sync_columns(table_name, payload.keys())
+        return {"_id": row_id, **payload} if affected else None
 
     def delete_row(self, table_name, row_id):
         """删除行"""
@@ -213,6 +224,20 @@ class Database:
                 (table_name,),
             )
             return {row.get("column_name") for row in (cursor.fetchall() or [])}
+
+    def list_columns(self, table_name):
+        """列出已注册列（兼容 SeaTable 接口）"""
+        columns = self.get_registered_columns(table_name)
+        return [{"name": col} for col in sorted(columns)]
+
+    def add_table(self, table_name, *args):
+        """添加表（MySQL 模式无操作，仅兼容 SeaTable 接口）"""
+        return {"name": table_name, "ok": True}
+
+    def insert_column(self, table_name, column_name, *args):
+        """插入列（MySQL 模式仅同步列定义，兼容 SeaTable 接口）"""
+        self._sync_columns(table_name, [column_name])
+        return {"table": table_name, "column": column_name, "ok": True}
 
 
 # 单例实例

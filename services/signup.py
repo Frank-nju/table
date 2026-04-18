@@ -14,17 +14,22 @@ from config import (
     SIGNUP_COL_REVIEW_SUBMITTED_AT, SIGNUP_COL_LAST_REVIEW_REMINDER_AT,
     SIGNUP_COL_REVIEW_CONTENT,
     ACTIVITY_COL_TYPE, ACTIVITY_COL_CREATOR_NAME, ACTIVITY_COL_CREATOR_EMAIL,
-    REVIEWER_LIMIT
+    REVIEWER_LIMIT, TABLE_ROWS_CACHE_TTL_SECONDS
 )
 from models import db
-from utils import ValidationError, NotFoundError, ConflictError
-from services.activity import get_activity_by_id, get_activity_creator_name, get_activity_creator_email
+from utils import ValidationError, NotFoundError, ConflictError, safe_text
+from services.activity import get_activity_by_id, get_activity_creator_name, get_activity_creator_email, get_activity_details
 from services.email import send_email_async
+from utils.versioned_cache import cached_build, touch_version
 
 
 def list_signups():
-    """获取所有报名记录"""
-    return db.list_rows(SIGNUP_TABLE_NAME)
+    """获取所有报名记录（带版本缓存）"""
+    return cached_build(
+        'signups',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: db.list_rows(SIGNUP_TABLE_NAME) or [],
+    )
 
 
 def get_signup_by_id(signup_id):
@@ -40,22 +45,22 @@ def get_signup_by_id(signup_id):
 
 def get_signup_name(signup):
     """获取报名者姓名"""
-    return _safe_text(signup.get(SIGNUP_COL_NAME, ''))
+    return safe_text(signup.get(SIGNUP_COL_NAME, ''))
 
 
 def get_signup_email(signup):
     """获取报名者邮箱"""
-    return _safe_text(signup.get(SIGNUP_COL_EMAIL, ''))
+    return safe_text(signup.get(SIGNUP_COL_EMAIL, ''))
 
 
 def get_signup_role(signup):
     """获取报名角色"""
-    return _safe_text(signup.get(SIGNUP_COL_ROLE, ''))
+    return safe_text(signup.get(SIGNUP_COL_ROLE, ''))
 
 
 def get_signup_review_doc_url(signup):
     """获取评议文档链接"""
-    return _safe_text(signup.get(SIGNUP_COL_REVIEW_DOC_URL, ''))
+    return safe_text(signup.get(SIGNUP_COL_REVIEW_DOC_URL, ''))
 
 
 def get_signups_by_activity(activity_id, role=None):
@@ -78,8 +83,6 @@ def serialize_signup(signup):
     """序列化报名记录"""
     activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
     activity = get_activity_by_id(activity_id)
-
-    from services.activity import get_activity_details
     activity_details = get_activity_details(activity) if activity else {}
 
     return {
@@ -87,10 +90,10 @@ def serialize_signup(signup):
         'name': get_signup_name(signup),
         'activity_id': activity_id,
         'role': get_signup_role(signup),
-        'phone': _safe_text(signup.get(SIGNUP_COL_PHONE, '')),
+        'phone': safe_text(signup.get(SIGNUP_COL_PHONE, '')),
         'email': get_signup_email(signup),
-        'review_content': _safe_text(signup.get(SIGNUP_COL_REVIEW_CONTENT, '')),
-        'review_doc_url': _safe_text(signup.get(SIGNUP_COL_REVIEW_DOC_URL, '')),
+        'review_content': safe_text(signup.get(SIGNUP_COL_REVIEW_CONTENT, '')),
+        'review_doc_url': safe_text(signup.get(SIGNUP_COL_REVIEW_DOC_URL, '')),
         'review_submitted_at': signup.get(SIGNUP_COL_REVIEW_SUBMITTED_AT, ''),
         'activity': activity_details,
     }
@@ -98,12 +101,12 @@ def serialize_signup(signup):
 
 def create_signup(data):
     """创建报名"""
-    name = _safe_text(data.get('name', ''))
-    activity_id = _safe_text(data.get('activity_id', ''))
-    role = _safe_text(data.get('role', ''))
-    phone = _safe_text(data.get('phone', ''))
-    email = _safe_text(data.get('email', ''))
-    review_content = _safe_text(data.get('review_content', ''))
+    name = safe_text(data.get('name', ''))
+    activity_id = safe_text(data.get('activity_id', ''))
+    role = safe_text(data.get('role', ''))
+    phone = safe_text(data.get('phone', ''))
+    email = safe_text(data.get('email', ''))
+    review_content = safe_text(data.get('review_content', ''))
 
     # 验证必填字段
     if not name or not activity_id or not role:
@@ -144,7 +147,8 @@ def create_signup(data):
         SIGNUP_COL_REVIEW_CONTENT: review_content if role == '评议员' else '',
     }
 
-    row_id = db.append_row(SIGNUP_TABLE_NAME, row_data)
+    result = db.append_row(SIGNUP_TABLE_NAME, row_data)
+    touch_version()
 
     # 发送通知邮件
     creator_email = get_activity_creator_email(activity)
@@ -157,7 +161,7 @@ def create_signup(data):
             (f"评议内容：{review_content}\n" if review_content else "")
         )
 
-    return row_id
+    return str(result.get('_id', ''))
 
 
 def delete_signup(signup_id, name=None):
@@ -169,7 +173,10 @@ def delete_signup(signup_id, name=None):
     if name and get_signup_name(signup) != name:
         raise ValidationError("只能取消自己的报名")
 
-    return db.delete_row(SIGNUP_TABLE_NAME, signup_id)
+    result = db.delete_row(SIGNUP_TABLE_NAME, signup_id)
+    if result:
+        touch_version()
+    return result
 
 
 def update_signup_review_doc(signup_id, review_doc_url, reviewer_name=None):
@@ -187,13 +194,7 @@ def update_signup_review_doc(signup_id, review_doc_url, reviewer_name=None):
         SIGNUP_COL_REVIEW_SUBMITTED_AT: datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     }
 
-    return db.update_row(SIGNUP_TABLE_NAME, signup_id, update_data)
+    result = db.update_row(SIGNUP_TABLE_NAME, signup_id, update_data)
+    touch_version()
+    return result
 
-
-# ===== 辅助函数 =====
-
-def _safe_text(value):
-    """安全获取文本"""
-    if value is None:
-        return ''
-    return str(value).strip()

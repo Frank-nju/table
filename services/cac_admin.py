@@ -12,18 +12,23 @@ from config import (
     CAC_ADMIN_COL_NAME, CAC_ADMIN_COL_CREATED_AT,
     CAC_SLOT_COL_DATE, CAC_SLOT_COL_TIME_SLOT, CAC_SLOT_COL_CLASSROOM,
     CAC_SLOT_COL_STATUS, CAC_SLOT_COL_ACTIVITY_ID, CAC_SLOT_COL_CREATED_BY,
-    CAC_SLOT_COL_CREATED_AT, CAC_NAME
+    CAC_SLOT_COL_CREATED_AT, CAC_NAME,
+    TABLE_ROWS_CACHE_TTL_SECONDS
 )
 from models import db
 from utils import ValidationError, NotFoundError, AuthError
+from utils.versioned_cache import cached_build, touch_version
 
 
 # ===== 管理员服务 =====
 
 def list_cac_admins():
-    """获取CAC管理员列表"""
-    rows = db.list_rows(CAC_ADMINS_TABLE_NAME)
-    return [{'name': str(row.get(CAC_ADMIN_COL_NAME, '')).strip()} for row in rows]
+    """获取CAC管理员列表（带版本缓存）"""
+    return cached_build(
+        'cac_admins',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: db.list_rows(CAC_ADMINS_TABLE_NAME) or [],
+    )
 
 
 def is_cac_admin(name):
@@ -52,11 +57,12 @@ def add_cac_admin(name, requester_name=None):
     if is_cac_admin(name):
         raise ValidationError("该用户已是管理员")
 
-    row_id = db.append_row(CAC_ADMINS_TABLE_NAME, {
+    result = db.append_row(CAC_ADMINS_TABLE_NAME, {
         CAC_ADMIN_COL_NAME: name,
         CAC_ADMIN_COL_CREATED_AT: datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     })
-    return row_id
+    touch_version()
+    return str(result.get('_id', ''))
 
 
 def remove_cac_admin(name, requester_name):
@@ -71,6 +77,7 @@ def remove_cac_admin(name, requester_name):
     for row in rows:
         if str(row.get(CAC_ADMIN_COL_NAME, '')).strip() == name:
             db.delete_row(CAC_ADMINS_TABLE_NAME, row.get('_id'))
+            touch_version()
             return True
 
     raise NotFoundError("该用户不是管理员")
@@ -84,7 +91,11 @@ def list_cac_room_slots(date=None, time_slot=None):
     time_slot 可以是单个时间段如 '14:00-14:30' 或合并后的如 '14:00-15:30'
     当是合并后的时间段时，返回在该时间段内所有半小时槽都可用的教室
     """
-    rows = db.list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
+    rows = cached_build(
+        'cac_room_slots',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: db.list_rows(CAC_ROOM_SLOTS_TABLE_NAME) or [],
+    )
 
     # 解析需要的半小时槽列表
     required_slots = []
@@ -176,7 +187,7 @@ def add_cac_room_slot(date, time_slot, classroom, requester_name):
             str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip() == classroom):
             raise ValidationError("该时间槽已存在")
 
-    row_id = db.append_row(CAC_ROOM_SLOTS_TABLE_NAME, {
+    result = db.append_row(CAC_ROOM_SLOTS_TABLE_NAME, {
         CAC_SLOT_COL_DATE: date,
         CAC_SLOT_COL_TIME_SLOT: time_slot,
         CAC_SLOT_COL_CLASSROOM: classroom,
@@ -185,7 +196,8 @@ def add_cac_room_slot(date, time_slot, classroom, requester_name):
         CAC_SLOT_COL_CREATED_BY: requester_name,
         CAC_SLOT_COL_CREATED_AT: datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
     })
-    return row_id
+    touch_version()
+    return str(result.get('_id', ''))
 
 
 def remove_cac_room_slot(slot_id, requester_name):
@@ -197,6 +209,7 @@ def remove_cac_room_slot(slot_id, requester_name):
     for row in rows:
         if row.get('_id') == slot_id:
             db.delete_row(CAC_ROOM_SLOTS_TABLE_NAME, slot_id)
+            touch_version()
             return True
 
     raise NotFoundError("时间槽不存在")

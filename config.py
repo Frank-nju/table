@@ -166,8 +166,13 @@ LISTENER_UNLIMITED = os.getenv("LISTENER_UNLIMITED", "true").lower() == "true"
 # ===== 时间槽配置 =====
 TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00,18:30,19:00,19:30,20:00,20:30,21:00,21:30,22:00").split(",") if x.strip()]
 
+# ===== 时间槽配置 =====
+# 半小时一档，从09:00到22:00
+TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00,18:30,19:00,19:30,20:00,20:30,21:00,21:30,22:00").split(",") if x.strip()]
+
 # ===== CAC有约冲突检测配置 =====
 CAC_FIXED_WEEKDAY = int(os.getenv("CAC_FIXED_WEEKDAY", "4"))
+CAC_FIXED_TIME = os.getenv("CAC_FIXED_TIME", "18:00-19:00")
 
 # ===== 邮件提醒配置 =====
 SMTP_HOST = os.getenv("SMTP_HOST", "")
@@ -177,6 +182,8 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "true").lower() == "true"
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", SMTP_USER)
 SENDER_NAME = os.getenv("SENDER_NAME", "CAC分享会")
+# 兼容旧变量名
+EMAIL_FROM = os.getenv("EMAIL_FROM", SENDER_EMAIL)
 
 # ===== 个人主页配置 =====
 PROFILE_EXPLORE_DEFAULT_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_DEFAULT_PAGE_SIZE", "10"))
@@ -186,9 +193,24 @@ PROFILE_FEED_DEFAULT_LIMIT = int(os.getenv("PROFILE_FEED_DEFAULT_LIMIT", "30"))
 
 # ===== 边界预警配置 =====
 BOUNDARY_LOOKBACK_DAYS = int(os.getenv("BOUNDARY_LOOKBACK_DAYS", "14"))
+BOUNDARY_REPORT_EMAIL = os.getenv("BOUNDARY_REPORT_EMAIL", "nova@nju.edu.cn").strip()
+BOUNDARY_FIRST_REPORT_AT = os.getenv("BOUNDARY_FIRST_REPORT_AT", "2026-03-22 22:00:00").strip()
+BOUNDARY_WEEKLY_REPORT_WEEKDAY = int(os.getenv("BOUNDARY_WEEKLY_REPORT_WEEKDAY", "6"))
+BOUNDARY_WEEKLY_REPORT_HOUR = int(os.getenv("BOUNDARY_WEEKLY_REPORT_HOUR", "22"))
+BOUNDARY_WEEKLY_REPORT_MINUTE = int(os.getenv("BOUNDARY_WEEKLY_REPORT_MINUTE", "0"))
+BOUNDARY_REPORT_STATE_FILE = os.getenv(
+    "BOUNDARY_REPORT_STATE_FILE",
+    os.path.join(tempfile.gettempdir(), "table_signup_boundary_report.state"),
+)
 
 # ===== CAC 配置 =====
 CAC_NAME = os.getenv("CAC_NAME", "cac").strip()
+CAC_EMAIL = os.getenv("CAC_EMAIL", "nova@nju.edu.cn").strip()
+
+# ===== 后台任务配置 =====
+REVIEW_REMINDER_INTERVAL_HOURS = int(os.getenv("REVIEW_REMINDER_INTERVAL_HOURS", "24"))
+BACKGROUND_SCAN_INTERVAL_SECONDS = int(os.getenv("BACKGROUND_SCAN_INTERVAL_SECONDS", "3600"))
+ROSTER_FILE_PATH = os.getenv("ROSTER_FILE_PATH", os.path.join(os.path.dirname(__file__), "member_roster.local.txt"))
 
 # ===== 其他配置 =====
 TASK_LOCK_FILE = os.path.join(tempfile.gettempdir(), "table_signup_task.lock")

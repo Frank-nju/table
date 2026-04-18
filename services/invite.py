@@ -11,18 +11,24 @@ from config import (
     INVITE_COL_ACTIVITY_ID, INVITE_COL_ACTIVITY_TOPIC,
     INVITE_COL_INVITER_NAME, INVITE_COL_INVITEE_NAME, INVITE_COL_INVITEE_EMAIL,
     INVITE_COL_SOURCE_TYPE, INVITE_COL_STATUS, INVITE_COL_CREATED_AT,
-    INVITE_COL_UPDATED_AT, INVITE_COL_UPDATED_BY
+    INVITE_COL_UPDATED_AT, INVITE_COL_UPDATED_BY,
+    TABLE_ROWS_CACHE_TTL_SECONDS
 )
 from models import db
-from utils import ValidationError, NotFoundError
+from utils import ValidationError, NotFoundError, safe_text
 from services.activity import get_activity_by_id
 from services.profile import get_user_email, upsert_user_profile
 from services.email import send_email_async
+from utils.versioned_cache import cached_build, touch_version
 
 
 def list_review_invites():
-    """获取所有评议邀请"""
-    return db.list_rows(REVIEW_INVITE_TABLE_NAME)
+    """获取所有评议邀请（带版本缓存）"""
+    return cached_build(
+        'review_invites',
+        TABLE_ROWS_CACHE_TTL_SECONDS,
+        lambda: db.list_rows(REVIEW_INVITE_TABLE_NAME) or [],
+    )
 
 
 def get_invite_by_id(invite_id):
@@ -99,6 +105,7 @@ def create_review_invite(activity_id, inviter_name, invitee_name, invitee_email=
     }
 
     result = db.append_row(REVIEW_INVITE_TABLE_NAME, row_data)
+    touch_version()
 
     # 发送邮件通知
     if final_email:
@@ -130,13 +137,6 @@ def update_invite_status(invite_id, status, updater_name):
     }
 
     db.update_row(REVIEW_INVITE_TABLE_NAME, invite_id, update_data)
+    touch_version()
     return serialize_review_invite(get_invite_by_id(invite_id))
 
-
-# ===== 辅助函数 =====
-
-def _safe_text(value):
-    """安全获取文本"""
-    if value is None:
-        return ''
-    return str(value).strip()

@@ -1,10 +1,11 @@
+import logging
+
 import os
 import re
 import json
 import smtplib
 import threading
 import time
-import platform
 import tempfile
 import uuid
 from datetime import datetime, timedelta
@@ -14,8 +15,9 @@ from email.message import EmailMessage
 # 自定义异常处理
 from utils import (
     AppError, DatabaseError, ValidationError, NotFoundError, AuthError, ConflictError,
-    success_response, error_response
+    success_response, error_response, safe_text, safe_bool
 )
+from utils.versioned_cache import cached_build, touch_version, clear_all as clear_versioned_cache
 
 # 路由蓝图
 from routes import (
@@ -24,6 +26,7 @@ from routes import (
 )
 
 # fcntl is only available on Unix/Linux
+import platform
 if platform.system() != 'Windows':
     import fcntl
 else:
@@ -39,396 +42,96 @@ try:
     from seatable_api.constants import ColumnTypes
 except Exception:
     ColumnTypes = None
-try:
-    import pymysql
-except Exception:
-    pymysql = None
 
+# 统一从 config.py 导入所有配置，禁止在 app.py 重复定义
+from config import (
+    DB_BACKEND, SERVER_URL, API_TOKEN,
+    TABLE_ROWS_CACHE_TTL_SECONDS,
+    ACTIVITY_TABLE_NAME, SIGNUP_TABLE_NAME, REVIEW_RATING_TABLE_NAME,
+    OUTPUT_RECORD_TABLE_NAME, USER_PROFILE_TABLE_NAME, INTEREST_GROUP_TABLE_NAME,
+    GROUP_MEMBER_TABLE_NAME, REVIEW_INVITE_TABLE_NAME, CAC_ADMINS_TABLE_NAME,
+    CAC_ROOM_SLOTS_TABLE_NAME,
+    ACTIVITY_COL_DATE, ACTIVITY_COL_TIME, ACTIVITY_COL_SPEAKERS, ACTIVITY_COL_TOPIC,
+    ACTIVITY_COL_CLASSROOM, ACTIVITY_COL_VIDEOURL, ACTIVITY_COL_CREATOR_NAME,
+    ACTIVITY_COL_CREATOR_EMAIL, ACTIVITY_COL_STATUS, ACTIVITY_COL_CLOSED_AT,
+    ACTIVITY_COL_ON_TIME, ACTIVITY_COL_CLOSER_NAME, ACTIVITY_COL_TYPE,
+    ACTIVITY_COL_GROUP_ID, ACTIVITY_COL_GROUP_NAME, ACTIVITY_COL_EXPECTED_ATTENDANCE,
+    LEGACY_ACTIVITY_COL_CREATOR_STUDENT_ID,
+    SIGNUP_COL_NAME, SIGNUP_COL_ACTIVITY_ID, SIGNUP_COL_ROLE,
+    SIGNUP_COL_PHONE, SIGNUP_COL_EMAIL, SIGNUP_COL_REVIEW_DOC_URL,
+    SIGNUP_COL_REVIEW_SUBMITTED_AT, SIGNUP_COL_LAST_REVIEW_REMINDER_AT,
+    SIGNUP_COL_REVIEW_CONTENT, LEGACY_SIGNUP_COL_STUDENT_ID,
+    REVIEW_RATING_COL_SIGNUP_ID, REVIEW_RATING_COL_ACTIVITY_ID,
+    REVIEW_RATING_COL_REVIEWER_NAME, REVIEW_RATING_COL_RATER_NAME,
+    REVIEW_RATING_COL_SCORE, REVIEW_RATING_COL_WEIGHT, REVIEW_RATING_COL_COMMENT,
+    OUTPUT_RECORD_COL_NAME, OUTPUT_RECORD_COL_TYPE, OUTPUT_RECORD_COL_DATE,
+    OUTPUT_RECORD_COL_NOTE,
+    USER_COL_NAME, USER_COL_EMAIL, USER_COL_ROLE, USER_COL_FIRST_SEEN_AT,
+    GROUP_COL_NAME, GROUP_COL_LEADER_NAME, GROUP_COL_TOPIC_GOAL,
+    GROUP_COL_TIME_BOUNDARY, GROUP_COL_EXECUTION_PLAN, GROUP_COL_DESCRIPTION,
+    GROUP_COL_STATUS, GROUP_COL_CREATED_AT,
+    GROUP_MEMBER_COL_GROUP_ID, GROUP_MEMBER_COL_GROUP_NAME,
+    GROUP_MEMBER_COL_MEMBER_NAME, GROUP_MEMBER_COL_MEMBER_EMAIL,
+    GROUP_MEMBER_COL_MEMBER_ROLE, GROUP_MEMBER_COL_JOINED_AT,
+    INVITE_COL_ACTIVITY_ID, INVITE_COL_ACTIVITY_TOPIC,
+    INVITE_COL_INVITER_NAME, INVITE_COL_INVITEE_NAME, INVITE_COL_INVITEE_EMAIL,
+    INVITE_COL_SOURCE_TYPE, INVITE_COL_STATUS, INVITE_COL_CREATED_AT,
+    INVITE_COL_UPDATED_AT, INVITE_COL_UPDATED_BY,
+    CAC_ADMIN_COL_NAME, CAC_ADMIN_COL_CREATED_AT,
+    CAC_SLOT_COL_CLASSROOM, CAC_SLOT_COL_DATE, CAC_SLOT_COL_TIME_SLOT,
+    CAC_SLOT_COL_STATUS, CAC_SLOT_COL_ACTIVITY_ID, CAC_SLOT_COL_CREATED_BY,
+    CAC_SLOT_COL_CREATED_AT,
+    AUTO_REGISTER_COLUMNS,
+    REVIEWER_LIMIT, LISTENER_UNLIMITED, TIME_SLOTS,
+    CAC_FIXED_WEEKDAY, CAC_FIXED_TIME,
+    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_USE_SSL,
+    SENDER_EMAIL, SENDER_NAME,
+    BOUNDARY_REPORT_EMAIL, BOUNDARY_LOOKBACK_DAYS,
+    BOUNDARY_FIRST_REPORT_AT, BOUNDARY_WEEKLY_REPORT_WEEKDAY,
+    BOUNDARY_WEEKLY_REPORT_HOUR, BOUNDARY_WEEKLY_REPORT_MINUTE,
+    ACTIVITY_CLOSE_GRACE_MINUTES, REVIEW_REMINDER_INTERVAL_HOURS,
+    BACKGROUND_SCAN_INTERVAL_SECONDS, MEMBER_ROSTER_FILE,
+    TASK_LOCK_FILE, PROFILE_EXPLORE_DEFAULT_PAGE_SIZE,
+    PROFILE_EXPLORE_MAX_PAGE_SIZE, PROFILE_CACHE_TTL_SECONDS,
+    PROFILE_FEED_DEFAULT_LIMIT, CAC_NAME, CAC_EMAIL,
+)
 
 load_dotenv()
 
-SERVER_URL = os.getenv("SEATABLE_SERVER_URL", "https://table.nju.edu.cn").rstrip("/")
-API_TOKEN = os.getenv("SEATABLE_API_TOKEN", "")
-DB_BACKEND = os.getenv("DB_BACKEND", "mysql").strip().lower()
-MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1").strip()
-MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
-MYSQL_USER = os.getenv("MYSQL_USER", "root").strip()
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "").strip()
-MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "table_signup").strip()
-MYSQL_CONNECT_TIMEOUT = int(os.getenv("MYSQL_CONNECT_TIMEOUT", "5"))
-MYSQL_READ_TIMEOUT = int(os.getenv("MYSQL_READ_TIMEOUT", "30"))
-MYSQL_WRITE_TIMEOUT = int(os.getenv("MYSQL_WRITE_TIMEOUT", "30"))
-TABLE_ROWS_CACHE_TTL_SECONDS = int(os.getenv("TABLE_ROWS_CACHE_TTL_SECONDS", "120"))
+from models import db
 
-# ===== 表名配置 =====
-ACTIVITY_TABLE_NAME = os.getenv("ACTIVITY_TABLE_NAME", "分享会活动")
-SIGNUP_TABLE_NAME = os.getenv("SIGNUP_TABLE_NAME", "分享会报名")
-REVIEW_RATING_TABLE_NAME = os.getenv("REVIEW_RATING_TABLE_NAME", "评议评分")
-OUTPUT_RECORD_TABLE_NAME = os.getenv("OUTPUT_RECORD_TABLE_NAME", "输出活动记录")
-USER_PROFILE_TABLE_NAME = os.getenv("USER_PROFILE_TABLE_NAME", "用户档案")
-INTEREST_GROUP_TABLE_NAME = os.getenv("INTEREST_GROUP_TABLE_NAME", "兴趣组")
-GROUP_MEMBER_TABLE_NAME = os.getenv("GROUP_MEMBER_TABLE_NAME", "兴趣组成员")
-REVIEW_INVITE_TABLE_NAME = os.getenv("REVIEW_INVITE_TABLE_NAME", "评议邀请")
-CAC_ADMINS_TABLE_NAME = os.getenv("CAC_ADMINS_TABLE_NAME", "CAC管理员")
-CAC_ROOM_SLOTS_TABLE_NAME = os.getenv("CAC_ROOM_SLOTS_TABLE_NAME", "CAC教室时间槽")
+# 导入 services 层函数，避免 app.py 重复业务逻辑
+from services.activity import (
+    list_activities, get_activity_by_id, get_activity_details,
+    get_activity_creator_name, get_activity_creator_email,
+    get_activity_closed_at, get_activity_end_datetime,
+    get_activity_signups, count_signups_by_activity, get_signup_stats,
+    activity_is_closed, get_activity_state,
+)
+from services.signup import (
+    list_signups, get_signup_by_id, serialize_signup,
+    get_signup_review_doc_url, get_signup_review_submitted_at,
+    get_signup_last_review_reminder_at, get_signup_name,
+    auto_accept_invites_after_signup,
+)
+from services.rating import list_review_ratings, serialize_rating
+from services.profile import list_user_profiles, get_user_profile, get_user_email, upsert_user_profile
+from services.group import (
+    list_interest_groups, list_group_members, get_interest_group_by_id,
+    serialize_interest_group, get_group_ids_for_member,
+)
+from services.invite import (
+    list_review_invites, get_invite_by_id, serialize_review_invite,
+)
+from services.cac_admin import (
+    is_cac_admin, is_cac_user, list_cac_admins, list_cac_room_slots,
+)
 
-# ===== 活动表字段 =====
-ACTIVITY_COL_DATE = os.getenv("ACTIVITY_COL_DATE", "活动日期")
-ACTIVITY_COL_TIME = os.getenv("ACTIVITY_COL_TIME", "活动时间")
-ACTIVITY_COL_SPEAKERS = os.getenv("ACTIVITY_COL_SPEAKERS", "分享者")
-ACTIVITY_COL_TOPIC = os.getenv("ACTIVITY_COL_TOPIC", "活动主题")
-ACTIVITY_COL_CLASSROOM = os.getenv("ACTIVITY_COL_CLASSROOM", "活动教室")
-ACTIVITY_COL_VIDEOURL = os.getenv("ACTIVITY_COL_VIDEOURL", "线上视频号")
-ACTIVITY_COL_CREATOR_NAME = os.getenv("ACTIVITY_COL_CREATOR_NAME", "组织者姓名")
-ACTIVITY_COL_CREATOR_EMAIL = os.getenv("ACTIVITY_COL_CREATOR_EMAIL", "组织者邮箱")
-ACTIVITY_COL_STATUS = os.getenv("ACTIVITY_COL_STATUS", "活动状态")
-ACTIVITY_COL_CLOSED_AT = os.getenv("ACTIVITY_COL_CLOSED_AT", "结项时间")
-ACTIVITY_COL_ON_TIME = os.getenv("ACTIVITY_COL_ON_TIME", "准时结项")
-ACTIVITY_COL_CLOSER_NAME = os.getenv("ACTIVITY_COL_CLOSER_NAME", "结项人")
-ACTIVITY_COL_TYPE = os.getenv("ACTIVITY_COL_TYPE", "活动类型")
-ACTIVITY_COL_GROUP_ID = os.getenv("ACTIVITY_COL_GROUP_ID", "所属兴趣组ID")
-ACTIVITY_COL_GROUP_NAME = os.getenv("ACTIVITY_COL_GROUP_NAME", "所属兴趣组")
-LEGACY_ACTIVITY_COL_CREATOR_STUDENT_ID = os.getenv("ACTIVITY_COL_CREATOR_STUDENT_ID", "组织者学号")
+logger = logging.getLogger(__name__)
 
-# ===== 报名表字段 =====
-SIGNUP_COL_NAME = os.getenv("SIGNUP_COL_NAME", "姓名")
-SIGNUP_COL_ACTIVITY_ID = os.getenv("SIGNUP_COL_ACTIVITY_ID", "关联活动")
-SIGNUP_COL_ROLE = os.getenv("SIGNUP_COL_ROLE", "角色")
-SIGNUP_COL_PHONE = os.getenv("SIGNUP_COL_PHONE", "联系电话")
-SIGNUP_COL_EMAIL = os.getenv("SIGNUP_COL_EMAIL", "邮箱")
-SIGNUP_COL_REVIEW_DOC_URL = os.getenv("SIGNUP_COL_REVIEW_DOC_URL", "评议语雀链接")
-SIGNUP_COL_REVIEW_SUBMITTED_AT = os.getenv("SIGNUP_COL_REVIEW_SUBMITTED_AT", "评议提交时间")
-SIGNUP_COL_LAST_REVIEW_REMINDER_AT = os.getenv("SIGNUP_COL_LAST_REVIEW_REMINDER_AT", "上次评议提醒时间")
-LEGACY_SIGNUP_COL_STUDENT_ID = os.getenv("SIGNUP_COL_STUDENT_ID", "学号")
-SIGNUP_COL_REVIEW_CONTENT = os.getenv("SIGNUP_COL_REVIEW_CONTENT", "评议内容")
-
-# ===== 评议评分表字段 =====
-REVIEW_RATING_COL_SIGNUP_ID = os.getenv("REVIEW_RATING_COL_SIGNUP_ID", "评议报名ID")
-REVIEW_RATING_COL_ACTIVITY_ID = os.getenv("REVIEW_RATING_COL_ACTIVITY_ID", "活动ID")
-REVIEW_RATING_COL_REVIEWER_NAME = os.getenv("REVIEW_RATING_COL_REVIEWER_NAME", "评议者姓名")
-REVIEW_RATING_COL_RATER_NAME = os.getenv("REVIEW_RATING_COL_RATER_NAME", "评分人姓名")
-REVIEW_RATING_COL_SCORE = os.getenv("REVIEW_RATING_COL_SCORE", "评分")
-REVIEW_RATING_COL_WEIGHT = os.getenv("REVIEW_RATING_COL_WEIGHT", "权重")
-REVIEW_RATING_COL_COMMENT = os.getenv("REVIEW_RATING_COL_COMMENT", "评分备注")
-
-# ===== 输出活动记录表字段 =====
-OUTPUT_RECORD_COL_NAME = os.getenv("OUTPUT_RECORD_COL_NAME", "姓名")
-OUTPUT_RECORD_COL_TYPE = os.getenv("OUTPUT_RECORD_COL_TYPE", "输出类型")
-OUTPUT_RECORD_COL_DATE = os.getenv("OUTPUT_RECORD_COL_DATE", "输出日期")
-OUTPUT_RECORD_COL_NOTE = os.getenv("OUTPUT_RECORD_COL_NOTE", "备注")
-
-# ===== 用户档案字段 =====
-USER_COL_NAME = os.getenv("USER_COL_NAME", "姓名")
-USER_COL_EMAIL = os.getenv("USER_COL_EMAIL", "邮箱")
-USER_COL_ROLE = os.getenv("USER_COL_ROLE", "角色")
-USER_COL_FIRST_SEEN_AT = os.getenv("USER_COL_FIRST_SEEN_AT", "首次使用时间")
-
-# ===== 兴趣组字段 =====
-GROUP_COL_NAME = os.getenv("GROUP_COL_NAME", "组名")
-GROUP_COL_LEADER_NAME = os.getenv("GROUP_COL_LEADER_NAME", "组长")
-GROUP_COL_TOPIC_GOAL = os.getenv("GROUP_COL_TOPIC_GOAL", "主题目标")
-GROUP_COL_TIME_BOUNDARY = os.getenv("GROUP_COL_TIME_BOUNDARY", "时间边界")
-GROUP_COL_EXECUTION_PLAN = os.getenv("GROUP_COL_EXECUTION_PLAN", "执行方案")
-GROUP_COL_DESCRIPTION = os.getenv("GROUP_COL_DESCRIPTION", "简介")
-GROUP_COL_STATUS = os.getenv("GROUP_COL_STATUS", "状态")
-GROUP_COL_CREATED_AT = os.getenv("GROUP_COL_CREATED_AT", "创建时间")
-
-# ===== 兴趣组成员字段 =====
-GROUP_MEMBER_COL_GROUP_ID = os.getenv("GROUP_MEMBER_COL_GROUP_ID", "兴趣组ID")
-GROUP_MEMBER_COL_GROUP_NAME = os.getenv("GROUP_MEMBER_COL_GROUP_NAME", "兴趣组名")
-GROUP_MEMBER_COL_MEMBER_NAME = os.getenv("GROUP_MEMBER_COL_MEMBER_NAME", "成员姓名")
-GROUP_MEMBER_COL_MEMBER_EMAIL = os.getenv("GROUP_MEMBER_COL_MEMBER_EMAIL", "成员邮箱")
-GROUP_MEMBER_COL_MEMBER_ROLE = os.getenv("GROUP_MEMBER_COL_MEMBER_ROLE", "成员身份")
-GROUP_MEMBER_COL_JOINED_AT = os.getenv("GROUP_MEMBER_COL_JOINED_AT", "加入时间")
-
-# ===== 评议邀请字段 =====
-INVITE_COL_ACTIVITY_ID = os.getenv("INVITE_COL_ACTIVITY_ID", "活动ID")
-INVITE_COL_ACTIVITY_TOPIC = os.getenv("INVITE_COL_ACTIVITY_TOPIC", "活动主题")
-INVITE_COL_INVITER_NAME = os.getenv("INVITE_COL_INVITER_NAME", "邀请人")
-INVITE_COL_INVITEE_NAME = os.getenv("INVITE_COL_INVITEE_NAME", "被邀请人")
-INVITE_COL_INVITEE_EMAIL = os.getenv("INVITE_COL_INVITEE_EMAIL", "被邀请邮箱")
-INVITE_COL_SOURCE_TYPE = os.getenv("INVITE_COL_SOURCE_TYPE", "邀请来源")
-INVITE_COL_STATUS = os.getenv("INVITE_COL_STATUS", "状态")
-INVITE_COL_CREATED_AT = os.getenv("INVITE_COL_CREATED_AT", "邀请时间")
-INVITE_COL_UPDATED_AT = os.getenv("INVITE_COL_UPDATED_AT", "状态更新时间")
-INVITE_COL_UPDATED_BY = os.getenv("INVITE_COL_UPDATED_BY", "状态更新人")
-
-# ===== CAC管理员字段 =====
-CAC_ADMIN_COL_NAME = os.getenv("CAC_ADMIN_COL_NAME", "姓名")
-CAC_ADMIN_COL_CREATED_AT = os.getenv("CAC_ADMIN_COL_CREATED_AT", "添加时间")
-
-# ===== CAC教室时间槽字段 =====
-CAC_SLOT_COL_CLASSROOM = os.getenv("CAC_SLOT_COL_CLASSROOM", "教室")
-CAC_SLOT_COL_DATE = os.getenv("CAC_SLOT_COL_DATE", "日期")
-CAC_SLOT_COL_TIME_SLOT = os.getenv("CAC_SLOT_COL_TIME_SLOT", "时间段")
-CAC_SLOT_COL_STATUS = os.getenv("CAC_SLOT_COL_STATUS", "状态")
-CAC_SLOT_COL_ACTIVITY_ID = os.getenv("CAC_SLOT_COL_ACTIVITY_ID", "关联活动ID")
-CAC_SLOT_COL_CREATED_BY = os.getenv("CAC_SLOT_COL_CREATED_BY", "创建者")
-CAC_SLOT_COL_CREATED_AT = os.getenv("CAC_SLOT_COL_CREATED_AT", "创建时间")
-
-# ===== 自动注册列配置 =====
-# 定义每个表需要的列，启动时自动同步到 app_table_columns
-AUTO_REGISTER_COLUMNS = {
-    # 活动表
-    "分享会活动": [
-        "活动日期", "活动时间", "分享者", "活动主题", "活动教室", "线上视频号",
-        "组织者姓名", "组织者邮箱", "活动状态", "结项时间", "准时结项", "结项人",
-        "活动类型", "所属兴趣组ID", "所属兴趣组", "组织者学号", "预期人数",
-    ],
-    # 报名表
-    "分享会报名": [
-        "姓名", "关联活动", "角色", "联系电话", "邮箱", "学号",
-        "评议语雀链接", "评议提交时间", "上次评议提醒时间", "评议内容",
-    ],
-    # 评议评分表
-    "评议评分": [
-        "评议报名ID", "活动ID", "评议者姓名", "评分人姓名", "评分", "权重", "评分备注",
-    ],
-    # 输出活动记录表
-    "输出活动记录": [
-        "姓名", "输出类型", "输出日期", "备注",
-    ],
-    # 用户档案表
-    "用户档案": [
-        "姓名", "邮箱", "角色", "首次使用时间",
-    ],
-    # 兴趣组表
-    "兴趣组": [
-        "组名", "组长", "主题目标", "时间边界", "执行方案", "简介", "状态", "创建时间",
-    ],
-    # 兴趣组成员表
-    "兴趣组成员": [
-        "兴趣组ID", "兴趣组名", "成员姓名", "成员邮箱", "成员身份", "加入时间",
-    ],
-    # 评议邀请表
-    "评议邀请": [
-        "活动ID", "活动主题", "邀请人", "被邀请人", "被邀请邮箱",
-        "邀请来源", "状态", "邀请时间", "状态更新时间", "状态更新人",
-    ],
-    # CAC管理员表
-    "CAC管理员": [
-        "姓名", "添加时间",
-    ],
-    # CAC教室时间槽表
-    "CAC教室时间槽": [
-        "教室", "日期", "时间段", "状态", "关联活动ID", "创建者", "创建时间",
-    ],
-}
-
-# ===== 报名限额配置 =====
-REVIEWER_LIMIT = int(os.getenv("REVIEWER_LIMIT", "3"))
-LISTENER_UNLIMITED = os.getenv("LISTENER_UNLIMITED", "true").lower() == "true"
-
-# ===== 时间槽配置 =====
-# 半小时一档，从09:00到22:00
-TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00,18:30,19:00,19:30,20:00,20:30,21:00,21:30,22:00").split(",") if x.strip()]
-
-# ===== CAC有约冲突检测配置 =====
-# CAC有约固定在哪一天（0=周一, 1=周二, ..., 4=周五, 6=周日），默认周五
-CAC_FIXED_WEEKDAY = int(os.getenv("CAC_FIXED_WEEKDAY", "4"))
-# CAC有约固定时间段（格式 HH:MM-HH:MM）
-CAC_FIXED_TIME = os.getenv("CAC_FIXED_TIME", "18:00-19:00")
-
-# ===== 邮件提醒配置 =====
-SMTP_HOST = os.getenv("SMTP_HOST", "").strip()
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME", "").strip()
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
-SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
-SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
-EMAIL_FROM = os.getenv("EMAIL_FROM", "").strip()
-BOUNDARY_REPORT_EMAIL = os.getenv("BOUNDARY_REPORT_EMAIL", "nova@nju.edu.cn").strip()
-BOUNDARY_LOOKBACK_DAYS = int(os.getenv("BOUNDARY_LOOKBACK_DAYS", "14"))
-BOUNDARY_FIRST_REPORT_AT = os.getenv("BOUNDARY_FIRST_REPORT_AT", "2026-03-22 22:00:00").strip()
-BOUNDARY_WEEKLY_REPORT_WEEKDAY = int(os.getenv("BOUNDARY_WEEKLY_REPORT_WEEKDAY", "6"))
-BOUNDARY_WEEKLY_REPORT_HOUR = int(os.getenv("BOUNDARY_WEEKLY_REPORT_HOUR", "22"))
-BOUNDARY_WEEKLY_REPORT_MINUTE = int(os.getenv("BOUNDARY_WEEKLY_REPORT_MINUTE", "0"))
-ACTIVITY_CLOSE_GRACE_MINUTES = int(os.getenv("ACTIVITY_CLOSE_GRACE_MINUTES", "120"))
-REVIEW_REMINDER_INTERVAL_HOURS = int(os.getenv("REVIEW_REMINDER_INTERVAL_HOURS", "24"))
-BACKGROUND_SCAN_INTERVAL_SECONDS = int(os.getenv("BACKGROUND_SCAN_INTERVAL_SECONDS", "3600"))
-ROSTER_FILE_PATH = os.getenv("ROSTER_FILE_PATH", os.path.join(os.path.dirname(__file__), "member_roster.local.txt"))
-# Use platform-specific temp directory
-_temp_dir = tempfile.gettempdir()
-TASK_LOCK_FILE = os.getenv("TASK_LOCK_FILE", os.path.join(_temp_dir, "table_signup_background.lock"))
-BOUNDARY_REPORT_STATE_FILE = os.getenv("BOUNDARY_REPORT_STATE_FILE", os.path.join(_temp_dir, "table_signup_boundary_report.state"))
-CAC_NAME = os.getenv("CAC_NAME", "cac").strip()
-CAC_EMAIL = os.getenv("CAC_EMAIL", "nova@nju.edu.cn").strip()
-PROFILE_EXPLORE_DEFAULT_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_DEFAULT_PAGE_SIZE", "10"))
-PROFILE_EXPLORE_MAX_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_MAX_PAGE_SIZE", "100"))
-PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "120"))
-PROFILE_FEED_DEFAULT_LIMIT = int(os.getenv("PROFILE_FEED_DEFAULT_LIMIT", "30"))
-
-class MySQLBase:
-    def __init__(self):
-        if pymysql is None:
-            raise RuntimeError("缺少 pymysql 依赖。请执行: pip install pymysql")
-        if not MYSQL_DATABASE:
-            raise RuntimeError("MYSQL_DATABASE 不能为空")
-        self._local = threading.local()
-        self._bootstrap()
-
-    def _connect(self, database=None):
-        return pymysql.connect(
-            host=MYSQL_HOST,
-            port=MYSQL_PORT,
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            database=database,
-            charset="utf8mb4",
-            autocommit=True,
-            cursorclass=pymysql.cursors.DictCursor,
-            connect_timeout=MYSQL_CONNECT_TIMEOUT,
-            read_timeout=MYSQL_READ_TIMEOUT,
-            write_timeout=MYSQL_WRITE_TIMEOUT,
-        )
-
-    def _get_conn(self):
-        conn = getattr(self._local, "conn", None)
-        if conn is None or not getattr(conn, "open", False):
-            conn = self._connect(MYSQL_DATABASE)
-            self._local.conn = conn
-        else:
-            conn.ping(reconnect=True)
-        return conn
-
-    def _bootstrap(self):
-        server_conn = self._connect(None)
-        try:
-            with server_conn.cursor() as cursor:
-                cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{MYSQL_DATABASE}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
-        finally:
-            server_conn.close()
-
-        conn = self._connect(MYSQL_DATABASE)
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS app_rows (
-                        table_name VARCHAR(191) NOT NULL,
-                        row_id VARCHAR(64) NOT NULL,
-                        row_data JSON NOT NULL,
-                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        PRIMARY KEY (table_name, row_id),
-                        KEY idx_table_updated (table_name, updated_at)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-                    """
-                )
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS app_table_columns (
-                        table_name VARCHAR(191) NOT NULL,
-                        column_name VARCHAR(191) NOT NULL,
-                        PRIMARY KEY (table_name, column_name)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-                    """
-                )
-        finally:
-            conn.close()
-
-    def list_rows(self, table_name):
-        conn = self._get_conn()
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "SELECT row_id, row_data FROM app_rows WHERE table_name=%s ORDER BY created_at ASC",
-                (table_name,),
-            )
-            rows = cursor.fetchall() or []
-        result = []
-        for row in rows:
-            payload = row.get("row_data")
-            if isinstance(payload, str):
-                try:
-                    payload = json.loads(payload)
-                except Exception:
-                    payload = {}
-            if not isinstance(payload, dict):
-                payload = {}
-            payload["_id"] = row.get("row_id")
-            result.append(payload)
-        return result
-
-    def _sync_columns(self, table_name, columns):
-        clean_columns = [str(item).strip() for item in (columns or []) if str(item).strip()]
-        if not clean_columns:
-            return
-        conn = self._get_conn()
-        with conn.cursor() as cursor:
-            cursor.executemany(
-                "INSERT IGNORE INTO app_table_columns (table_name, column_name) VALUES (%s, %s)",
-                [(table_name, column_name) for column_name in clean_columns],
-            )
-
-    def append_row(self, table_name, row_data):
-        row_id = uuid.uuid4().hex
-        payload = dict(row_data or {})
-        payload.pop("_id", None)
-        conn = self._get_conn()
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO app_rows (table_name, row_id, row_data) VALUES (%s, %s, %s)",
-                (table_name, row_id, json.dumps(payload, ensure_ascii=False)),
-            )
-        self._sync_columns(table_name, payload.keys())
-        return {"_id": row_id, **payload}
-
-    def update_row(self, table_name, row_id, row_data):
-        conn = self._get_conn()
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "SELECT row_data FROM app_rows WHERE table_name=%s AND row_id=%s LIMIT 1",
-                (table_name, row_id),
-            )
-            row = cursor.fetchone()
-            if not row:
-                raise RuntimeError(f"记录不存在: {table_name}/{row_id}")
-            payload = row.get("row_data")
-            if isinstance(payload, str):
-                try:
-                    payload = json.loads(payload)
-                except Exception:
-                    payload = {}
-            if not isinstance(payload, dict):
-                payload = {}
-            payload.update(dict(row_data or {}))
-            payload.pop("_id", None)
-            cursor.execute(
-                "UPDATE app_rows SET row_data=%s WHERE table_name=%s AND row_id=%s",
-                (json.dumps(payload, ensure_ascii=False), table_name, row_id),
-            )
-        self._sync_columns(table_name, payload.keys())
-        return {"_id": row_id, **payload}
-
-    def delete_row(self, table_name, row_id):
-        conn = self._get_conn()
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM app_rows WHERE table_name=%s AND row_id=%s",
-                (table_name, row_id),
-            )
-
-    def list_columns(self, table_name):
-        conn = self._get_conn()
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "SELECT column_name FROM app_table_columns WHERE table_name=%s ORDER BY column_name ASC",
-                (table_name,),
-            )
-            rows = cursor.fetchall() or []
-        return [{"name": row.get("column_name")} for row in rows if row.get("column_name")]
-
-    def add_table(self, table_name, *args):
-        return {"name": table_name, "ok": True}
-
-    def insert_column(self, table_name, column_name, *args):
-        self._sync_columns(table_name, [column_name])
-        return {"table": table_name, "column": column_name, "ok": True}
-
-
-if DB_BACKEND == "mysql":
-    base = MySQLBase()
-else:
+# 初始化后端: MySQL 模式通过 models/database.py 的 db 单例操作
+# SeaTable 模式需要额外的适配层（暂不修改）
+if DB_BACKEND == "seatable":
     if Base is None:
         raise RuntimeError("未安装 seatable-api，无法使用 seatable 后端")
     if not API_TOKEN:
@@ -441,19 +144,10 @@ else:
             "SeaTable 认证失败。请确认使用的是 Base 的 API Token（不是账号令牌），"
             "并且该 Token 对目标表有读写权限。"
         ) from exc
+else:
+    base = db  # MySQL 模式统一使用 models.database 的 db 单例
 
-# 自动注册列到 app_table_columns
-def _auto_register_columns():
-    """启动时自动同步列定义到数据库"""
-    if hasattr(base, '_sync_columns'):
-        for table_name, columns in AUTO_REGISTER_COLUMNS.items():
-            try:
-                base._sync_columns(table_name, columns)
-            except Exception as e:
-                print(f"[WARN] Auto register columns for {table_name} failed: {e}")
-        print("[INFO] Auto register columns completed")
-
-_auto_register_columns()
+# 列注册已由 models/database.py 的 Database.__init__ 完成
 
 app = Flask(__name__)
 
@@ -482,42 +176,6 @@ def handle_500(error):
 
 # Protect check+insert in single-process deployment to reduce race conditions.
 submit_lock = threading.Lock()
-cache_lock = threading.Lock()
-read_cache = {}
-data_version = 0
-
-
-def _get_data_version():
-    with cache_lock:
-        return data_version
-
-
-def _touch_data_version():
-    global data_version
-    with cache_lock:
-        data_version += 1
-
-
-def _build_cache_key(namespace, *parts):
-    normalized_parts = [namespace, str(_get_data_version())]
-    normalized_parts.extend(str(part) for part in parts)
-    return "::".join(normalized_parts)
-
-
-def _cached_build(namespace, ttl_seconds, build_fn, *parts):
-    now_ts = time.time()
-    cache_key = _build_cache_key(namespace, *parts)
-    with cache_lock:
-        cached = read_cache.get(cache_key)
-        if cached and cached.get('expires_at', 0) > now_ts:
-            return cached.get('value')
-    value = build_fn()
-    with cache_lock:
-        read_cache[cache_key] = {
-            'value': value,
-            'expires_at': now_ts + max(1, ttl_seconds),
-        }
-    return value
 
 
 def _now():
@@ -547,32 +205,13 @@ def _parse_datetime(dt_str):
     return None
 
 
-def _safe_bool(value):
-    if isinstance(value, bool):
-        return value
-    text = str(value or "").strip().lower()
-    return text in {"true", "1", "yes", "y", "是"}
-
-
-def _safe_text(value):
-    if value is None:
-        return ""
-    text = str(value).strip()
-    return "" if text.lower() == "none" else text
-
-
 def _should_track_member_name(name):
-    text = _safe_text(name)
+    text = safe_text(name)
     if not text:
         return False
     if re.fullmatch(r"[A-Za-z]{1,4}\d{4,}", text):
         return False
     return True
-
-
-def _is_cac_user(name):
-    text = _safe_text(name).lower()
-    return text == _safe_text(CAC_NAME).lower() or text == "cac"
 
 
 def _list_rows(table_name):
@@ -581,10 +220,10 @@ def _list_rows(table_name):
             rows = base.list_rows(table_name)
             return rows or []
         except Exception as exc:
-            print(f"Error listing rows from {table_name}: {exc}")
+            logger.error("Error listing rows from %s: %s", table_name, exc)
             return []
 
-    return _cached_build(
+    return cached_build(
         'table_rows',
         TABLE_ROWS_CACHE_TTL_SECONDS,
         load_rows,
@@ -615,22 +254,22 @@ def _load_member_roster():
 
 def _collect_known_member_names():
     names = set(_load_member_roster())
-    for activity in _list_activities():
+    for activity in list_activities():
         names.update(_split_names(activity.get(ACTIVITY_COL_SPEAKERS, "")))
-        creator_name = _get_activity_creator_name(activity)
+        creator_name = _get_activity_creator_name_legacy(activity)
         if _should_track_member_name(creator_name):
             names.add(creator_name)
-    for signup in _list_signups():
+    for signup in list_signups():
         signup_name = _get_signup_name(signup)
         if _should_track_member_name(signup_name):
             names.add(signup_name)
     for record in _list_output_records():
-        name = _safe_text(record.get(OUTPUT_RECORD_COL_NAME, ""))
+        name = safe_text(record.get(OUTPUT_RECORD_COL_NAME, ""))
         if _should_track_member_name(name):
             names.add(name)
-    for rating in _list_review_ratings():
-        reviewer_name = _safe_text(rating.get(REVIEW_RATING_COL_REVIEWER_NAME, ""))
-        rater_name = _safe_text(rating.get(REVIEW_RATING_COL_RATER_NAME, ""))
+    for rating in list_review_ratings():
+        reviewer_name = safe_text(rating.get(REVIEW_RATING_COL_REVIEWER_NAME, ""))
+        rater_name = safe_text(rating.get(REVIEW_RATING_COL_RATER_NAME, ""))
         if _should_track_member_name(reviewer_name):
             names.add(reviewer_name)
         if _should_track_member_name(rater_name):
@@ -653,31 +292,12 @@ def _get_activity_end_datetime(activity):
     return datetime.combine(date_obj.date(), datetime.min.time()) + timedelta(minutes=end_minutes)
 
 
-def _get_activity_closed_at(activity):
-    return _parse_datetime(activity.get(ACTIVITY_COL_CLOSED_AT, ""))
-
-
-def _activity_is_closed(activity):
-    return _safe_bool(activity.get(ACTIVITY_COL_ON_TIME)) or str(activity.get(ACTIVITY_COL_STATUS, "")).strip() == "已结项" or bool(_get_activity_closed_at(activity))
-
-
 def _compute_activity_on_time(activity, closed_at=None):
-    closed_at = closed_at or _get_activity_closed_at(activity)
+    closed_at = closed_at or get_activity_closed_at(activity)
     end_at = _get_activity_end_datetime(activity)
     if not closed_at or not end_at:
         return None
     return closed_at <= end_at + timedelta(minutes=ACTIVITY_CLOSE_GRACE_MINUTES)
-
-
-def _get_activity_state(activity):
-    if not activity:
-        return "未开始"
-    if _activity_is_closed(activity):
-        return "已结项"
-    end_at = _get_activity_end_datetime(activity)
-    if end_at and _now() > end_at:
-        return "待结项"
-    return "进行中"
 
 
 def _task_lock():
@@ -720,7 +340,7 @@ def _get_table_columns(table_name):
         columns = base.list_columns(table_name)
         return {column.get('name') for column in (columns or [])}
     except Exception as exc:
-        print(f"Error listing columns for {table_name}: {exc}")
+        logger.error("Error listing columns for %s: %s", table_name, exc)
         return set()
 
 
@@ -902,32 +522,27 @@ def _update_row(table_name, row_id, row_data):
     return base.update_row(table_name, row_id, filtered)
 
 
-def _get_activity_creator_name(activity):
+def _get_activity_creator_name_legacy(activity):
     value = _get_first_nonempty(
         activity,
         ACTIVITY_COL_CREATOR_NAME,
         LEGACY_ACTIVITY_COL_CREATOR_STUDENT_ID,
     )
-    return _safe_text(value)
-
-
-def _get_activity_creator_email(activity):
-    value = _get_first_nonempty(activity, ACTIVITY_COL_CREATOR_EMAIL)
-    return _safe_text(value)
+    return safe_text(value)
 
 
 def _get_signup_email(signup):
     value = _get_first_nonempty(signup, SIGNUP_COL_EMAIL)
-    return _safe_text(value)
+    return safe_text(value)
 
 
 def _get_signup_name(signup):
     value = _get_first_nonempty(signup, SIGNUP_COL_NAME, LEGACY_SIGNUP_COL_STUDENT_ID)
-    return _safe_text(value)
+    return safe_text(value)
 
 
 def _mail_configured():
-    return bool(SMTP_HOST and SMTP_PORT and SMTP_USERNAME and SMTP_PASSWORD and EMAIL_FROM)
+    return bool(SMTP_HOST and SMTP_PORT and SMTP_USER and SMTP_PASSWORD and EMAIL_FROM)
 
 
 def _send_email(recipient, subject, body):
@@ -943,13 +558,12 @@ def _send_email(recipient, subject, body):
 
     if SMTP_USE_SSL:
         with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
-            smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+            smtp.login(SMTP_USER, SMTP_PASSWORD)
             smtp.send_message(msg)
     else:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
-            if SMTP_USE_TLS:
-                smtp.starttls()
-            smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+            smtp.starttls()
+            smtp.login(SMTP_USER, SMTP_PASSWORD)
             smtp.send_message(msg)
     return True
 
@@ -962,7 +576,7 @@ def _send_email_async(recipient, subject, body):
         try:
             _send_email(recipient, subject, body)
         except Exception as exc:
-            print(f"Send email failed to {recipient}: {exc}")
+            logger.error("Send email failed to %s: %s", recipient, exc)
 
     threading.Thread(target=worker, daemon=True).start()
 
@@ -984,7 +598,7 @@ def _notify_signup_change(activity, signup_name, role, recipient_email, action):
 
 
 def _notify_organizer_signup(activity, signup_name, role, review_content=''):
-    organizer_email = _get_activity_creator_email(activity)
+    organizer_email = get_activity_creator_email(activity)
     if not organizer_email:
         return
     topic = str(activity.get(ACTIVITY_COL_TOPIC, '')).strip() or '未命名活动'
@@ -1061,18 +675,18 @@ def _notify_boundary_report(non_compliant_names, stats):
 
 def _build_member_email_map():
     result = {}
-    for signup in _list_signups():
+    for signup in list_signups():
         name = _get_signup_name(signup)
         email = _get_signup_email(signup)
         if _should_track_member_name(name) and email:
             result[name] = email
-    for activity in _list_activities():
-        name = _get_activity_creator_name(activity)
-        email = _get_activity_creator_email(activity)
+    for activity in list_activities():
+        name = _get_activity_creator_name_legacy(activity)
+        email = get_activity_creator_email(activity)
         if _should_track_member_name(name) and email:
             result[name] = email
     if CAC_EMAIL:
-        result[_safe_text(CAC_NAME)] = CAC_EMAIL
+        result[safe_text(CAC_NAME)] = CAC_EMAIL
     return result
 
 
@@ -1094,124 +708,18 @@ def _get_current_boundary_schedule_key(now=None):
     return scheduled.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _list_review_ratings():
-    return _list_rows(REVIEW_RATING_TABLE_NAME)
-
 
 def _list_output_records():
     return _list_rows(OUTPUT_RECORD_TABLE_NAME)
 
 
-def _list_user_profiles():
-    return _list_rows(USER_PROFILE_TABLE_NAME)
-
-
-def _list_interest_groups():
-    return _list_rows(INTEREST_GROUP_TABLE_NAME)
-
-
-def _list_group_members():
-    return _list_rows(GROUP_MEMBER_TABLE_NAME)
-
-
-def _list_review_invites():
-    return _list_rows(REVIEW_INVITE_TABLE_NAME)
-
-
-def _get_user_profile(name):
-    target = _safe_text(name)
-    if not target:
-        return None
-    for profile in _list_user_profiles():
-        if _safe_text(profile.get(USER_COL_NAME, '')) == target:
-            return profile
-    return None
-
-
-def _upsert_user_profile(name, email=None, role=None):
-    name = _safe_text(name)
-    if not name:
-        return None
-    existing = _get_user_profile(name)
-    if existing:
-        update_data = {}
-        current_email = _safe_text(existing.get(USER_COL_EMAIL, ''))
-        current_role = _safe_text(existing.get(USER_COL_ROLE, ''))
-        if email and email != current_email:
-            update_data[USER_COL_EMAIL] = email
-        if role and role != current_role:
-            update_data[USER_COL_ROLE] = role
-        if update_data:
-            try:
-                _update_row(USER_PROFILE_TABLE_NAME, existing.get('_id'), update_data)
-            except Exception as exc:
-                print(f"Update user profile failed: {exc}")
-        return _get_user_profile(name) or existing
-
-    row_data = {
-        USER_COL_NAME: name,
-        USER_COL_EMAIL: _safe_text(email),
-        USER_COL_ROLE: _safe_text(role) or '普通用户',
-        USER_COL_FIRST_SEEN_AT: _now_iso(),
-    }
-    try:
-        _append_row(USER_PROFILE_TABLE_NAME, row_data)
-    except Exception as exc:
-        print(f"Create user profile failed: {exc}")
-    return _get_user_profile(name)
-
-
-def _get_user_email(name):
-    profile = _get_user_profile(name)
-    if profile:
-        return _safe_text(profile.get(USER_COL_EMAIL, ''))
-    return ''
-
-
-def _get_interest_group_by_id(group_id):
-    for group in _list_interest_groups():
-        if str(group.get('_id')) == str(group_id):
-            return group
-    return None
-
-
-def _serialize_interest_group(group):
-    if not group:
-        return None
-    group_id = str(group.get('_id'))
-    members = [m for m in _list_group_members() if str(m.get(GROUP_MEMBER_COL_GROUP_ID, '')) == group_id]
-    leader_name = _safe_text(group.get(GROUP_COL_LEADER_NAME, ''))
-    return {
-        'id': group_id,
-        'name': _safe_text(group.get(GROUP_COL_NAME, '')),
-        'leader_name': leader_name,
-        'topic_goal': _safe_text(group.get(GROUP_COL_TOPIC_GOAL, '')),
-        'time_boundary': _safe_text(group.get(GROUP_COL_TIME_BOUNDARY, '')),
-        'execution_plan': _safe_text(group.get(GROUP_COL_EXECUTION_PLAN, '')),
-        'description': _safe_text(group.get(GROUP_COL_DESCRIPTION, '')),
-        'status': _safe_text(group.get(GROUP_COL_STATUS, '')) or '活跃',
-        'created_at': _safe_text(group.get(GROUP_COL_CREATED_AT, '')),
-        'member_count': len(members),
-        'members': [
-            {
-                'id': str(member.get('_id')),
-                'name': _safe_text(member.get(GROUP_MEMBER_COL_MEMBER_NAME, '')),
-                'email': _safe_text(member.get(GROUP_MEMBER_COL_MEMBER_EMAIL, '')),
-                'role': _safe_text(member.get(GROUP_MEMBER_COL_MEMBER_ROLE, '')),
-                'joined_at': _safe_text(member.get(GROUP_MEMBER_COL_JOINED_AT, '')),
-            }
-            for member in members
-        ],
-    }
-
-
 def _get_memberships_by_name(name):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return []
     return [
-        member for member in _list_group_members()
-        if _safe_text(member.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) == target
+        member for member in list_group_members()
+        if safe_text(member.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) == target
     ]
 
 
@@ -1220,9 +728,9 @@ def _get_group_ids_for_member(name):
 
 
 def _notify_group_membership_change(group, member_name, member_email, action):
-    group_name = _safe_text(group.get(GROUP_COL_NAME, ''))
-    leader_name = _safe_text(group.get(GROUP_COL_LEADER_NAME, ''))
-    leader_email = _get_user_email(leader_name)
+    group_name = safe_text(group.get(GROUP_COL_NAME, ''))
+    leader_name = safe_text(group.get(GROUP_COL_LEADER_NAME, ''))
+    leader_email = get_user_email(leader_name)
     subject = f"[CAC 兴趣组] 成员{action}通知"
     body = f"兴趣组《{group_name}》成员变更：{member_name}{action}。"
 
@@ -1247,39 +755,16 @@ def _notify_cac_activity_created(activity_type, topic, creator_name):
     _send_email_async(recipient, subject, body)
 
 
-def _serialize_review_invite(invite):
-    return {
-        'id': str(invite.get('_id')),
-        'activity_id': _safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')),
-        'activity_topic': _safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '')),
-        'inviter_name': _safe_text(invite.get(INVITE_COL_INVITER_NAME, '')),
-        'invitee_name': _safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')),
-        'invitee_email': _safe_text(invite.get(INVITE_COL_INVITEE_EMAIL, '')),
-        'source_type': _safe_text(invite.get(INVITE_COL_SOURCE_TYPE, '')),
-        'status': _safe_text(invite.get(INVITE_COL_STATUS, '')),
-        'created_at': _safe_text(invite.get(INVITE_COL_CREATED_AT, '')),
-        'updated_at': _safe_text(invite.get(INVITE_COL_UPDATED_AT, '')),
-        'updated_by': _safe_text(invite.get(INVITE_COL_UPDATED_BY, '')),
-    }
-
-
-def _get_review_invite_by_id(invite_id):
-    for invite in _list_review_invites():
-        if str(invite.get('_id')) == str(invite_id):
-            return invite
-    return None
-
-
 def _list_pending_invites_for_user(activity_id, invitee_name):
     result = []
     target_activity_id = str(activity_id).strip()
-    target_name = _safe_text(invitee_name)
-    for invite in _list_review_invites():
-        if _safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')) != target_activity_id:
+    target_name = safe_text(invitee_name)
+    for invite in list_review_invites():
+        if safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')) != target_activity_id:
             continue
-        if _safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) != target_name:
+        if safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) != target_name:
             continue
-        if _safe_text(invite.get(INVITE_COL_STATUS, '')) != '已发送':
+        if safe_text(invite.get(INVITE_COL_STATUS, '')) != '已发送':
             continue
         result.append(invite)
     return result
@@ -1296,13 +781,13 @@ def _auto_accept_invites_after_signup(activity_id, signup_name):
             })
             accepted_count += 1
         except Exception as exc:
-            print(f"Update invite status failed: {exc}")
+            logger.error("Update invite status failed: %s", exc)
     return accepted_count
 
 
 def _is_invite_transition_allowed(old_status, new_status, is_cac_operator=False):
-    old_status = _safe_text(old_status)
-    new_status = _safe_text(new_status)
+    old_status = safe_text(old_status)
+    new_status = safe_text(new_status)
     if old_status == new_status:
         return True
     if is_cac_operator:
@@ -1316,53 +801,21 @@ def _is_invite_transition_allowed(old_status, new_status, is_cac_operator=False)
     return new_status in allowed_map.get(old_status, set())
 
 
-def _get_signup_review_doc_url(signup):
-    return _safe_text(signup.get(SIGNUP_COL_REVIEW_DOC_URL, ''))
-
-
-def _get_signup_review_submitted_at(signup):
-    return _parse_datetime(signup.get(SIGNUP_COL_REVIEW_SUBMITTED_AT, ''))
-
-
-def _get_signup_last_review_reminder_at(signup):
-    return _parse_datetime(signup.get(SIGNUP_COL_LAST_REVIEW_REMINDER_AT, ''))
-
-
 def _get_signups_grouped_by_activity():
     def build_groups():
         grouped = defaultdict(list)
-        for signup in _list_signups():
+        for signup in list_signups():
             activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
             if not activity_id:
                 continue
             grouped[activity_id].append(signup)
         return dict(grouped)
 
-    return _cached_build('signups_grouped_activity', PROFILE_CACHE_TTL_SECONDS, build_groups)
-
-
-def _get_activity_signups(activity_id, role=None):
-    matches = list(_get_signups_grouped_by_activity().get(str(activity_id), []))
-    if not role:
-        return matches
-    return [signup for signup in matches if str(signup.get(SIGNUP_COL_ROLE, '')).strip() == role]
+    return cached_build('signups_grouped_activity', PROFILE_CACHE_TTL_SECONDS, build_groups)
 
 
 def _get_signup_role(signup):
     return str(signup.get(SIGNUP_COL_ROLE, '')).strip()
-
-
-def _serialize_rating(rating):
-    return {
-        'id': rating.get('_id'),
-        'signup_id': str(rating.get(REVIEW_RATING_COL_SIGNUP_ID, '')).strip(),
-        'activity_id': str(rating.get(REVIEW_RATING_COL_ACTIVITY_ID, '')).strip(),
-        'reviewer_name': str(rating.get(REVIEW_RATING_COL_REVIEWER_NAME, '')).strip(),
-        'rater_name': str(rating.get(REVIEW_RATING_COL_RATER_NAME, '')).strip(),
-        'score': float(rating.get(REVIEW_RATING_COL_SCORE, 0) or 0),
-        'weight': float(rating.get(REVIEW_RATING_COL_WEIGHT, 0) or 0),
-        'comment': str(rating.get(REVIEW_RATING_COL_COMMENT, '')).strip(),
-    }
 
 
 def _build_review_quality_stats():
@@ -1370,8 +823,8 @@ def _build_review_quality_stats():
         per_signup = defaultdict(lambda: {'weighted_score': 0.0, 'total_weight': 0.0, 'rating_count': 0, 'ratings': []})
         per_reviewer = defaultdict(lambda: {'weighted_score': 0.0, 'total_weight': 0.0, 'rating_count': 0, 'review_count': 0})
 
-        for rating in _list_review_ratings():
-            item = _serialize_rating(rating)
+        for rating in list_review_ratings():
+            item = serialize_rating(rating)
             signup_id = item['signup_id']
             if not signup_id:
                 continue
@@ -1380,7 +833,7 @@ def _build_review_quality_stats():
             per_signup[signup_id]['rating_count'] += 1
             per_signup[signup_id]['ratings'].append(item)
 
-        for signup in _list_signups():
+        for signup in list_signups():
             if _get_signup_role(signup) != '评议员':
                 continue
             signup_id = str(signup.get('_id'))
@@ -1405,25 +858,25 @@ def _build_review_quality_stats():
         ranking.sort(key=lambda item: (-item['score'], -item['rating_count'], item['name']))
         return dict(per_signup), ranking
 
-    return _cached_build('review_quality_stats', PROFILE_CACHE_TTL_SECONDS, build_stats)
+    return cached_build('review_quality_stats', PROFILE_CACHE_TTL_SECONDS, build_stats)
 
 
 def _serialize_review_task(signup):
     activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
-    activity = _get_activity_by_id(activity_id)
-    activity_details = _get_activity_details(activity) if activity else {}
+    activity = get_activity_by_id(activity_id)
+    activity_details = get_activity_details(activity) if activity else {}
     per_signup_stats, _ = _build_review_quality_stats()
     signup_stats = per_signup_stats.get(str(signup.get('_id')), {})
     average_score = 0
     if signup_stats.get('total_weight', 0) > 0:
         average_score = round(signup_stats['weighted_score'] / signup_stats['total_weight'], 2)
     return {
-        **_serialize_signup(signup),
-        'review_doc_url': _get_signup_review_doc_url(signup),
+        **serialize_signup(signup),
+        'review_doc_url': get_signup_review_doc_url(signup),
         'review_submitted_at': signup.get(SIGNUP_COL_REVIEW_SUBMITTED_AT, ''),
         'average_score': average_score,
         'rating_count': signup_stats.get('rating_count', 0),
-        'activity_state': _get_activity_state(activity),
+        'activity_state': get_activity_state(activity),
         'activity': activity_details,
     }
 
@@ -1431,8 +884,8 @@ def _serialize_review_task(signup):
 def _get_activity_review_documents(activity_id, include_pending=False):
     per_signup_stats, _ = _build_review_quality_stats()
     documents = []
-    for signup in _get_activity_signups(activity_id, role='评议员'):
-        review_doc_url = _get_signup_review_doc_url(signup)
+    for signup in get_activity_signups(activity_id, role='评议员'):
+        review_doc_url = get_signup_review_doc_url(signup)
         if not include_pending and not review_doc_url:
             continue
         signup_id = str(signup.get('_id'))
@@ -1454,9 +907,9 @@ def _get_activity_review_documents(activity_id, include_pending=False):
 
 def _build_share_leaderboard():
     counter = Counter()
-    for activity in _list_activities():
+    for activity in list_activities():
         for speaker in _split_names(activity.get(ACTIVITY_COL_SPEAKERS, '')):
-            if _is_cac_user(speaker):
+            if is_cac_user(speaker):
                 continue
             counter[speaker] += 1
     ranking = [{'name': name, 'count': count} for name, count in counter.most_common()]
@@ -1465,10 +918,10 @@ def _build_share_leaderboard():
 
 def _build_participation_leaderboard():
     counter = Counter()
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_role(signup) in {'评议员', '旁听'}:
             signup_name = _get_signup_name(signup)
-            if _is_cac_user(signup_name):
+            if is_cac_user(signup_name):
                 continue
             counter[signup_name] += 1
     ranking = [{'name': name, 'count': count} for name, count in counter.most_common()]
@@ -1477,13 +930,13 @@ def _build_participation_leaderboard():
 
 def _build_punctuality_leaderboard():
     stats = defaultdict(lambda: {'on_time': 0, 'closed': 0})
-    for activity in _list_activities():
-        if not _activity_is_closed(activity):
+    for activity in list_activities():
+        if not activity_is_closed(activity):
             continue
-        creator_name = _get_activity_creator_name(activity)
+        creator_name = _get_activity_creator_name_legacy(activity)
         if not creator_name:
             continue
-        if _is_cac_user(creator_name):
+        if is_cac_user(creator_name):
             continue
         stats[creator_name]['closed'] += 1
         if _compute_activity_on_time(activity):
@@ -1511,15 +964,15 @@ def _within_lookback(date_value, lookback_days=BOUNDARY_LOOKBACK_DAYS):
 def _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS):
     output_counter = Counter()
 
-    for activity in _list_activities():
+    for activity in list_activities():
         if _within_lookback(activity.get(ACTIVITY_COL_DATE, ''), lookback_days=lookback_days):
             for speaker in _split_names(activity.get(ACTIVITY_COL_SPEAKERS, '')):
                 output_counter[speaker] += 1
 
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_role(signup) != '评议员':
             continue
-        activity = _get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
+        activity = get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
         if activity and _within_lookback(activity.get(ACTIVITY_COL_DATE, ''), lookback_days=lookback_days):
             output_counter[_get_signup_name(signup)] += 1
 
@@ -1537,7 +990,7 @@ def _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS):
 
 def _build_boundary_stats():
     known_members = set(_collect_known_member_names())
-    known_members = {name for name in known_members if not _is_cac_user(name)}
+    known_members = {name for name in known_members if not is_cac_user(name)}
     output_counter = _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS)
 
     non_compliant = sorted(name for name in known_members if output_counter.get(name, 0) < 1)
@@ -1556,24 +1009,24 @@ def _build_monthly_report(now=None):
     month = now.month
 
     monthly_activities = []
-    for activity in _list_activities():
+    for activity in list_activities():
         activity_date = _parse_date(activity.get(ACTIVITY_COL_DATE, ''))
         if not activity_date or activity_date.year != year or activity_date.month != month:
             continue
         monthly_activities.append(activity)
 
     monthly_activity_ids = {str(activity.get('_id')) for activity in monthly_activities}
-    monthly_signups = [signup for signup in _list_signups() if str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip() in monthly_activity_ids]
+    monthly_signups = [signup for signup in list_signups() if str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip() in monthly_activity_ids]
     monthly_outputs = []
     for record in _list_output_records():
         output_date = _parse_date(record.get(OUTPUT_RECORD_COL_DATE, ''))
         if output_date and output_date.year == year and output_date.month == month:
             monthly_outputs.append(record)
 
-    closed_activities = [activity for activity in monthly_activities if _activity_is_closed(activity)]
+    closed_activities = [activity for activity in monthly_activities if activity_is_closed(activity)]
     on_time_closed = [activity for activity in closed_activities if _compute_activity_on_time(activity)]
-    type_counter = Counter((_safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal') for activity in monthly_activities)
-    creator_names = {name for name in (_get_activity_creator_name(activity) for activity in monthly_activities) if name}
+    type_counter = Counter((safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal') for activity in monthly_activities)
+    creator_names = {name for name in (_get_activity_creator_name_legacy(activity) for activity in monthly_activities) if name}
     participant_names = {name for name in (_get_signup_name(signup) for signup in monthly_signups) if name}
 
     return {
@@ -1584,7 +1037,7 @@ def _build_monthly_report(now=None):
         'active_creator_count': len(creator_names),
         'active_participant_count': len(participant_names),
         'closed_count': len(closed_activities),
-        'pending_close_count': len([activity for activity in monthly_activities if _get_activity_state(activity) == '待结项']),
+        'pending_close_count': len([activity for activity in monthly_activities if get_activity_state(activity) == '待结项']),
         'on_time_close_rate': round((len(on_time_closed) / len(closed_activities)), 4) if closed_activities else 0,
         'activity_type_breakdown': {
             'normal': int(type_counter.get('normal', 0)),
@@ -1596,21 +1049,21 @@ def _build_monthly_report(now=None):
 def _build_group_health_report(lookback_days=30):
     recent_output_counts = _build_output_counts(lookback_days=lookback_days)
     report = []
-    for group in _list_interest_groups():
+    for group in list_interest_groups():
         group_id = str(group.get('_id'))
-        group_name = _safe_text(group.get(GROUP_COL_NAME, ''))
-        members = [member for member in _list_group_members() if str(member.get(GROUP_MEMBER_COL_GROUP_ID, '')) == group_id]
-        member_names = {_safe_text(member.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) for member in members if _safe_text(member.get(GROUP_MEMBER_COL_MEMBER_NAME, ''))}
+        group_name = safe_text(group.get(GROUP_COL_NAME, ''))
+        members = [member for member in list_group_members() if str(member.get(GROUP_MEMBER_COL_GROUP_ID, '')) == group_id]
+        member_names = {safe_text(member.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) for member in members if safe_text(member.get(GROUP_MEMBER_COL_MEMBER_NAME, ''))}
         related_activities = []
-        for activity in _list_activities():
-            if _safe_text(activity.get(ACTIVITY_COL_GROUP_ID, '')) != group_id:
+        for activity in list_activities():
+            if safe_text(activity.get(ACTIVITY_COL_GROUP_ID, '')) != group_id:
                 continue
             if not _within_lookback(activity.get(ACTIVITY_COL_DATE, ''), lookback_days=lookback_days):
                 continue
             related_activities.append(activity)
 
         recent_activity_count = len(related_activities)
-        pending_close_count = len([activity for activity in related_activities if _get_activity_state(activity) == '待结项'])
+        pending_close_count = len([activity for activity in related_activities if get_activity_state(activity) == '待结项'])
         active_member_count = len([name for name in member_names if recent_output_counts.get(name, 0) > 0])
         score = 35 + min(30, recent_activity_count * 15) + min(25, active_member_count * 5) - (pending_close_count * 12)
         score = max(0, min(100, score))
@@ -1624,7 +1077,7 @@ def _build_group_health_report(lookback_days=30):
         report.append({
             'id': group_id,
             'name': group_name,
-            'leader_name': _safe_text(group.get(GROUP_COL_LEADER_NAME, '')),
+            'leader_name': safe_text(group.get(GROUP_COL_LEADER_NAME, '')),
             'member_count': len(member_names),
             'active_member_count': active_member_count,
             'recent_activity_count': recent_activity_count,
@@ -1641,13 +1094,13 @@ def _build_reviewer_watch():
     _, ranking = _build_review_quality_stats()
     score_map = {item.get('name'): item for item in ranking}
     pending_docs = Counter()
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_role(signup) != '评议员':
             continue
-        if _get_signup_review_doc_url(signup):
+        if get_signup_review_doc_url(signup):
             continue
-        activity = _get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
-        if activity and _activity_is_closed(activity):
+        activity = get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
+        if activity and activity_is_closed(activity):
             pending_docs[_get_signup_name(signup)] += 1
 
     names = set(score_map.keys()) | set(pending_docs.keys())
@@ -1682,14 +1135,14 @@ def _build_reviewer_watch():
 def _build_time_conflict_report():
     """检测未结项活动中同日同时段的时间冲突（含 CAC有约 周五 18 点档）"""
     slot_map = defaultdict(list)
-    for activity in _list_activities():
-        if _activity_is_closed(activity):
+    for activity in list_activities():
+        if activity_is_closed(activity):
             continue
         parsed = _parse_date(activity.get(ACTIVITY_COL_DATE, ''))
         if not parsed:
             continue
         date_str = parsed.strftime('%Y-%m-%d')
-        time_slot = _safe_text(activity.get(ACTIVITY_COL_TIME, ''))
+        time_slot = safe_text(activity.get(ACTIVITY_COL_TIME, ''))
         if not time_slot:
             continue
         slot_map[(date_str, time_slot)].append(activity)
@@ -1713,10 +1166,10 @@ def _build_time_conflict_report():
             'activities': [
                 {
                     'id': str(a.get('_id', '')),
-                    'topic': _safe_text(a.get(ACTIVITY_COL_TOPIC, '')),
-                    'speakers': _safe_text(a.get(ACTIVITY_COL_SPEAKERS, '')),
-                    'type': _safe_text(a.get(ACTIVITY_COL_TYPE, '')),
-                    'status': _get_activity_state(a),
+                    'topic': safe_text(a.get(ACTIVITY_COL_TOPIC, '')),
+                    'speakers': safe_text(a.get(ACTIVITY_COL_SPEAKERS, '')),
+                    'type': safe_text(a.get(ACTIVITY_COL_TYPE, '')),
+                    'status': get_activity_state(a),
                 }
                 for a in activities
             ],
@@ -1729,17 +1182,17 @@ def _build_time_conflict_report():
 
 
 def _find_rank_by_name(items, name):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return None
     for index, item in enumerate(items or [], start=1):
-        if _safe_text(item.get('name', '')) == target:
+        if safe_text(item.get('name', '')) == target:
             return index
     return None
 
 
 def _build_person_profile_summary(name):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return None
 
@@ -1749,41 +1202,41 @@ def _build_person_profile_summary(name):
     _, review_quality_ranking = _build_review_quality_stats()
     boundary_stats = _build_boundary_stats()
 
-    share_count = next((item.get('count', 0) for item in share_ranking if _safe_text(item.get('name', '')) == target), 0)
-    participation_count = next((item.get('count', 0) for item in participation_ranking if _safe_text(item.get('name', '')) == target), 0)
-    review_quality_item = next((item for item in review_quality_ranking if _safe_text(item.get('name', '')) == target), None)
-    punctuality_item = next((item for item in punctuality_ranking if _safe_text(item.get('name', '')) == target), None)
+    share_count = next((item.get('count', 0) for item in share_ranking if safe_text(item.get('name', '')) == target), 0)
+    participation_count = next((item.get('count', 0) for item in participation_ranking if safe_text(item.get('name', '')) == target), 0)
+    review_quality_item = next((item for item in review_quality_ranking if safe_text(item.get('name', '')) == target), None)
+    punctuality_item = next((item for item in punctuality_ranking if safe_text(item.get('name', '')) == target), None)
 
     my_groups = []
     for member in _get_memberships_by_name(target):
-        group = _get_interest_group_by_id(member.get(GROUP_MEMBER_COL_GROUP_ID, ''))
+        group = get_interest_group_by_id(member.get(GROUP_MEMBER_COL_GROUP_ID, ''))
         if group:
             my_groups.append({
                 'id': str(group.get('_id')),
-                'name': _safe_text(group.get(GROUP_COL_NAME, '')),
-                'member_role': _safe_text(member.get(GROUP_MEMBER_COL_MEMBER_ROLE, '')),
+                'name': safe_text(group.get(GROUP_COL_NAME, '')),
+                'member_role': safe_text(member.get(GROUP_MEMBER_COL_MEMBER_ROLE, '')),
             })
 
     my_signups = []
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_name(signup) == target:
             my_signups.append(_serialize_review_task(signup))
     my_signups.sort(key=lambda item: (item.get('activity', {}).get('date', ''), item.get('activity', {}).get('time', '')), reverse=True)
 
     my_invites = []
-    for invite in _list_review_invites():
-        if _safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) == target:
-            my_invites.append(_serialize_review_invite(invite))
+    for invite in list_review_invites():
+        if safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) == target:
+            my_invites.append(serialize_review_invite(invite))
     my_invites.sort(key=lambda item: item.get('created_at', ''), reverse=True)
 
     output_count_recent = int(boundary_stats.get('output_counts', {}).get(target, 0))
-    boundary_ok = output_count_recent >= 1 or _is_cac_user(target)
+    boundary_ok = output_count_recent >= 1 or is_cac_user(target)
 
     return {
         'name': target,
-        'is_cac': _is_cac_user(target),
+        'is_cac': is_cac_user(target),
         'profile': {
-            'email': _get_user_email(target),
+            'email': get_user_email(target),
             'groups': my_groups,
         },
         'metrics': {
@@ -1809,89 +1262,89 @@ def _build_person_profile_summary(name):
 
 
 def _build_profile_feed(name, limit=30, type_filter='', keyword=''):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return []
 
     events = []
 
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_name(signup) != target:
             continue
-        activity = _get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
-        activity_details = _get_activity_details(activity) if activity else {}
+        activity = get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
+        activity_details = get_activity_details(activity) if activity else {}
         events.append({
             'type': 'signup',
-            'ts': _safe_text(signup.get(SIGNUP_COL_REVIEW_SUBMITTED_AT, '')) or _safe_text(activity_details.get('date', '')),
-            'title': f"报名活动：{_safe_text(activity_details.get('topic', '未命名活动'))}",
-            'detail': f"角色：{_safe_text(signup.get(SIGNUP_COL_ROLE, '')) or '-'}",
+            'ts': safe_text(signup.get(SIGNUP_COL_REVIEW_SUBMITTED_AT, '')) or safe_text(activity_details.get('date', '')),
+            'title': f"报名活动：{safe_text(activity_details.get('topic', '未命名活动'))}",
+            'detail': f"角色：{safe_text(signup.get(SIGNUP_COL_ROLE, '')) or '-'}",
             'meta': {
-                'activity_id': _safe_text(activity_details.get('id', '')),
-                'activity_topic': _safe_text(activity_details.get('topic', '')),
-                'activity_type': _safe_text(activity_details.get('activity_type', 'normal')),
-                'group_name': _safe_text(activity_details.get('group_name', '')),
+                'activity_id': safe_text(activity_details.get('id', '')),
+                'activity_topic': safe_text(activity_details.get('topic', '')),
+                'activity_type': safe_text(activity_details.get('activity_type', 'normal')),
+                'group_name': safe_text(activity_details.get('group_name', '')),
             },
         })
 
-    for invite in _list_review_invites():
-        if _safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) != target:
+    for invite in list_review_invites():
+        if safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) != target:
             continue
         events.append({
             'type': 'invite',
-            'ts': _safe_text(invite.get(INVITE_COL_UPDATED_AT, '')) or _safe_text(invite.get(INVITE_COL_CREATED_AT, '')),
-            'title': f"收到邀请：{_safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '未命名活动'))}",
-            'detail': f"状态：{_safe_text(invite.get(INVITE_COL_STATUS, '已发送'))} · 来源：{_safe_text(invite.get(INVITE_COL_SOURCE_TYPE, '-'))}",
+            'ts': safe_text(invite.get(INVITE_COL_UPDATED_AT, '')) or safe_text(invite.get(INVITE_COL_CREATED_AT, '')),
+            'title': f"收到邀请：{safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '未命名活动'))}",
+            'detail': f"状态：{safe_text(invite.get(INVITE_COL_STATUS, '已发送'))} · 来源：{safe_text(invite.get(INVITE_COL_SOURCE_TYPE, '-'))}",
             'meta': {
                 'invite_id': str(invite.get('_id')),
-                'activity_id': _safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')),
-                'activity_topic': _safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '')),
-                'invite_status': _safe_text(invite.get(INVITE_COL_STATUS, '已发送')),
+                'activity_id': safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')),
+                'activity_topic': safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '')),
+                'invite_status': safe_text(invite.get(INVITE_COL_STATUS, '已发送')),
             },
         })
 
-    for activity in _list_activities():
-        if _get_activity_creator_name(activity) != target:
+    for activity in list_activities():
+        if _get_activity_creator_name_legacy(activity) != target:
             continue
-        details = _get_activity_details(activity)
+        details = get_activity_details(activity)
         events.append({
             'type': 'created_activity',
-            'ts': _safe_text(details.get('date', '')),
-            'title': f"创建活动：{_safe_text(details.get('topic', '未命名活动'))}",
-            'detail': f"类型：{_safe_text(details.get('activity_type', 'normal'))} · 状态：{_safe_text(details.get('status', '-'))}",
+            'ts': safe_text(details.get('date', '')),
+            'title': f"创建活动：{safe_text(details.get('topic', '未命名活动'))}",
+            'detail': f"类型：{safe_text(details.get('activity_type', 'normal'))} · 状态：{safe_text(details.get('status', '-'))}",
             'meta': {
-                'activity_id': _safe_text(details.get('id', '')),
-                'group_name': _safe_text(details.get('group_name', '')),
-                'activity_topic': _safe_text(details.get('topic', '')),
-                'activity_type': _safe_text(details.get('activity_type', 'normal')),
-                'state': _safe_text(details.get('status', '')),
+                'activity_id': safe_text(details.get('id', '')),
+                'group_name': safe_text(details.get('group_name', '')),
+                'activity_topic': safe_text(details.get('topic', '')),
+                'activity_type': safe_text(details.get('activity_type', 'normal')),
+                'state': safe_text(details.get('status', '')),
             },
         })
 
-    normalized_type_filter = _safe_text(type_filter)
-    normalized_keyword = _safe_text(keyword).lower()
+    normalized_type_filter = safe_text(type_filter)
+    normalized_keyword = safe_text(keyword).lower()
     if normalized_type_filter:
-        events = [event for event in events if _safe_text(event.get('type', '')) == normalized_type_filter]
+        events = [event for event in events if safe_text(event.get('type', '')) == normalized_type_filter]
     if normalized_keyword:
         events = [
             event for event in events
-            if normalized_keyword in _safe_text(event.get('title', '')).lower()
-            or normalized_keyword in _safe_text(event.get('detail', '')).lower()
-            or normalized_keyword in _safe_text((event.get('meta') or {}).get('activity_topic', '')).lower()
+            if normalized_keyword in safe_text(event.get('title', '')).lower()
+            or normalized_keyword in safe_text(event.get('detail', '')).lower()
+            or normalized_keyword in safe_text((event.get('meta') or {}).get('activity_topic', '')).lower()
         ]
 
-    events.sort(key=lambda item: (_safe_text(item.get('ts', '')), _safe_text(item.get('title', ''))), reverse=True)
+    events.sort(key=lambda item: (safe_text(item.get('ts', '')), safe_text(item.get('title', ''))), reverse=True)
     return events[:max(1, min(limit, 100))]
 
 
 def _build_profile_tasks(name):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return []
 
     tasks = []
     boundary_stats = _build_boundary_stats()
     output_count_recent = int(boundary_stats.get('output_counts', {}).get(target, 0))
-    if not _is_cac_user(target) and output_count_recent < 1:
+    if not is_cac_user(target) and output_count_recent < 1:
         tasks.append({
             'type': 'boundary_warning',
             'priority': 100,
@@ -1901,7 +1354,7 @@ def _build_profile_tasks(name):
             'action_label': '去找活动',
         })
 
-    if not _get_user_email(target):
+    if not get_user_email(target):
         tasks.append({
             'type': 'missing_email',
             'priority': 95,
@@ -1911,7 +1364,7 @@ def _build_profile_tasks(name):
             'action_label': '去设置邮箱',
         })
 
-    if not _get_memberships_by_name(target) and not _is_cac_user(target):
+    if not _get_memberships_by_name(target) and not is_cac_user(target):
         tasks.append({
             'type': 'join_group',
             'priority': 70,
@@ -1921,100 +1374,100 @@ def _build_profile_tasks(name):
             'action_label': '去看兴趣组',
         })
 
-    for invite in _list_review_invites():
-        if _safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) != target:
+    for invite in list_review_invites():
+        if safe_text(invite.get(INVITE_COL_INVITEE_NAME, '')) != target:
             continue
-        if _safe_text(invite.get(INVITE_COL_STATUS, '已发送')) != '已发送':
+        if safe_text(invite.get(INVITE_COL_STATUS, '已发送')) != '已发送':
             continue
         tasks.append({
             'type': 'pending_invite',
             'priority': 90,
-            'title': f"待处理邀请：{_safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '未命名活动'))}",
-            'detail': f"来源：{_safe_text(invite.get(INVITE_COL_SOURCE_TYPE, '-'))} · 邀请人：{_safe_text(invite.get(INVITE_COL_INVITER_NAME, '-'))}",
-            'activity_id': _safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')),
-            'activity_topic': _safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '')),
+            'title': f"待处理邀请：{safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '未命名活动'))}",
+            'detail': f"来源：{safe_text(invite.get(INVITE_COL_SOURCE_TYPE, '-'))} · 邀请人：{safe_text(invite.get(INVITE_COL_INVITER_NAME, '-'))}",
+            'activity_id': safe_text(invite.get(INVITE_COL_ACTIVITY_ID, '')),
+            'activity_topic': safe_text(invite.get(INVITE_COL_ACTIVITY_TOPIC, '')),
             'invite_id': str(invite.get('_id')),
             'action': 'respond_invite',
             'action_label': '处理邀请',
         })
 
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_name(signup) != target:
             continue
         if _get_signup_role(signup) != '评议员':
             continue
-        if _get_signup_review_doc_url(signup):
+        if get_signup_review_doc_url(signup):
             continue
-        activity = _get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
-        if not activity or not _activity_is_closed(activity):
+        activity = get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
+        if not activity or not activity_is_closed(activity):
             continue
-        details = _get_activity_details(activity)
+        details = get_activity_details(activity)
         tasks.append({
             'type': 'review_doc',
             'priority': 88,
-            'title': f"待提交评议文档：{_safe_text(details.get('topic', '未命名活动'))}",
+            'title': f"待提交评议文档：{safe_text(details.get('topic', '未命名活动'))}",
             'detail': '活动已结项，请尽快补评议语雀链接。',
             'signup_id': str(signup.get('_id')),
-            'activity_id': _safe_text(details.get('id', '')),
-            'activity_topic': _safe_text(details.get('topic', '')),
-            'activity_type': _safe_text(details.get('activity_type', 'normal')),
-            'state': _safe_text(details.get('status', '')),
+            'activity_id': safe_text(details.get('id', '')),
+            'activity_topic': safe_text(details.get('topic', '')),
+            'activity_type': safe_text(details.get('activity_type', 'normal')),
+            'state': safe_text(details.get('status', '')),
             'action': 'jump_activity',
             'action_label': '查看活动',
         })
 
-    for activity in _list_activities():
-        if _get_activity_creator_name(activity) != target:
+    for activity in list_activities():
+        if _get_activity_creator_name_legacy(activity) != target:
             continue
-        if _get_activity_state(activity) != '待结项':
+        if get_activity_state(activity) != '待结项':
             continue
-        details = _get_activity_details(activity)
+        details = get_activity_details(activity)
         tasks.append({
             'type': 'close_activity',
             'priority': 85,
-            'title': f"待结项活动：{_safe_text(details.get('topic', '未命名活动'))}",
+            'title': f"待结项活动：{safe_text(details.get('topic', '未命名活动'))}",
             'detail': '活动时间已经过去，请尽快结项并触发后续评议流程。',
-            'activity_id': _safe_text(details.get('id', '')),
-            'activity_topic': _safe_text(details.get('topic', '')),
-            'activity_type': _safe_text(details.get('activity_type', 'normal')),
-            'state': _safe_text(details.get('status', '')),
+            'activity_id': safe_text(details.get('id', '')),
+            'activity_topic': safe_text(details.get('topic', '')),
+            'activity_type': safe_text(details.get('activity_type', 'normal')),
+            'state': safe_text(details.get('status', '')),
             'action': 'jump_activity',
             'action_label': '去结项',
         })
 
-    tasks.sort(key=lambda item: (-int(item.get('priority', 0)), _safe_text(item.get('title', ''))))
+    tasks.sort(key=lambda item: (-int(item.get('priority', 0)), safe_text(item.get('title', ''))))
     return tasks[:12]
 
 
 def _build_profile_recommendations(name, limit=6):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return []
 
     joined_group_ids = set(_get_group_ids_for_member(target))
     signed_activity_ids = {
         str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
-        for signup in _list_signups()
+        for signup in list_signups()
         if _get_signup_name(signup) == target
     }
 
     recommendations = []
-    for activity in _list_activities():
-        details = _get_activity_details(activity)
-        activity_id = _safe_text(details.get('id', ''))
+    for activity in list_activities():
+        details = get_activity_details(activity)
+        activity_id = safe_text(details.get('id', ''))
         if not activity_id or activity_id in signed_activity_ids:
             continue
-        if _get_activity_creator_name(activity) == target:
+        if _get_activity_creator_name_legacy(activity) == target:
             continue
-        if _safe_text(details.get('status', '')) == '已结项':
+        if safe_text(details.get('status', '')) == '已结项':
             continue
 
         score = 0
         reasons = []
-        group_id = _safe_text(details.get('group_id', ''))
-        activity_type = _safe_text(details.get('activity_type', 'normal'))
-        state = _safe_text(details.get('status', ''))
-        reviewer_remaining = int(_get_signup_stats(activity_id).get('reviewer_remaining', 0) or 0)
+        group_id = safe_text(details.get('group_id', ''))
+        activity_type = safe_text(details.get('activity_type', 'normal'))
+        state = safe_text(details.get('status', ''))
+        reviewer_remaining = int(_get_signup_stats_local(activity_id).get('reviewer_remaining', 0) or 0)
 
         if group_id and group_id in joined_group_ids:
             score += 5
@@ -2038,11 +1491,11 @@ def _build_profile_recommendations(name, limit=6):
         recommended_role = '参与者' if activity_type == 'cac有约' else ('评议员' if reviewer_remaining > 0 else '旁听')
         recommendations.append({
             'activity_id': activity_id,
-            'topic': _safe_text(details.get('topic', '未命名活动')),
-            'date': _safe_text(details.get('date', '')),
-            'time': _safe_text(details.get('time', '')),
-            'speakers': _safe_text(details.get('speakers', '')),
-            'group_name': _safe_text(details.get('group_name', '')),
+            'topic': safe_text(details.get('topic', '未命名活动')),
+            'date': safe_text(details.get('date', '')),
+            'time': safe_text(details.get('time', '')),
+            'speakers': safe_text(details.get('speakers', '')),
+            'group_name': safe_text(details.get('group_name', '')),
             'activity_type': activity_type,
             'state': state,
             'recommended_role': recommended_role,
@@ -2050,24 +1503,24 @@ def _build_profile_recommendations(name, limit=6):
             'reasons': reasons[:3],
         })
 
-    recommendations.sort(key=lambda item: (-int(item.get('score', 0)), _safe_text(item.get('date', '')), _safe_text(item.get('topic', ''))), reverse=False)
+    recommendations.sort(key=lambda item: (-int(item.get('score', 0)), safe_text(item.get('date', '')), safe_text(item.get('topic', ''))), reverse=False)
     return recommendations[:max(1, min(limit, 20))]
 
 
 def _run_review_reminder_scan():
     with _task_lock():
         reminder_cutoff = _now() - timedelta(hours=REVIEW_REMINDER_INTERVAL_HOURS)
-        for signup in _list_signups():
+        for signup in list_signups():
             if _get_signup_role(signup) != '评议员':
                 continue
-            if _get_signup_review_doc_url(signup):
+            if get_signup_review_doc_url(signup):
                 continue
-            activity = _get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
-            if not activity or not _activity_is_closed(activity):
+            activity = get_activity_by_id(str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip())
+            if not activity or not activity_is_closed(activity):
                 continue
-            if (_safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal') == 'cac有约':
+            if (safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal') == 'cac有约':
                 continue
-            last_reminder = _get_signup_last_review_reminder_at(signup)
+            last_reminder = get_signup_last_review_reminder_at(signup)
             if last_reminder and last_reminder > reminder_cutoff:
                 continue
             _notify_review_doc_reminder(signup, activity)
@@ -2076,7 +1529,7 @@ def _run_review_reminder_scan():
                     SIGNUP_COL_LAST_REVIEW_REMINDER_AT: _now_iso(),
                 })
             except Exception as exc:
-                print(f"Update review reminder timestamp failed: {exc}")
+                logger.error("Update review reminder timestamp failed: %s", exc)
 
 
 def _run_boundary_report_scan():
@@ -2094,94 +1547,24 @@ def _run_boundary_report_scan():
 
 
 def _background_maintenance_loop():
-    while True:
+    while not _shutdown_event.is_set():
         try:
             _run_review_reminder_scan()
             _run_boundary_report_scan()
         except Exception as exc:
-            print(f"Background maintenance error: {exc}")
-        time.sleep(max(300, BACKGROUND_SCAN_INTERVAL_SECONDS))
+            logger.error("Background maintenance error: %s", exc)
+        _shutdown_event.wait(timeout=max(300, BACKGROUND_SCAN_INTERVAL_SECONDS))
 
 
-def _get_signup_by_id(signup_id):
-    signups = _list_signups()
-    for signup in signups:
-        if str(signup.get('_id')) == str(signup_id):
-            return signup
-    return None
-
-
-def _serialize_signup(signup):
-    activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
-    activity = _get_activity_by_id(activity_id)
-    details = _get_activity_details(activity) if activity else {}
-    return {
-        'id': signup.get('_id'),
-        'name': _get_signup_name(signup),
-        'activity_id': activity_id,
-        'role': str(signup.get(SIGNUP_COL_ROLE, '')).strip(),
-        'phone': str(signup.get(SIGNUP_COL_PHONE, '')).strip(),
-        'email': _get_signup_email(signup),
-        'review_content': str(signup.get(SIGNUP_COL_REVIEW_CONTENT, '')).strip(),
-        'review_doc_url': _get_signup_review_doc_url(signup),
-        'review_submitted_at': signup.get(SIGNUP_COL_REVIEW_SUBMITTED_AT, ''),
-        'activity': details,
-    }
-
-
-# ===== 活动相关函数 =====
-def _list_activities():
-    """获取所有活动信息"""
-    return _list_rows(ACTIVITY_TABLE_NAME)
-
-
-def _get_activity_index():
-    return _cached_build(
-        'activity_index',
-        PROFILE_CACHE_TTL_SECONDS,
-        lambda: {str(activity.get('_id')): activity for activity in _list_activities() if activity.get('_id')},
-    )
-
-
-def _get_activity_by_id(activity_id):
-    """根据ID获取活动详情"""
-    return _get_activity_index().get(str(activity_id))
-
-
-def _get_activity_details(activity):
-    """提取活动的关键信息"""
-    if not activity:
-        return None
-    return {
-        'id': activity.get('_id'),
-        'date': activity.get(ACTIVITY_COL_DATE, ''),
-        'time': activity.get(ACTIVITY_COL_TIME, ''),
-        'speakers': activity.get(ACTIVITY_COL_SPEAKERS, ''),
-        'topic': activity.get(ACTIVITY_COL_TOPIC, ''),
-        'classroom': activity.get(ACTIVITY_COL_CLASSROOM, ''),
-        'videourl': activity.get(ACTIVITY_COL_VIDEOURL, ''),
-        'creator_name': _get_activity_creator_name(activity),
-        'creator_email': _get_activity_creator_email(activity),
-        'activity_type': _safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal',
-        'group_id': _safe_text(activity.get(ACTIVITY_COL_GROUP_ID, '')),
-        'group_name': _safe_text(activity.get(ACTIVITY_COL_GROUP_NAME, '')),
-        'status': _get_activity_state(activity),
-        'closed_at': activity.get(ACTIVITY_COL_CLOSED_AT, ''),
-        'on_time': _compute_activity_on_time(activity),
-        'closer_name': str(activity.get(ACTIVITY_COL_CLOSER_NAME, '')).strip(),
-    }
-
-
-# ===== 报名相关函数 =====
-def _list_signups():
-    """获取所有报名记录"""
-    return _list_rows(SIGNUP_TABLE_NAME)
-
+# ===== 活动/报名内部统计函数 =====
+# 注意：list_activities, get_activity_by_id, get_activity_details,
+#       list_signups, count_signups_by_activity, get_signup_stats
+# 已统一从 services 层导入，此处不再重复定义。
 
 def _get_signup_counters_by_activity():
     def build_counters():
         counters = defaultdict(lambda: defaultdict(int))
-        for signup in _list_signups():
+        for signup in list_signups():
             activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
             if not activity_id:
                 continue
@@ -2191,11 +1574,11 @@ def _get_signup_counters_by_activity():
                 counters[activity_id][role] += 1
         return {k: dict(v) for k, v in counters.items()}
 
-    return _cached_build('signup_counters', PROFILE_CACHE_TTL_SECONDS, build_counters)
+    return cached_build('signup_counters', PROFILE_CACHE_TTL_SECONDS, build_counters)
 
 
-def _count_signups_by_activity(activity_id, role=None):
-    """统计某个活动的报名人数"""
+def _count_signups_local(activity_id, role=None):
+    """统计某个活动的报名人数（使用预计算计数器）"""
     counters = _get_signup_counters_by_activity().get(str(activity_id), {})
     if role is None:
         return int(counters.get('all', 0) or 0)
@@ -2204,31 +1587,31 @@ def _count_signups_by_activity(activity_id, role=None):
 
 def _calculate_expected_attendance(activity_id):
     """计算拟参加人数 = 分享者数 + 旁听者数 + 3名评议员"""
-    activity = _get_activity_by_id(activity_id)
+    activity = get_activity_by_id(activity_id)
     if not activity:
         return 0
-    
+
     # 分享者数（按逗号分割）
     speakers_str = str(activity.get(ACTIVITY_COL_SPEAKERS, '')).strip()
     speakers_count = len([s.strip() for s in speakers_str.split(',') if s.strip()]) if speakers_str else 0
-    
+
     # 旁听者数
-    listener_count = _count_signups_by_activity(activity_id, '旁听')
-    
+    listener_count = _count_signups_local(activity_id, '旁听')
+
     # 评议员固定3人
     reviewer_count = REVIEWER_LIMIT
-    
+
     return speakers_count + listener_count + reviewer_count
 
 
-def _get_signup_stats(activity_id):
-    """获取某个活动的报名统计"""
-    reviewer_count = _count_signups_by_activity(activity_id, '评议员')
-    listener_count = _count_signups_by_activity(activity_id, '旁听')
+def _get_signup_stats_local(activity_id):
+    """获取某个活动的报名统计（含拟参加人数）"""
+    reviewer_count = _count_signups_local(activity_id, '评议员')
+    listener_count = _count_signups_local(activity_id, '旁听')
     expected_attendance = _calculate_expected_attendance(activity_id)
     reviewer_full = reviewer_count >= REVIEWER_LIMIT
     reviewer_remaining = max(0, REVIEWER_LIMIT - reviewer_count)
-    
+
     return {
         'reviewers': reviewer_count,
         'listeners': listener_count,
@@ -2312,7 +1695,7 @@ def _get_time_slot_pairs():
 
 def _detect_inactive_members():
     """检测消亡的兴趣组（无活动记录）"""
-    activities = _list_activities()
+    activities = list_activities()
     speakers_set = set()
     for activity in activities:
         speakers_str = str(activity.get(ACTIVITY_COL_SPEAKERS, '')).strip()
@@ -2326,7 +1709,7 @@ def _detect_inactive_members():
 
 def _detect_boundary_violations():
     """检测接近超出边界的社员（过度参与导致可能违规）"""
-    signups = _list_signups()
+    signups = list_signups()
     member_participation = Counter()
     
     for signup in signups:
@@ -2372,16 +1755,16 @@ def healthz():
 @app.get("/api/activities")
 def api_activities():
     """获取所有活动列表和统计信息（仅返回非已结项的活动）"""
-    activities = _list_activities()
+    activities = list_activities()
     result = []
 
     for activity in activities:
         # 跳过已结项的活动
-        if _activity_is_closed(activity):
+        if activity_is_closed(activity):
             continue
         activity_id = activity.get('_id')
-        details = _get_activity_details(activity)
-        stats = _get_signup_stats(activity_id)
+        details = get_activity_details(activity)
+        stats = _get_signup_stats_local(activity_id)
         result.append({
             **details,
             **stats,
@@ -2396,10 +1779,10 @@ def api_activities():
 
 @app.get("/api/activities/filter")
 def api_activities_filter():
-    activity_type = _safe_text(request.args.get('activity_type', '')).lower()
-    group_id = _safe_text(request.args.get('group_id', ''))
-    state = _safe_text(request.args.get('state', ''))
-    keyword = _safe_text(request.args.get('keyword', '')).lower()
+    activity_type = safe_text(request.args.get('activity_type', '')).lower()
+    group_id = safe_text(request.args.get('group_id', ''))
+    state = safe_text(request.args.get('state', ''))
+    keyword = safe_text(request.args.get('keyword', '')).lower()
     try:
         page = max(1, int(request.args.get('page', '1')))
     except Exception:
@@ -2409,8 +1792,8 @@ def api_activities_filter():
     except Exception:
         page_size = PROFILE_EXPLORE_DEFAULT_PAGE_SIZE
     page_size = max(1, min(page_size, PROFILE_EXPLORE_MAX_PAGE_SIZE))
-    sort_by = _safe_text(request.args.get('sort_by', 'date')).lower()
-    sort_order = _safe_text(request.args.get('sort_order', 'desc')).lower()
+    sort_by = safe_text(request.args.get('sort_by', 'date')).lower()
+    sort_order = safe_text(request.args.get('sort_order', 'desc')).lower()
 
     allowed_types = {'', 'normal', 'cac有约'}
     allowed_states = {'', '进行中', '待结项', '已结项'}
@@ -2427,14 +1810,14 @@ def api_activities_filter():
 
     def build_response():
         result = []
-        for activity in _list_activities():
-            details = _get_activity_details(activity)
-            stats = _get_signup_stats(activity.get('_id'))
+        for activity in list_activities():
+            details = get_activity_details(activity)
+            stats = _get_signup_stats_local(activity.get('_id'))
 
-            current_type = _safe_text(details.get('activity_type', 'normal')).lower()
-            current_group_id = _safe_text(details.get('group_id', ''))
-            current_state = _safe_text(details.get('status', ''))
-            current_text = f"{_safe_text(details.get('topic', ''))} {_safe_text(details.get('speakers', ''))}".lower()
+            current_type = safe_text(details.get('activity_type', 'normal')).lower()
+            current_group_id = safe_text(details.get('group_id', ''))
+            current_state = safe_text(details.get('status', ''))
+            current_text = f"{safe_text(details.get('topic', ''))} {safe_text(details.get('speakers', ''))}".lower()
 
             if activity_type and current_type != activity_type:
                 continue
@@ -2451,10 +1834,10 @@ def api_activities_filter():
             })
 
         if sort_by == 'topic':
-            result.sort(key=lambda item: (_safe_text(item.get('topic', '')).lower(), item.get('date', ''), item.get('time', '')), reverse=(sort_order == 'desc'))
+            result.sort(key=lambda item: (safe_text(item.get('topic', '')).lower(), item.get('date', ''), item.get('time', '')), reverse=(sort_order == 'desc'))
         elif sort_by == 'state':
             state_weight = {'进行中': 0, '待结项': 1, '已结项': 2}
-            result.sort(key=lambda item: (state_weight.get(_safe_text(item.get('status', '')), 9), item.get('date', ''), item.get('time', '')), reverse=(sort_order == 'desc'))
+            result.sort(key=lambda item: (state_weight.get(safe_text(item.get('status', '')), 9), item.get('date', ''), item.get('time', '')), reverse=(sort_order == 'desc'))
         else:
             result.sort(key=lambda item: (item.get('date', ''), item.get('time', ''), item.get('topic', '')), reverse=(sort_order == 'desc'))
 
@@ -2474,7 +1857,7 @@ def api_activities_filter():
             "sort_order": sort_order,
         }
 
-    payload = _cached_build(
+    payload = cached_build(
         'activities_filter',
         PROFILE_CACHE_TTL_SECONDS,
         build_response,
@@ -2492,7 +1875,7 @@ def api_activities_filter():
 
 @app.get("/api/admin/dashboard")
 def api_admin_dashboard():
-    payload = _cached_build(
+    payload = cached_build(
         'admin_dashboard',
         PROFILE_CACHE_TTL_SECONDS,
         lambda: {
@@ -2509,12 +1892,12 @@ def api_admin_dashboard():
 @app.get("/api/activity/<activity_id>")
 def api_activity_detail(activity_id):
     """获取单个活动的详细信息"""
-    activity = _get_activity_by_id(activity_id)
+    activity = get_activity_by_id(activity_id)
     if not activity:
         return jsonify({"ok": False, "message": "活动不存在"}), 404
     
-    details = _get_activity_details(activity)
-    stats = _get_signup_stats(activity_id)
+    details = get_activity_details(activity)
+    stats = _get_signup_stats_local(activity_id)
     
     return jsonify({
         "ok": True,
@@ -2547,25 +1930,25 @@ def api_signup():
         return jsonify({"ok": False, "message": "评议员请填写评议内容"}), 400
     
     # 校验活动是否存在
-    activity = _get_activity_by_id(activity_id)
+    activity = get_activity_by_id(activity_id)
     if not activity:
         return jsonify({"ok": False, "message": "活动不存在"}), 404
-    activity_type = _safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal'
+    activity_type = safe_text(activity.get(ACTIVITY_COL_TYPE, '')) or 'normal'
 
     if role not in ['评议员', '旁听']:
         if not (activity_type == 'cac有约' and role == '参与者'):
             return jsonify({"ok": False, "message": "角色必须为'评议员'或'旁听'（CAC有约可选'参与者'）"}), 400
 
-    if not _get_user_profile(name) and not email:
+    if not get_user_profile(name) and not email:
         return jsonify({"ok": False, "message": "首次使用请先填写邮箱"}), 400
     _upsert_user_profile(name, email=email, role='普通用户')
     
     with submit_lock:
-        signups = _list_signups()
+        signups = list_signups()
         
         # 检检查评议员是否已满
         if role == '评议员' and activity_type != 'cac有约':
-            reviewer_count = _count_signups_by_activity(activity_id, '评议员')
+            reviewer_count = _count_signups_local(activity_id, '评议员')
             if reviewer_count >= REVIEWER_LIMIT:
                 return jsonify({"ok": False, "message": f"评议员已满 {REVIEWER_LIMIT} 人，无法报名"}), 409
         
@@ -2593,7 +1976,7 @@ def api_signup():
     _notify_signup_change(activity, name, role, email, '报名')
     _notify_organizer_signup(activity, name, role, review_content)
     accepted_invites = _auto_accept_invites_after_signup(activity_id, name)
-    _touch_data_version()
+    touch_version()
 
     message = f"{role}报名成功"
     if accepted_invites > 0:
@@ -2610,7 +1993,7 @@ def api_my_signups(name):
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
 
     signups = []
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_name(signup) == name:
             signups.append(_serialize_review_task(signup))
 
@@ -2632,7 +2015,7 @@ def api_my_signups(name):
 def api_cancel_signup(signup_id):
     """取消报名（仅允许报名者本人按姓名取消）"""
     signup_id = str(signup_id).strip()
-    signup = _get_signup_by_id(signup_id)
+    signup = get_signup_by_id(signup_id)
     if not signup:
         return jsonify({"ok": False, "message": "报名记录不存在"}), 404
 
@@ -2646,7 +2029,7 @@ def api_cancel_signup(signup_id):
         return jsonify({"ok": False, "message": "只能取消您自己的报名记录"}), 403
 
     activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
-    activity = _get_activity_by_id(activity_id)
+    activity = get_activity_by_id(activity_id)
     role = str(signup.get(SIGNUP_COL_ROLE, '')).strip() or '报名'
     signup_email = _get_signup_email(signup)
 
@@ -2657,7 +2040,7 @@ def api_cancel_signup(signup_id):
 
     if activity:
         _notify_signup_change(activity, signup_name, role, signup_email, '取消')
-    _touch_data_version()
+    touch_version()
 
     return jsonify({"ok": True, "message": "报名已取消"})
 
@@ -2665,7 +2048,7 @@ def api_cancel_signup(signup_id):
 @app.post("/api/signup/<signup_id>/review-doc")
 def api_submit_review_doc(signup_id):
     """评议员上传语雀文档链接"""
-    signup = _get_signup_by_id(signup_id)
+    signup = get_signup_by_id(signup_id)
     if not signup:
         return jsonify({"ok": False, "message": "报名记录不存在"}), 404
     if _get_signup_role(signup) != '评议员':
@@ -2687,7 +2070,7 @@ def api_submit_review_doc(signup_id):
     except Exception as exc:
         return jsonify({"ok": False, "message": f"评议文档提交失败: {exc}"}), 500
 
-    _touch_data_version()
+    touch_version()
 
     return jsonify({"ok": True, "message": "评议文档已提交"})
 
@@ -2709,24 +2092,24 @@ def api_rate_review():
     if score > 10:
         return jsonify({"ok": False, "message": "评分请控制在 1 到 10 分之间"}), 400
 
-    signup = _get_signup_by_id(signup_id)
+    signup = get_signup_by_id(signup_id)
     if not signup:
         return jsonify({"ok": False, "message": "评议报名记录不存在"}), 404
     reviewer_name = _get_signup_name(signup)
     if reviewer_name == rater_name:
         return jsonify({"ok": False, "message": "不能给自己的评议打分"}), 400
-    if not _get_signup_review_doc_url(signup):
+    if not get_signup_review_doc_url(signup):
         return jsonify({"ok": False, "message": "该评议文档尚未上传"}), 409
 
     activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
     existing_rating = None
-    for rating in _list_review_ratings():
+    for rating in list_review_ratings():
         if str(rating.get(REVIEW_RATING_COL_SIGNUP_ID, '')).strip() == signup_id and str(rating.get(REVIEW_RATING_COL_RATER_NAME, '')).strip() == rater_name:
             existing_rating = rating
             break
 
     weight = 1
-    for listener_signup in _get_activity_signups(activity_id, role='旁听'):
+    for listener_signup in get_activity_signups(activity_id, role='旁听'):
         if _get_signup_name(listener_signup) == rater_name:
             weight = 10
             break
@@ -2749,7 +2132,7 @@ def api_rate_review():
     except Exception as exc:
         return jsonify({"ok": False, "message": f"评分提交失败: {exc}"}), 500
 
-    _touch_data_version()
+    touch_version()
 
     return jsonify({"ok": True, "message": "评分已提交", "weight": weight})
 
@@ -2763,17 +2146,17 @@ def api_init_phase1_schema():
 
 @app.get("/api/groups")
 def api_groups_list():
-    groups = [_serialize_interest_group(group) for group in _list_interest_groups()]
+    groups = [serialize_interest_group(group) for group in list_interest_groups()]
     groups.sort(key=lambda item: (item.get('status', ''), item.get('name', '')))
     return jsonify({"ok": True, "groups": groups})
 
 
 @app.get("/api/group/<group_id>")
 def api_group_detail(group_id):
-    group = _get_interest_group_by_id(group_id)
+    group = get_interest_group_by_id(group_id)
     if not group:
         return jsonify({"ok": False, "message": "兴趣组不存在"}), 404
-    return jsonify({"ok": True, "group": _serialize_interest_group(group)})
+    return jsonify({"ok": True, "group": serialize_interest_group(group)})
 
 
 @app.get("/api/my-groups/<name>")
@@ -2782,25 +2165,25 @@ def api_my_groups(name):
     group_ids = [str(item.get(GROUP_MEMBER_COL_GROUP_ID, '')) for item in memberships]
     groups = []
     for group_id in group_ids:
-        group = _get_interest_group_by_id(group_id)
+        group = get_interest_group_by_id(group_id)
         if group:
-            groups.append(_serialize_interest_group(group))
+            groups.append(serialize_interest_group(group))
     return jsonify({"ok": True, "groups": groups})
 
 
 @app.post("/api/group")
 def api_group_create():
     data = request.get_json(silent=True) or {}
-    group_name = _safe_text(data.get('name', ''))
-    leader_name = _safe_text(data.get('leader_name', ''))
-    leader_email = _safe_text(data.get('leader_email', ''))
-    topic_goal = _safe_text(data.get('topic_goal', ''))
-    time_boundary = _safe_text(data.get('time_boundary', ''))
-    execution_plan = _safe_text(data.get('execution_plan', ''))
-    description = _safe_text(data.get('description', ''))
+    group_name = safe_text(data.get('name', ''))
+    leader_name = safe_text(data.get('leader_name', ''))
+    leader_email = safe_text(data.get('leader_email', ''))
+    topic_goal = safe_text(data.get('topic_goal', ''))
+    time_boundary = safe_text(data.get('time_boundary', ''))
+    execution_plan = safe_text(data.get('execution_plan', ''))
+    description = safe_text(data.get('description', ''))
     member_names = data.get('member_names', []) or []
     # 兼容前端传 members 字符串的情况
-    members_str = _safe_text(data.get('members', ''))
+    members_str = safe_text(data.get('members', ''))
     if members_str and not member_names:
         member_names = [m.strip() for m in members_str.replace('，', ',').split(',') if m.strip()]
 
@@ -2809,7 +2192,7 @@ def api_group_create():
 
     normalized_members = []
     for item in member_names:
-        member_name = _safe_text(item)
+        member_name = safe_text(item)
         if member_name:
             normalized_members.append(member_name)
     if leader_name not in normalized_members:
@@ -2838,16 +2221,16 @@ def api_group_create():
         return jsonify({"ok": False, "message": f"兴趣组创建失败: {exc}"}), 500
 
     group_id = str(created.get('_id')) if isinstance(created, dict) else ''
-    group = _get_interest_group_by_id(group_id)
+    group = get_interest_group_by_id(group_id)
     if not group:
-        groups = _list_interest_groups()
+        groups = list_interest_groups()
         if groups:
             group = groups[-1]
             group_id = str(group.get('_id'))
-    group_name_saved = _safe_text(group.get(GROUP_COL_NAME, group_name)) if group else group_name
+    group_name_saved = safe_text(group.get(GROUP_COL_NAME, group_name)) if group else group_name
 
     for member_name in normalized_members:
-        member_email = _get_user_email(member_name)
+        member_email = get_user_email(member_name)
         role = '组长' if member_name == leader_name else '组员'
         try:
             _append_row(GROUP_MEMBER_TABLE_NAME, {
@@ -2861,22 +2244,22 @@ def api_group_create():
         except Exception as exc:
             return jsonify({"ok": False, "message": f"兴趣组成员写入失败: {exc}"}), 500
 
-    _touch_data_version()
+    touch_version()
 
-    return jsonify({"ok": True, "group": _serialize_interest_group(group or _get_interest_group_by_id(group_id)), "message": "兴趣组创建成功"})
+    return jsonify({"ok": True, "group": serialize_interest_group(group or get_interest_group_by_id(group_id)), "message": "兴趣组创建成功"})
 
 
 @app.post("/api/group/<group_id>/join")
 def api_group_join(group_id):
-    group = _get_interest_group_by_id(group_id)
+    group = get_interest_group_by_id(group_id)
     if not group:
         return jsonify({"ok": False, "message": "兴趣组不存在"}), 404
     data = request.get_json(silent=True) or {}
-    member_name = _safe_text(data.get('name', ''))
-    member_email = _safe_text(data.get('email', ''))
+    member_name = safe_text(data.get('name', ''))
+    member_email = safe_text(data.get('email', ''))
     if not member_name:
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
-    if not _get_user_profile(member_name) and not member_email:
+    if not get_user_profile(member_name) and not member_email:
         return jsonify({"ok": False, "message": "首次使用请填写邮箱"}), 400
 
     _upsert_user_profile(member_name, email=member_email, role='普通用户')
@@ -2887,39 +2270,39 @@ def api_group_join(group_id):
     try:
         _append_row(GROUP_MEMBER_TABLE_NAME, {
             GROUP_MEMBER_COL_GROUP_ID: str(group.get('_id')),
-            GROUP_MEMBER_COL_GROUP_NAME: _safe_text(group.get(GROUP_COL_NAME, '')),
+            GROUP_MEMBER_COL_GROUP_NAME: safe_text(group.get(GROUP_COL_NAME, '')),
             GROUP_MEMBER_COL_MEMBER_NAME: member_name,
-            GROUP_MEMBER_COL_MEMBER_EMAIL: _get_user_email(member_name),
+            GROUP_MEMBER_COL_MEMBER_EMAIL: get_user_email(member_name),
             GROUP_MEMBER_COL_MEMBER_ROLE: '组员',
             GROUP_MEMBER_COL_JOINED_AT: _now_iso(),
         })
     except Exception as exc:
         return jsonify({"ok": False, "message": f"加入兴趣组失败: {exc}"}), 500
 
-    _notify_group_membership_change(group, member_name, _get_user_email(member_name), '加入')
-    _touch_data_version()
-    return jsonify({"ok": True, "message": "加入兴趣组成功", "group": _serialize_interest_group(group)})
+    _notify_group_membership_change(group, member_name, get_user_email(member_name), '加入')
+    touch_version()
+    return jsonify({"ok": True, "message": "加入兴趣组成功", "group": serialize_interest_group(group)})
 
 
 @app.post("/api/group/<group_id>/leave")
 def api_group_leave(group_id):
-    group = _get_interest_group_by_id(group_id)
+    group = get_interest_group_by_id(group_id)
     if not group:
         return jsonify({"ok": False, "message": "兴趣组不存在"}), 404
     data = request.get_json(silent=True) or {}
-    member_name = _safe_text(data.get('name', ''))
+    member_name = safe_text(data.get('name', ''))
     if not member_name:
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
 
     membership = None
-    for item in _list_group_members():
-        if str(item.get(GROUP_MEMBER_COL_GROUP_ID, '')) == str(group_id) and _safe_text(item.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) == member_name:
+    for item in list_group_members():
+        if str(item.get(GROUP_MEMBER_COL_GROUP_ID, '')) == str(group_id) and safe_text(item.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) == member_name:
             membership = item
             break
     if not membership:
         return jsonify({"ok": False, "message": "您不在该兴趣组中"}), 404
 
-    if _safe_text(membership.get(GROUP_MEMBER_COL_MEMBER_ROLE, '')) == '组长':
+    if safe_text(membership.get(GROUP_MEMBER_COL_MEMBER_ROLE, '')) == '组长':
         return jsonify({"ok": False, "message": "组长不能直接退出，请先移交组长"}), 409
 
     try:
@@ -2927,14 +2310,14 @@ def api_group_leave(group_id):
     except Exception as exc:
         return jsonify({"ok": False, "message": f"退出兴趣组失败: {exc}"}), 500
 
-    _notify_group_membership_change(group, member_name, _get_user_email(member_name), '退出')
-    _touch_data_version()
-    return jsonify({"ok": True, "message": "已退出兴趣组", "group": _serialize_interest_group(group)})
+    _notify_group_membership_change(group, member_name, get_user_email(member_name), '退出')
+    touch_version()
+    return jsonify({"ok": True, "message": "已退出兴趣组", "group": serialize_interest_group(group)})
 
 
 @app.get("/api/profile-summary/<name>")
 def api_profile_summary(name):
-    summary = _cached_build('profile_summary', PROFILE_CACHE_TTL_SECONDS, lambda: _build_person_profile_summary(name), _safe_text(name))
+    summary = cached_build('profile_summary', PROFILE_CACHE_TTL_SECONDS, lambda: _build_person_profile_summary(name), safe_text(name))
     if not summary:
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
     return jsonify({"ok": True, "summary": summary})
@@ -2942,16 +2325,16 @@ def api_profile_summary(name):
 
 @app.get("/api/profile-feed/<name>")
 def api_profile_feed(name):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
     try:
         limit = int(request.args.get('limit', str(PROFILE_FEED_DEFAULT_LIMIT)))
     except Exception:
         limit = PROFILE_FEED_DEFAULT_LIMIT
-    type_filter = _safe_text(request.args.get('type', ''))
-    keyword = _safe_text(request.args.get('keyword', ''))
-    events = _cached_build(
+    type_filter = safe_text(request.args.get('type', ''))
+    keyword = safe_text(request.args.get('keyword', ''))
+    events = cached_build(
         'profile_feed',
         PROFILE_CACHE_TTL_SECONDS,
         lambda: _build_profile_feed(target, limit=limit, type_filter=type_filter, keyword=keyword),
@@ -2966,21 +2349,21 @@ def api_profile_feed(name):
 @app.get("/api/reviewer-submitted-docs")
 def api_reviewer_submitted_docs():
     """返回当前评分人尚未评分、已提交文档的评议报名列表"""
-    rater_name = _safe_text(request.args.get('rater', ''))
+    rater_name = safe_text(request.args.get('rater', ''))
     if not rater_name:
         return jsonify({"ok": False, "message": "请传入评分人姓名 ?rater="}), 400
 
     rated_signup_ids = {
         str(rating.get(REVIEW_RATING_COL_SIGNUP_ID, '')).strip()
-        for rating in _list_review_ratings()
-        if _safe_text(rating.get(REVIEW_RATING_COL_RATER_NAME, '')) == rater_name
+        for rating in list_review_ratings()
+        if safe_text(rating.get(REVIEW_RATING_COL_RATER_NAME, '')) == rater_name
     }
 
     docs = []
-    for signup in _list_signups():
+    for signup in list_signups():
         if _get_signup_role(signup) != '评议员':
             continue
-        doc_url = _get_signup_review_doc_url(signup)
+        doc_url = get_signup_review_doc_url(signup)
         if not doc_url:
             continue
         signup_id = str(signup.get('_id', '')).strip()
@@ -2990,16 +2373,16 @@ def api_reviewer_submitted_docs():
         if reviewer_name == rater_name:
             continue
         activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
-        activity = _get_activity_by_id(activity_id)
-        if not activity or not _activity_is_closed(activity):
+        activity = get_activity_by_id(activity_id)
+        if not activity or not activity_is_closed(activity):
             continue
         docs.append({
             'signup_id': signup_id,
             'reviewer_name': reviewer_name,
             'doc_url': doc_url,
             'activity_id': activity_id,
-            'activity_topic': _safe_text(activity.get(ACTIVITY_COL_TOPIC, '')),
-            'activity_date': _safe_text(activity.get(ACTIVITY_COL_DATE, '')).split('T')[0],
+            'activity_topic': safe_text(activity.get(ACTIVITY_COL_TOPIC, '')),
+            'activity_date': safe_text(activity.get(ACTIVITY_COL_DATE, '')).split('T')[0],
         })
 
     docs.sort(key=lambda x: x.get('activity_date', ''), reverse=True)
@@ -3008,10 +2391,10 @@ def api_reviewer_submitted_docs():
 
 @app.get("/api/profile-tasks/<name>")
 def api_profile_tasks(name):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
-    tasks = _cached_build(
+    tasks = cached_build(
         'profile_tasks',
         PROFILE_CACHE_TTL_SECONDS,
         lambda: _build_profile_tasks(target),
@@ -3022,7 +2405,7 @@ def api_profile_tasks(name):
 
 @app.get("/api/profile-recommendations/<name>")
 def api_profile_recommendations(name):
-    target = _safe_text(name)
+    target = safe_text(name)
     if not target:
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
     try:
@@ -3030,7 +2413,7 @@ def api_profile_recommendations(name):
     except Exception:
         limit = 6
     limit = max(1, min(limit, 20))
-    recommendations = _cached_build(
+    recommendations = cached_build(
         'profile_recommendations',
         PROFILE_CACHE_TTL_SECONDS,
         lambda: _build_profile_recommendations(target, limit=limit),
@@ -3042,28 +2425,28 @@ def api_profile_recommendations(name):
 
 @app.post("/api/invite/<invite_id>/status")
 def api_update_invite_status(invite_id):
-    invite = _get_review_invite_by_id(invite_id)
+    invite = get_invite_by_id(invite_id)
     if not invite:
         return jsonify({"ok": False, "message": "邀请记录不存在"}), 404
 
     data = request.get_json(silent=True) or {}
-    operator_name = _safe_text(data.get('operator_name', ''))
-    status = _safe_text(data.get('status', ''))
+    operator_name = safe_text(data.get('operator_name', ''))
+    status = safe_text(data.get('status', ''))
     if not operator_name or not status:
         return jsonify({"ok": False, "message": "请提供操作人和目标状态"}), 400
     if status not in {'已发送', '已接受', '已拒绝', '已撤回'}:
         return jsonify({"ok": False, "message": "状态必须为 已发送、已接受、已拒绝 或 已撤回"}), 400
 
-    old_status = _safe_text(invite.get(INVITE_COL_STATUS, ''))
+    old_status = safe_text(invite.get(INVITE_COL_STATUS, ''))
     if old_status == status:
-        return jsonify({"ok": True, "message": "状态未变化", "invite": _serialize_review_invite(invite)})
+        return jsonify({"ok": True, "message": "状态未变化", "invite": serialize_review_invite(invite)})
 
-    inviter_name = _safe_text(invite.get(INVITE_COL_INVITER_NAME, ''))
-    invitee_name = _safe_text(invite.get(INVITE_COL_INVITEE_NAME, ''))
-    activity_id = _safe_text(invite.get(INVITE_COL_ACTIVITY_ID, ''))
-    activity = _get_activity_by_id(activity_id)
-    activity_creator = _get_activity_creator_name(activity) if activity else ''
-    is_cac_operator = _is_cac_user(operator_name)
+    inviter_name = safe_text(invite.get(INVITE_COL_INVITER_NAME, ''))
+    invitee_name = safe_text(invite.get(INVITE_COL_INVITEE_NAME, ''))
+    activity_id = safe_text(invite.get(INVITE_COL_ACTIVITY_ID, ''))
+    activity = get_activity_by_id(activity_id)
+    activity_creator = _get_activity_creator_name_legacy(activity) if activity else ''
+    is_cac_operator = is_cac_user(operator_name)
     is_invitee_operator = operator_name == invitee_name
     allowed = is_cac_operator or operator_name == inviter_name or operator_name == activity_creator or is_invitee_operator
     if not allowed:
@@ -3084,12 +2467,12 @@ def api_update_invite_status(invite_id):
     except Exception as exc:
         return jsonify({"ok": False, "message": f"更新邀请状态失败: {exc}"}), 500
 
-    refreshed = _get_review_invite_by_id(invite_id) or invite
+    refreshed = get_invite_by_id(invite_id) or invite
 
-    invitee_email = _safe_text(refreshed.get(INVITE_COL_INVITEE_EMAIL, ''))
+    invitee_email = safe_text(refreshed.get(INVITE_COL_INVITEE_EMAIL, ''))
     if invitee_email and status in {'已接受', '已拒绝', '已撤回'}:
-        topic = _safe_text(refreshed.get(INVITE_COL_ACTIVITY_TOPIC, '')) or '未命名活动'
-        invitee_name = _safe_text(refreshed.get(INVITE_COL_INVITEE_NAME, '')) or '同学'
+        topic = safe_text(refreshed.get(INVITE_COL_ACTIVITY_TOPIC, '')) or '未命名活动'
+        invitee_name = safe_text(refreshed.get(INVITE_COL_INVITEE_NAME, '')) or '同学'
         subject = f"[CAC 分享会] 邀请状态更新：{topic}"
         body = (
             f"{invitee_name}，您好：\n\n"
@@ -3098,9 +2481,9 @@ def api_update_invite_status(invite_id):
         )
         _send_email_async(invitee_email, subject, body)
 
-    _touch_data_version()
+    touch_version()
 
-    return jsonify({"ok": True, "message": "邀请状态已更新", "invite": _serialize_review_invite(refreshed)})
+    return jsonify({"ok": True, "message": "邀请状态已更新", "invite": serialize_review_invite(refreshed)})
 
 
 # ===== 分享者管理 API =====
@@ -3111,17 +2494,17 @@ def api_my_activities(name):
     if not name:
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
     
-    activities = _list_activities()
+    activities = list_activities()
     my_activities = []
     
     for activity in activities:
-        creator_name = _get_activity_creator_name(activity)
+        creator_name = _get_activity_creator_name_legacy(activity)
         if creator_name == name:
             activity_id = activity.get('_id')
-            details = _get_activity_details(activity)
-            stats = _get_signup_stats(activity_id)
+            details = get_activity_details(activity)
+            stats = _get_signup_stats_local(activity_id)
             # 获取报名者列表（包含评议内容）
-            signups = _get_activity_signups(activity_id)
+            signups = get_activity_signups(activity_id)
             signups_list = [_serialize_review_task(s) for s in signups]
             my_activities.append({
                 **details,
@@ -3159,7 +2542,7 @@ def api_create_output_record():
     except Exception as exc:
         return jsonify({"ok": False, "message": f"输出记录保存失败: {exc}"}), 500
 
-    _touch_data_version()
+    touch_version()
 
     return jsonify({"ok": True, "message": "输出记录已登记"})
 
@@ -3176,8 +2559,8 @@ def api_create_activity():
     topic = str(data.get("topic", "")).strip()
     creator_name = str(data.get("creator_name", "")).strip()
     creator_email = str(data.get("creator_email", "")).strip()
-    activity_type = _safe_text(data.get("activity_type", "normal")) or 'normal'
-    group_id = _safe_text(data.get("group_id", ""))
+    activity_type = safe_text(data.get("activity_type", "normal")) or 'normal'
+    group_id = safe_text(data.get("group_id", ""))
     classroom = str(data.get("classroom", "")).strip()
     videourl = str(data.get("videourl", "")).strip()
     
@@ -3204,7 +2587,7 @@ def api_create_activity():
         if time not in allowed_slots:
             return jsonify({"ok": False, "message": "CAC有约 时间段必须为周日 14:00-18:00（半小时一档）"}), 400
 
-    if not _get_user_profile(creator_name) and not creator_email:
+    if not get_user_profile(creator_name) and not creator_email:
         return jsonify({"ok": False, "message": "首次使用请填写邮箱后再创建活动"}), 400
     _upsert_user_profile(creator_name, email=creator_email, role='普通用户')
 
@@ -3214,20 +2597,20 @@ def api_create_activity():
         if len(creator_memberships) > 1 and not group_id:
             return jsonify({"ok": False, "message": "您加入了多个兴趣组，请创建活动时选择所属兴趣组"}), 400
         if group_id:
-            selected_group = _get_interest_group_by_id(group_id)
+            selected_group = get_interest_group_by_id(group_id)
             if not selected_group:
                 return jsonify({"ok": False, "message": "所选兴趣组不存在"}), 404
             member_group_ids = set(_get_group_ids_for_member(creator_name))
             if group_id not in member_group_ids:
                 return jsonify({"ok": False, "message": "只能选择您已加入的兴趣组"}), 403
         elif len(creator_memberships) == 1:
-            selected_group = _get_interest_group_by_id(creator_memberships[0].get(GROUP_MEMBER_COL_GROUP_ID, ''))
+            selected_group = get_interest_group_by_id(creator_memberships[0].get(GROUP_MEMBER_COL_GROUP_ID, ''))
 
     # 检测冲突
     warnings = []
     classroom_conflict = False
     classroom_conflict_msg = ""
-    existing_activities = _list_activities()
+    existing_activities = list_activities()
     new_range = _parse_time_range(time)
 
     if new_range:
@@ -3282,7 +2665,7 @@ def api_create_activity():
         ACTIVITY_COL_TOPIC: topic,
         ACTIVITY_COL_TYPE: activity_type,
         ACTIVITY_COL_GROUP_ID: str(selected_group.get('_id')) if selected_group else None,
-        ACTIVITY_COL_GROUP_NAME: _safe_text(selected_group.get(GROUP_COL_NAME, '')) if selected_group else None,
+        ACTIVITY_COL_GROUP_NAME: safe_text(selected_group.get(GROUP_COL_NAME, '')) if selected_group else None,
         ACTIVITY_COL_CREATOR_NAME: creator_name,
         LEGACY_ACTIVITY_COL_CREATOR_STUDENT_ID: creator_name,
         ACTIVITY_COL_CREATOR_EMAIL: creator_email,
@@ -3303,7 +2686,7 @@ def api_create_activity():
             [f"活动时间：{date} {time}"],
         )
         _notify_cac_activity_created(activity_type, topic, creator_name)
-        _touch_data_version()
+        touch_version()
         return jsonify(response), 201
     except Exception as e:
         return jsonify({"ok": False, "message": f"创建失败: {str(e)}"}), 500
@@ -3313,7 +2696,7 @@ def api_create_activity():
 def api_update_activity(activity_id):
     """编辑活动（仅限创建者）"""
     activity_id = str(activity_id).strip()
-    activity = _get_activity_by_id(activity_id)
+    activity = get_activity_by_id(activity_id)
     
     if not activity:
         return jsonify({"ok": False, "message": "活动不存在"}), 404
@@ -3322,7 +2705,7 @@ def api_update_activity(activity_id):
     creator_name = str(data.get("creator_name", "")).strip()
     
     # 验证身份
-    actual_creator = _get_activity_creator_name(activity)
+    actual_creator = _get_activity_creator_name_legacy(activity)
     if actual_creator != creator_name:
         return jsonify({
             "ok": False, 
@@ -3346,18 +2729,18 @@ def api_update_activity(activity_id):
     if "creator_email" in data:
         update_data[ACTIVITY_COL_CREATOR_EMAIL] = str(data["creator_email"]).strip() or None
     if "activity_type" in data:
-        new_type = _safe_text(data.get("activity_type", ""))
+        new_type = safe_text(data.get("activity_type", ""))
         if new_type and new_type not in {'normal', 'cac有约'}:
             return jsonify({"ok": False, "message": "活动类型必须为 normal 或 cac有约"}), 400
         update_data[ACTIVITY_COL_TYPE] = new_type or None
     if "group_id" in data:
-        new_group_id = _safe_text(data.get("group_id", ""))
+        new_group_id = safe_text(data.get("group_id", ""))
         if new_group_id:
-            group = _get_interest_group_by_id(new_group_id)
+            group = get_interest_group_by_id(new_group_id)
             if not group:
                 return jsonify({"ok": False, "message": "所选兴趣组不存在"}), 404
             update_data[ACTIVITY_COL_GROUP_ID] = str(group.get('_id'))
-            update_data[ACTIVITY_COL_GROUP_NAME] = _safe_text(group.get(GROUP_COL_NAME, ''))
+            update_data[ACTIVITY_COL_GROUP_NAME] = safe_text(group.get(GROUP_COL_NAME, ''))
         else:
             update_data[ACTIVITY_COL_GROUP_ID] = None
             update_data[ACTIVITY_COL_GROUP_NAME] = None
@@ -3370,7 +2753,7 @@ def api_update_activity(activity_id):
     
     try:
         _update_row(ACTIVITY_TABLE_NAME, activity.get('_id'), update_data)
-        creator_email = str(data.get("creator_email", "")).strip() or _get_activity_creator_email(activity)
+        creator_email = str(data.get("creator_email", "")).strip() or get_activity_creator_email(activity)
         _notify_activity_change(
             creator_email,
             creator_name,
@@ -3381,7 +2764,7 @@ def api_update_activity(activity_id):
                 f"活动时间：{str(update_data.get(ACTIVITY_COL_TIME) or activity.get(ACTIVITY_COL_TIME, '')).strip()}",
             ],
         )
-        _touch_data_version()
+        touch_version()
         return jsonify({"ok": True, "message": "活动更新成功"})
     except Exception as e:
         return jsonify({"ok": False, "message": f"更新失败: {str(e)}"}), 500
@@ -3391,14 +2774,14 @@ def api_update_activity(activity_id):
 def api_close_activity(activity_id):
     """活动结项，统计准时率并触发评议提醒"""
     activity_id = str(activity_id).strip()
-    activity = _get_activity_by_id(activity_id)
+    activity = get_activity_by_id(activity_id)
     if not activity:
         return jsonify({"ok": False, "message": "活动不存在"}), 404
     data = request.get_json(silent=True) or {}
     creator_name = str(data.get('creator_name', '')).strip()
-    if _get_activity_creator_name(activity) != creator_name:
+    if _get_activity_creator_name_legacy(activity) != creator_name:
         return jsonify({"ok": False, "message": "只有活动创建者才能结项"}), 403
-    if _activity_is_closed(activity):
+    if activity_is_closed(activity):
         return jsonify({"ok": False, "message": "活动已经结项"}), 409
 
     closed_at = _now()
@@ -3413,11 +2796,11 @@ def api_close_activity(activity_id):
     except Exception as exc:
         return jsonify({"ok": False, "message": f"活动结项失败: {exc}"}), 500
 
-    refreshed_activity = _get_activity_by_id(activity_id) or activity
-    activity_type = _safe_text(refreshed_activity.get(ACTIVITY_COL_TYPE, '')) or 'normal'
+    refreshed_activity = get_activity_by_id(activity_id) or activity
+    activity_type = safe_text(refreshed_activity.get(ACTIVITY_COL_TYPE, '')) or 'normal'
     if activity_type != 'cac有约':
-        for reviewer_signup in _get_activity_signups(activity_id, role='评议员'):
-            if _get_signup_review_doc_url(reviewer_signup):
+        for reviewer_signup in get_activity_signups(activity_id, role='评议员'):
+            if get_signup_review_doc_url(reviewer_signup):
                 continue
             _notify_review_doc_reminder(reviewer_signup, refreshed_activity)
             try:
@@ -3425,9 +2808,9 @@ def api_close_activity(activity_id):
                     SIGNUP_COL_LAST_REVIEW_REMINDER_AT: _now_iso(),
                 })
             except Exception as exc:
-                print(f"Update immediate reminder timestamp failed: {exc}")
+                logger.error("Update immediate reminder timestamp failed: %s", exc)
 
-    _touch_data_version()
+    touch_version()
 
     return jsonify({
         "ok": True,
@@ -3440,7 +2823,7 @@ def api_close_activity(activity_id):
 def api_delete_activity(activity_id):
     """删除活动（仅限创建者，会通知报名者）"""
     activity_id = str(activity_id).strip()
-    activity = _get_activity_by_id(activity_id)
+    activity = get_activity_by_id(activity_id)
 
     if not activity:
         return jsonify({"ok": False, "message": "活动不存在"}), 404
@@ -3449,7 +2832,7 @@ def api_delete_activity(activity_id):
     creator_name = str(data.get("creator_name", "")).strip()
 
     # 验证身份
-    actual_creator = _get_activity_creator_name(activity)
+    actual_creator = _get_activity_creator_name_legacy(activity)
     if actual_creator != creator_name:
         return jsonify({
             "ok": False,
@@ -3462,7 +2845,7 @@ def api_delete_activity(activity_id):
     time = str(activity.get(ACTIVITY_COL_TIME, '')).strip() or '时间待定'
 
     # 获取所有报名者并发送通知
-    signups = _get_activity_signups(activity_id)
+    signups = get_activity_signups(activity_id)
     notified_count = 0
     for signup in signups:
         signup_name = _get_signup_name(signup)
@@ -3491,12 +2874,12 @@ def api_delete_activity(activity_id):
     try:
         base.delete_row(ACTIVITY_TABLE_NAME, activity.get('_id'))
         _notify_activity_change(
-            _get_activity_creator_email(activity),
+            get_activity_creator_email(activity),
             creator_name,
             topic,
             '删除',
         )
-        _touch_data_version()
+        touch_version()
         msg = f"活动已删除"
         if notified_count > 0:
             msg += f"，已通知 {notified_count} 位报名者"
@@ -3507,28 +2890,11 @@ def api_delete_activity(activity_id):
 
 # ===== CAC管理员相关API =====
 
-def _is_cac_admin(name):
-    """检查是否为CAC管理员"""
-    if not name:
-        return False
-    name = str(name).strip()
-    rows = _list_rows(CAC_ADMINS_TABLE_NAME)
-    for row in rows:
-        if str(row.get(CAC_ADMIN_COL_NAME, '')).strip() == name:
-            return True
-    return False
-
-
-def _list_cac_admins():
-    """获取CAC管理员列表"""
-    rows = _list_rows(CAC_ADMINS_TABLE_NAME)
-    return [{'name': str(row.get(CAC_ADMIN_COL_NAME, '')).strip()} for row in rows]
-
 
 @app.get("/api/cac-admins")
-def api_list_cac_admins():
+def apilist_cac_admins():
     """获取CAC管理员列表"""
-    return jsonify({"ok": True, "admins": _list_cac_admins()})
+    return jsonify({"ok": True, "admins": list_cac_admins()})
 
 
 @app.post("/api/cac-admin")
@@ -3542,12 +2908,12 @@ def api_add_cac_admin():
         return jsonify({"ok": False, "message": "姓名不能为空"}), 400
 
     # 检查权限：已有管理员或首次初始化（管理员列表为空）
-    existing_admins = _list_cac_admins()
-    if existing_admins and not _is_cac_admin(requester_name):
+    existing_admins = list_cac_admins()
+    if existing_admins and not is_cac_admin(requester_name):
         return jsonify({"ok": False, "message": "只有管理员才能添加新管理员"}), 403
 
     # 检查是否已存在
-    if _is_cac_admin(name):
+    if is_cac_admin(name):
         return jsonify({"ok": False, "message": "该用户已是管理员"}), 400
 
     try:
@@ -3571,7 +2937,7 @@ def api_delete_cac_admin(name):
         if not requester_name:
             return jsonify({"ok": False, "message": "缺少请求者姓名"}), 400
 
-        if not _is_cac_admin(requester_name):
+        if not is_cac_admin(requester_name):
             return jsonify({"ok": False, "message": "只有管理员才能删除管理员"}), 403
 
         rows = _list_rows(CAC_ADMINS_TABLE_NAME)
@@ -3581,25 +2947,24 @@ def api_delete_cac_admin(name):
                     base.delete_row(CAC_ADMINS_TABLE_NAME, row.get('_id'))
                     return jsonify({"ok": True, "message": f"已移除 {name} 的管理员权限"})
                 except Exception as e:
-                    print(f"[ERROR] Delete CAC admin row failed: {e}")
+                    logger.error("Delete CAC admin row failed: %s", e)
                     return jsonify({"ok": False, "message": f"删除失败: {str(e)}"}), 500
 
         return jsonify({"ok": False, "message": "该用户不是管理员"}), 404
     except Exception as e:
-        print(f"[ERROR] api_delete_cac_admin unexpected error: {e}")
+        logger.error("api_delete_cac_admin unexpected error: %s", e)
         return jsonify({"ok": False, "message": f"服务器错误: {str(e)}"}), 500
 
 
 # ===== CAC教室时间槽相关API =====
 
-def _list_cac_room_slots(date=None, time_slot=None):
+def _list_cac_room_slots_local(date=None, time_slot=None):
     """获取CAC教室时间槽列表
 
     time_slot 可以是单个时间段如 '14:00-14:30' 或合并后的如 '14:00-15:30'
     当是合并后的时间段时，返回在该时间段内所有半小时槽都可用的教室
     """
     rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
-    print(f"[DEBUG] _list_cac_room_slots: Found {len(rows)} total slots in database")
 
     # 解析需要的半小时槽列表
     required_slots = []
@@ -3621,8 +2986,6 @@ def _list_cac_room_slots(date=None, time_slot=None):
                     next_m -= 60
                 required_slots.append(f"{current_h:02d}:{current_m:02d}-{next_h:02d}:{next_m:02d}")
                 current_h, current_m = next_h, next_m
-
-    print(f"[DEBUG] Required time slots: {required_slots}")
 
     # 统计每个教室在所有需要的时间槽的可用情况
     classroom_slots = {}  # {classroom: set of available time_slots}
@@ -3671,16 +3034,15 @@ def _list_cac_room_slots(date=None, time_slot=None):
                 'status': slot_status,
             })
 
-    print(f"[DEBUG] _list_cac_room_slots: Returning {len(result)} available slots (date={date}, time_slot={time_slot})")
     return result
 
 
 @app.get("/api/cac-room-slots")
-def api_list_cac_room_slots():
+def apilist_cac_room_slots():
     """获取可用教室时间槽"""
     date = str(request.args.get("date", "")).strip()
     time_slot = str(request.args.get("time_slot", "")).strip()
-    slots = _list_cac_room_slots(date=date, time_slot=time_slot)
+    slots = _list_cac_room_slots_local(date=date, time_slot=time_slot)
     return jsonify({"ok": True, "slots": slots})
 
 
@@ -3693,7 +3055,7 @@ def api_add_cac_room_slot():
     time_slot = str(data.get("time_slot", "")).strip()
     requester_name = str(data.get("requester_name", "")).strip()
 
-    if not _is_cac_admin(requester_name):
+    if not is_cac_admin(requester_name):
         return jsonify({"ok": False, "message": "只有管理员才能添加教室时间槽"}), 403
 
     if not classroom or not date or not time_slot:
@@ -3720,7 +3082,7 @@ def api_delete_cac_room_slot(slot_id):
     data = request.get_json(silent=True) or {}
     requester_name = str(data.get("requester_name", "")).strip()
 
-    if not _is_cac_admin(requester_name):
+    if not is_cac_admin(requester_name):
         return jsonify({"ok": False, "message": "只有管理员才能删除教室时间槽"}), 403
 
     rows = _list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
@@ -3736,6 +3098,7 @@ def api_delete_cac_room_slot(slot_id):
 
 
 _maintenance_thread_started = False
+_shutdown_event = threading.Event()
 
 
 def _ensure_background_maintenance_started():
@@ -3746,7 +3109,24 @@ def _ensure_background_maintenance_started():
     threading.Thread(target=_background_maintenance_loop, daemon=True).start()
 
 
+def shutdown_background_tasks():
+    """优雅关闭后台维护线程"""
+    _shutdown_event.set()
+
+
+_atexit_registered = False
+
+
+def _register_shutdown():
+    global _atexit_registered
+    if not _atexit_registered:
+        import atexit
+        atexit.register(shutdown_background_tasks)
+        _atexit_registered = True
+
+
 _ensure_background_maintenance_started()
+_register_shutdown()
 
 
 if __name__ == "__main__":
