@@ -1,12 +1,9 @@
-"""
-通用辅助函数模块
-
-提供跨模块共享的基础工具函数
-"""
+"""Common helpers.
+Provides basic utilities shared across modules."""
 
 
 def safe_text(value):
-    """安全获取文本，None 返回空字符串"""
+    """Safely convert a value to text; return an empty string for None."""
     if value is None:
         return ""
     text = str(value).strip()
@@ -14,7 +11,7 @@ def safe_text(value):
 
 
 def safe_bool(value):
-    """安全获取布尔值"""
+    """Safely convert a value to a boolean."""
     if value is None:
         return False
     if isinstance(value, bool):

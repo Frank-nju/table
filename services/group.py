@@ -1,8 +1,5 @@
-"""
-兴趣组服务模块
-
-封装兴趣组相关的业务逻辑
-"""
+"""Interest group service.
+Encapsulates interest group business logic."""
 
 import uuid
 from datetime import datetime
@@ -23,7 +20,7 @@ from utils.versioned_cache import cached_build, touch_version
 
 
 def list_interest_groups():
-    """获取所有兴趣组（带版本缓存）"""
+    """List all interest groups using the versioned cache."""
     return cached_build(
         'interest_groups',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -32,7 +29,7 @@ def list_interest_groups():
 
 
 def get_interest_group_by_id(group_id):
-    """根据ID获取兴趣组"""
+    """Get an interest group by ID."""
     if not group_id:
         return None
     groups = list_interest_groups()
@@ -43,7 +40,7 @@ def get_interest_group_by_id(group_id):
 
 
 def list_group_members():
-    """获取所有兴趣组成员（带版本缓存）"""
+    """List all interest group members using the versioned cache."""
     return cached_build(
         'group_members',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -52,13 +49,13 @@ def list_group_members():
 
 
 def get_group_members(group_id):
-    """获取指定兴趣组的成员列表"""
+    """List members of a specific interest group."""
     members = list_group_members()
     return [m for m in members if str(m.get(GROUP_MEMBER_COL_GROUP_ID, '')) == group_id]
 
 
 def serialize_interest_group(group):
-    """序列化兴趣组"""
+    """Serialize an interest group."""
     if not group:
         return None
     group_id = str(group.get('_id', ''))
@@ -84,14 +81,14 @@ def serialize_interest_group(group):
 
 
 def get_group_ids_for_member(name):
-    """获取用户加入的兴趣组ID列表"""
+    """List the interest group IDs for a user."""
     members = list_group_members()
     return [m.get(GROUP_MEMBER_COL_GROUP_ID, '') for m in members
             if safe_text(m.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) == name]
 
 
 def create_group(data):
-    """创建兴趣组"""
+    """Create an interest group."""
     group_name = safe_text(data.get('name', ''))
     leader_name = safe_text(data.get('leader_name', ''))
     leader_email = safe_text(data.get('leader_email', ''))
@@ -101,15 +98,15 @@ def create_group(data):
     description = safe_text(data.get('description', ''))
     member_names = data.get('member_names', []) or []
 
-    # 兼容前端传 members 字符串的情况
+    # Accept a members string from the frontend for compatibility
     members_str = safe_text(data.get('members', ''))
     if members_str and not member_names:
         member_names = [m.strip() for m in members_str.replace('，', ',').split(',') if m.strip()]
 
     if not group_name or not leader_name or not topic_goal or not time_boundary or not execution_plan:
-        raise ValidationError("请完整填写组名、组长、主题目标、时间边界、执行方案")
+        raise ValidationError("Complete the group name, leader, goal, time boundaries, and execution plan")
 
-    # 规范化成员列表
+    # Normalize the member list
     normalized_members = []
     for item in member_names:
         member_name = safe_text(item)
@@ -120,9 +117,9 @@ def create_group(data):
     normalized_members = sorted(set(normalized_members))
 
     if len(normalized_members) < 2:
-        raise ValidationError("兴趣组创建条件至少 2 人（含组长）")
+        raise ValidationError("An interest group must have at least two members, including its leader")
 
-    # 创建兴趣组
+    # Create the interest group.
     row_data = {
         GROUP_COL_NAME: group_name,
         GROUP_COL_LEADER_NAME: leader_name,
@@ -137,7 +134,7 @@ def create_group(data):
     group = db.append_row(INTEREST_GROUP_TABLE_NAME, row_data)
     group_id = str(group.get('_id', ''))
 
-    # 添加成员
+    # Add the member to the group.
     for member_name in normalized_members:
         role = '组长' if member_name == leader_name else '组员'
         db.append_row(GROUP_MEMBER_TABLE_NAME, {
@@ -154,16 +151,16 @@ def create_group(data):
 
 
 def join_group(group_id, member_name, member_email=''):
-    """加入兴趣组"""
+    """Join an interest group."""
     group = get_interest_group_by_id(group_id)
     if not group:
-        raise NotFoundError("兴趣组不存在")
+        raise NotFoundError("Interest group not found")
 
-    # 检查是否已加入
+    # Check whether the user has already joined.
     members = get_group_members(group_id)
     for m in members:
         if safe_text(m.get(GROUP_MEMBER_COL_MEMBER_NAME, '')) == member_name:
-            raise ValidationError("您已加入该兴趣组")
+            raise ValidationError("You have already joined this interest group")
 
     db.append_row(GROUP_MEMBER_TABLE_NAME, {
         GROUP_MEMBER_COL_GROUP_ID: group_id,
@@ -179,10 +176,10 @@ def join_group(group_id, member_name, member_email=''):
 
 
 def leave_group(group_id, member_name):
-    """退出兴趣组"""
+    """Leave an interest group."""
     group = get_interest_group_by_id(group_id)
     if not group:
-        raise NotFoundError("兴趣组不存在")
+        raise NotFoundError("Interest group not found")
 
     members = get_group_members(group_id)
     for m in members:
@@ -191,5 +188,5 @@ def leave_group(group_id, member_name):
             touch_version()
             return True
 
-    raise NotFoundError("您未加入该兴趣组")
+    raise NotFoundError("You are not a member of this interest group")
 

@@ -6,6 +6,20 @@ import { ElMessage } from 'element-plus'
 
 const userStore = useUserStore()
 
+const formatRole = (role) => ({
+  '评议员': 'Reviewer',
+  '旁听': 'Observer',
+  '普通用户': 'Member',
+  'CAC管理员': 'CAC administrator'
+}[role] || role || 'Member')
+
+const formatInviteStatus = (status) => ({
+  '已发送': 'Pending',
+  '已接受': 'Accepted',
+  '已拒绝': 'Declined',
+  '已撤回': 'Withdrawn'
+}[status] || status || 'Pending')
+
 const loading = ref(true)
 const profile = ref(null)
 const mySignups = ref([])
@@ -27,7 +41,7 @@ const loadProfile = async () => {
     const res = await profileApi.summary(userStore.name)
     profile.value = res.summary
   } catch (e) {
-    // 用户不存在
+    // No profile exists yet.
   }
 }
 
@@ -36,7 +50,7 @@ const loadMySignups = async () => {
     const res = await signupApi.mySignups(userStore.name)
     mySignups.value = res.signups || []
   } catch (e) {
-    // 错误处理
+    // The response interceptor displays API errors.
   }
 }
 
@@ -45,76 +59,76 @@ const loadMyInvites = async () => {
     const res = await inviteApi.myInvites(userStore.name)
     myInvites.value = res.invites || []
   } catch (e) {
-    // 错误处理
+    // The response interceptor displays API errors.
   }
 }
 
 const handleCancelSignup = async (signupId) => {
   try {
     await signupApi.delete(signupId)
-    ElMessage.success('已取消报名')
+    ElMessage.success('Registration cancelled')
     await loadMySignups()
   } catch (e) {
-    // 错误处理
+    // The response interceptor displays API errors.
   }
 }
 
 const formatDate = (date) => {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('zh-CN')
+  return new Date(date).toLocaleDateString('en-US')
 }
 </script>
 
 <template>
   <div class="page-container">
     <div v-if="!userStore.isLoggedIn" class="not-logged-in">
-      <el-empty description="请先登录">
+      <el-empty description="Please log in first">
         <el-button type="primary" @click="userStore.login('test')">
-          去登录
+          Log in
         </el-button>
       </el-empty>
     </div>
 
     <template v-else>
-      <h1 class="page-title">个人中心</h1>
+      <h1 class="page-title">Profile</h1>
 
       <el-row :gutter="24">
-        <!-- 个人信息卡片 -->
+        <!-- Profile card -->
         <el-col :span="8">
           <div class="card profile-card">
             <div class="avatar">
               {{ userStore.name.charAt(0) }}
             </div>
             <h2>{{ userStore.name }}</h2>
-            <p class="role">{{ profile?.role || '普通用户' }}</p>
-            <p class="email">{{ profile?.email || '未设置邮箱' }}</p>
+            <p class="role">{{ formatRole(profile?.role) }}</p>
+            <p class="email">{{ profile?.email || 'No email set' }}</p>
 
             <el-divider />
 
             <div class="stats">
               <div class="stat">
                 <span class="value">{{ profile?.stats?.total_signups || 0 }}</span>
-                <span class="label">参与活动</span>
+                <span class="label">Activities joined</span>
               </div>
             </div>
           </div>
         </el-col>
 
-        <!-- 我的报名 -->
+        <!-- My registrations -->
         <el-col :span="16">
           <div class="card">
-            <h2>我的报名</h2>
+            <h2>My registrations</h2>
             <el-table :data="mySignups" style="width: 100%">
-              <el-table-column prop="activity.topic" label="活动" />
-              <el-table-column prop="role" label="角色" width="100">
+              <el-table-column prop="activity.topic" label="Activity" />
+              <el-table-column prop="role" label="Role" width="100">
                 <template #default="{ row }">
                   <el-tag :type="row.role === '评议员' ? 'primary' : 'info'">
-                    {{ row.role }}
+                    {{ formatRole(row.role) }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="activity.date" label="日期" width="120" />
-              <el-table-column label="操作" width="100">
+              <el-table-column prop="activity.date" label="Date" width="120" />
+              <el-table-column label="Actions" width="100">
                 <template #default="{ row }">
                   <el-button
                     type="danger"
@@ -122,29 +136,29 @@ const formatDate = (date) => {
                     link
                     @click="handleCancelSignup(row.id)"
                   >
-                    取消
+                    Cancel
                   </el-button>
                 </template>
               </el-table-column>
             </el-table>
-            <el-empty v-if="mySignups.length === 0" description="暂无报名记录" />
+            <el-empty v-if="mySignups.length === 0" description="No registrations yet" />
           </div>
 
-          <!-- 我的邀请 -->
+          <!-- My invitations -->
           <div class="card" style="margin-top: 16px">
-            <h2>我的邀请</h2>
+            <h2>My invitations</h2>
             <el-table :data="myInvites" style="width: 100%">
-              <el-table-column prop="activity_topic" label="活动" />
-              <el-table-column prop="inviter_name" label="邀请人" width="120" />
-              <el-table-column prop="status" label="状态" width="100">
+              <el-table-column prop="activity_topic" label="Activity" />
+              <el-table-column prop="inviter_name" label="Invited by" width="120" />
+              <el-table-column prop="status" label="Status" width="100">
                 <template #default="{ row }">
                   <el-tag :type="row.status === '已接受' ? 'success' : 'info'">
-                    {{ row.status }}
+                    {{ formatInviteStatus(row.status) }}
                   </el-tag>
                 </template>
               </el-table-column>
             </el-table>
-            <el-empty v-if="myInvites.length === 0" description="暂无邀请" />
+            <el-empty v-if="myInvites.length === 0" description="No invitations yet" />
           </div>
         </el-col>
       </el-row>

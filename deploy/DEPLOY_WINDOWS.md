@@ -1,193 +1,166 @@
-# CAC分享会系统 - Windows服务器部署指南
+# CAC Share Session System — Windows Server Deployment
 
-## 服务器信息
-- IP地址: 47.102.100.9
-- 系统: Windows Server
+## Server
 
----
+- IP address: 47.102.100.9
+- Operating system: Windows Server
 
-## 一、环境准备
+## 1. Prepare the environment
 
-### 1. 安装 Python 3.10+
+### Install Python 3.10 or later
 
-1. 访问 https://www.python.org/downloads/
-2. 下载 Windows 安装包
-3. 安装时勾选 "Add Python to PATH"
+1. Visit https://www.python.org/downloads/.
+2. Download the Windows installer.
+3. Select **Add Python to PATH** during installation.
 
-### 2. 安装 Node.js 18+
+### Install Node.js 18 or later
 
-1. 访问 https://nodejs.org/
-2. 下载 LTS 版本并安装
+1. Visit https://nodejs.org/.
+2. Download and install the LTS release.
 
-### 3. 安装 MySQL
+### Install MySQL
 
-#### 方法1: 下载MySQL安装包
-1. 访问 https://dev.mysql.com/downloads/mysql/
-2. 选择 Windows 版本下载
-3. 运行安装程序，设置 root 密码
+You can download the installer from https://dev.mysql.com/downloads/mysql/ and set a root password during setup. Alternatively, run PowerShell as Administrator and install MySQL with Chocolatey:
 
-#### 方法2: 使用Chocolatey
-```powershell
-# 以管理员身份运行PowerShell
+~~~powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force
 iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 choco install mysql -y
-```
+~~~
 
-### 4. 创建数据库
+Create the database:
 
-```sql
+~~~sql
 CREATE DATABASE table_signup CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'table_user'@'localhost' IDENTIFIED BY '你的密码';
+CREATE USER 'table_user'@'localhost' IDENTIFIED BY 'your_password';
 GRANT ALL PRIVILEGES ON table_signup.* TO 'table_user'@'localhost';
 FLUSH PRIVILEGES;
-```
+~~~
 
----
+## 2. Deploy the application
 
-## 二、部署应用
+Upload the project directory to the server, for example, C:/table-signup.
 
-### 1. 上传项目文件
+Install dependencies:
 
-将整个项目文件夹上传到服务器，例如 `C:\table-signup`
-
-### 2. 安装依赖
-
-```cmd
-cd C:\table-signup
-
-# 后端依赖
+~~~cmd
+cd C:/table-signup
 python -m venv .venv
-.venv\Scripts\activate
+.venv/Scripts/activate
 pip install -r requirements.txt
 
-# 前端依赖
 cd frontend
 npm install
-```
+~~~
 
-### 3. 构建前端
+Build the frontend:
 
-```cmd
-cd C:\table-signup\frontend
+~~~cmd
+cd C:/table-signup/frontend
 npm run build
-```
+~~~
 
-构建完成后，`frontend\dist\` 目录包含静态文件。
+The generated static files are placed in frontend/dist.
 
-### 4. 修改配置文件
+Create C:/table-signup/.env with the database settings:
 
-编辑 `C:\table-signup\.env`：
-
-```env
+~~~env
 DB_BACKEND=mysql
 MYSQL_HOST=127.0.0.1
 MYSQL_PORT=3306
 MYSQL_USER=table_user
-MYSQL_PASSWORD=你的密码
+MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=table_signup
-```
+~~~
 
-### 5. 启动服务
+Start the service:
 
-```cmd
-cd C:\table-signup
-.venv\Scripts\activate
+~~~cmd
+cd C:/table-signup
+.venv/Scripts/activate
 python app.py
-```
+~~~
 
----
+## 3. Configure the firewall
 
-## 三、配置防火墙
+### Windows Firewall interface
 
-### 方法1: 通过Windows防火墙界面
-1. 打开 "高级安全Windows Defender防火墙"
-2. 点击 "入站规则" → "新建规则"
-3. 选择 "端口" → "TCP" → "特定本地端口: 8080"
-4. 选择 "允许连接"
-5. 命名为 "CAC分享会系统"
+1. Open **Windows Defender Firewall with Advanced Security**.
+2. Select **Inbound Rules** → **New Rule**.
+3. Choose **Port** → **TCP** → **Specific local ports: 8080**.
+4. Select **Allow the connection**.
+5. Name the rule **CAC Share Session System**.
 
-### 方法2: 使用命令行
-```powershell
-New-NetFirewallRule -DisplayName "CAC分享会-8080" -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow
-```
+### Command line
 
----
+~~~powershell
+New-NetFirewallRule -DisplayName "CAC Share Session - 8080" -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow
+~~~
 
-## 四、设置开机自启动
+## 4. Start the service at boot
 
-### 方法1: 使用任务计划程序
-1. 打开 "任务计划程序"
-2. 创建基本任务
-   - 名称: CAC分享会系统
-   - 触发器: 计算机启动时
-   - 操作: 启动程序
-   - 程序: `C:\table-signup\.venv\Scripts\pythonw.exe`
-   - 参数: `app.py`
-   - 起始位置: `C:\table-signup`
+### Task Scheduler
 
-### 方法2: 使用NSSM（推荐）
-```powershell
-# 下载NSSM: https://nssm.cc/download
-nssm install CACSignup "C:\table-signup\.venv\Scripts\pythonw.exe" "app.py"
-nssm set CACSignup AppDirectory "C:\table-signup"
-nssm set CACSignup DisplayName "CAC分享会系统"
+Create a basic task with the following settings:
+
+- Name: CAC Share Session System
+- Trigger: When the computer starts
+- Action: Start a program
+- Program: C:/table-signup/.venv/Scripts/pythonw.exe
+- Arguments: app.py
+- Start in: C:/table-signup
+
+### NSSM (recommended)
+
+~~~powershell
+nssm install CACSignup "C:/table-signup/.venv/Scripts/pythonw.exe" "app.py"
+nssm set CACSignup AppDirectory "C:/table-signup"
+nssm set CACSignup DisplayName "CAC Share Session System"
 nssm start CACSignup
-```
+~~~
 
----
+Download NSSM from https://nssm.cc/download.
 
-## 五、验证部署
+## 5. Verify the deployment
 
-### 检查服务状态
-```cmd
+Check the health endpoint:
+
+~~~cmd
 curl http://localhost:8080/healthz
-```
+~~~
 
-### 访问应用
-浏览器打开: http://47.102.100.9:8080
+Open the application at http://47.102.100.9:8080.
 
----
+## 6. Update the deployment
 
-## 六、更新部署
-
-```cmd
-cd C:\table-signup
-
-# 拉取代码
+~~~cmd
+cd C:/table-signup
 git pull
 
-# 更新后端依赖
-.venv\Scripts\activate
+.venv/Scripts/activate
 pip install -r requirements.txt
 
-# 更新前端并构建
 cd frontend
 npm install
 npm run build
+~~~
 
-# 重启服务
-# 如果用NSSM:
-nssm restart CACSignup
-# 否则手动重启 python app.py
-```
+Restart the service with nssm restart CACSignup, or restart python app.py manually.
 
----
+## 7. Common commands
 
-## 七、常用命令
+| Task | Command |
+|---|---|
+| Start the service | python app.py |
+| Start in the background | pythonw app.py |
+| Build the frontend | cd frontend && npm run build |
+| Run the frontend dev server | cd frontend && npm run dev |
 
-| 操作 | 命令 |
-|------|------|
-| 启动服务 | `python app.py` |
-| 后台启动 | `pythonw app.py` |
-| 构建前端 | `cd frontend && npm run build` |
-| 开发模式前端 | `cd frontend && npm run dev` |
+## Aliyun security group
 
----
+Allow inbound TCP traffic on port 8080 in the Aliyun console:
 
-## 阿里云安全组
+1. Open the ECS instance details.
+2. Select **Security Groups**.
+3. Add an inbound rule for TCP port 8080.
 
-别忘了在阿里云控制台开放端口：
-1. 进入ECS实例详情
-2. 点击 "安全组"
-3. 添加入方向规则：端口 8080，协议 TCP

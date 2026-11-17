@@ -1,43 +1,43 @@
-# CAC分享会系统 - 服务状态检查
+# CAC Share Session System — check service status
 
 Write-Host ""
-Write-Host "=== CAC分享会系统 状态检查 ===" -ForegroundColor Cyan
+Write-Host "=== CAC Share Session System — Status ===" -ForegroundColor Cyan
 Write-Host ""
 
-# 检查进程
+# Check the process.
 $pythonProcess = Get-Process -Name python -ErrorAction SilentlyContinue
 if ($pythonProcess) {
-    Write-Host "服务状态: " -NoNewline
-    Write-Host "运行中" -ForegroundColor Green
-    Write-Host "进程ID:   $($pythonProcess.Id)"
+    Write-Host "Service status: " -NoNewline
+    Write-Host "Running" -ForegroundColor Green
+    Write-Host "Process ID: $($pythonProcess.Id)"
 } else {
-    Write-Host "服务状态: " -NoNewline
-    Write-Host "未运行" -ForegroundColor Red
+    Write-Host "Service status: " -NoNewline
+    Write-Host "Not running" -ForegroundColor Red
 }
 
-# 检查端口
+# Check the port.
 Write-Host ""
-Write-Host "端口检查..." -ForegroundColor Yellow
+Write-Host "Checking port..." -ForegroundColor Yellow
 $portCheck = netstat -ano | Select-String ":8080.*LISTENING"
 if ($portCheck) {
-    Write-Host "端口 8080: " -NoNewline
-    Write-Host "已监听" -ForegroundColor Green
+    Write-Host "Port 8080: " -NoNewline
+    Write-Host "Listening" -ForegroundColor Green
 } else {
-    Write-Host "端口 8080: " -NoNewline
-    Write-Host "未监听" -ForegroundColor Red
+    Write-Host "Port 8080: " -NoNewline
+    Write-Host "Not listening" -ForegroundColor Red
 }
 
-# 检查健康接口
+# Check the health endpoint.
 Write-Host ""
-Write-Host "健康检查..." -ForegroundColor Yellow
+Write-Host "Checking health..." -ForegroundColor Yellow
 $healthCheck = Invoke-WebRequest -Uri "http://localhost:8080/healthz" -UseBasicParsing -ErrorAction SilentlyContinue
 if ($healthCheck -and $healthCheck.StatusCode -eq 200) {
-    Write-Host "API状态:  " -NoNewline
-    Write-Host "正常" -ForegroundColor Green
-    Write-Host "响应:     $($healthCheck.Content)"
+    Write-Host "API status: " -NoNewline
+    Write-Host "Healthy" -ForegroundColor Green
+    Write-Host "Response:   $($healthCheck.Content)"
 } else {
-    Write-Host "API状态:  " -NoNewline
-    Write-Host "异常" -ForegroundColor Red
+    Write-Host "API status: " -NoNewline
+    Write-Host "Unhealthy" -ForegroundColor Red
 }
 
 Write-Host ""

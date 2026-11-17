@@ -1,9 +1,6 @@
-"""
-版本感知缓存模块
-
-提供带数据版本号的全局缓存，写入操作通过 touch_version() 使缓存失效。
-app.py 和 services/ 层共用此缓存。
-"""
+"""Version-aware cache.
+Provides a global cache keyed by the current data version. Call touch_version() after writes to invalidate cached values.
+This cache is shared by app.py and the services layer."""
 
 import threading
 import time
@@ -14,25 +11,22 @@ _data_version = 0
 
 
 def get_version():
-    """获取当前数据版本号"""
+    """Get the current data version."""
     with _cache_lock:
         return _data_version
 
 
 def touch_version():
-    """递增版本号，使所有缓存失效"""
+    """Increment the version to invalidate all cached values."""
     global _data_version
     with _cache_lock:
         _data_version += 1
 
 
 def cached_build(namespace, ttl_seconds, build_fn, *parts):
-    """
-    带版本号的缓存构建函数。
+    """Build and cache a value using the current version.
 
-    缓存键包含当前版本号，写入时调用 touch_version() 递增版本号，
-    旧的缓存键不再匹配，自然失效。
-    """
+The cache key includes the current data version. Calling touch_version() after a write changes the key, so old entries expire naturally."""
     version = get_version()
     cache_key = (namespace, version, parts)
     now_ts = time.time()
@@ -42,7 +36,7 @@ def cached_build(namespace, ttl_seconds, build_fn, *parts):
         if cached and cached['expires_at'] > now_ts:
             return cached['value']
 
-    # 在锁外执行构建，避免阻塞
+    # run outside the lockbuild，to avoid blocking
     value = build_fn()
 
     with _cache_lock:
@@ -54,6 +48,6 @@ def cached_build(namespace, ttl_seconds, build_fn, *parts):
 
 
 def clear_all():
-    """清除所有缓存（用于测试）"""
+    """Clear all cached values (for tests)."""
     with _cache_lock:
         _cache.clear()

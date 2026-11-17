@@ -6,7 +6,7 @@ import { useUserStore } from './stores/user'
 const router = useRouter()
 const userStore = useUserStore()
 
-// 登录对话框
+// Login dialog
 const loginDialogVisible = ref(false)
 const loginName = ref('')
 
@@ -25,19 +25,19 @@ const handleLogout = () => {
 
 <template>
   <el-container class="app-container">
-    <!-- 顶部导航 -->
+    <!-- Top navigation -->
     <el-header class="app-header">
       <div class="header-left">
         <router-link to="/" class="logo">
           <el-icon :size="24"><Calendar /></el-icon>
-          <span>CAC 分享会</span>
+          <span>CAC Share Sessions</span>
         </router-link>
       </div>
 
       <el-menu mode="horizontal" :ellipsis="false" router>
-        <el-menu-item index="/">首页</el-menu-item>
-        <el-menu-item index="/profile">个人中心</el-menu-item>
-        <el-menu-item index="/admin">管理后台</el-menu-item>
+        <el-menu-item index="/">Home</el-menu-item>
+        <el-menu-item index="/profile">Profile</el-menu-item>
+        <el-menu-item index="/admin">Admin</el-menu-item>
       </el-menu>
 
       <div class="header-right">
@@ -53,10 +53,10 @@ const handleLogout = () => {
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="router.push('/profile')">
-                  个人中心
+                  Profile
                 </el-dropdown-item>
                 <el-dropdown-item divided @click="handleLogout">
-                  退出登录
+                  Log out
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -64,31 +64,31 @@ const handleLogout = () => {
         </template>
         <template v-else>
           <el-button type="primary" @click="loginDialogVisible = true">
-            登录
+            Log in
           </el-button>
         </template>
       </div>
     </el-header>
 
-    <!-- 主内容区 -->
+    <!-- Main content -->
     <el-main class="app-main">
       <router-view />
     </el-main>
 
-    <!-- 登录对话框 -->
-    <el-dialog v-model="loginDialogVisible" title="登录" width="400px">
+    <!-- Login dialog -->
+    <el-dialog v-model="loginDialogVisible" title="Log in" width="400px">
       <el-form @submit.prevent="handleLogin">
-        <el-form-item label="姓名">
+        <el-form-item label="Name">
           <el-input
             v-model="loginName"
-            placeholder="请输入姓名"
+            placeholder="Enter your name"
             @keyup.enter="handleLogin"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="loginDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleLogin">确定</el-button>
+        <el-button @click="loginDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="handleLogin">Confirm</el-button>
       </template>
     </el-dialog>
   </el-container>

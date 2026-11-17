@@ -1,77 +1,77 @@
 @echo off
 chcp 65001 >nul
 echo ==========================================
-echo   CAC分享会系统 Windows部署脚本
+echo   CAC Share Session System — Windows Setup
 echo ==========================================
 echo.
 
-:: 检查管理员权限
+:: Check for administrator privileges
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo 请以管理员身份运行此脚本！
+    echo Run this script as Administrator!
     pause
     exit /b 1
 )
 
-:: 设置项目目录
+:: Set the project directory
 set APP_DIR=C:\table-signup
 set PROJECT_DIR=%~dp0..
 
-:: 1. 创建项目目录
-echo [1/5] 创建项目目录...
+:: 1. Create the project directory
+echo [1/5] Creating the project directory...
 if not exist "%APP_DIR%" mkdir "%APP_DIR%"
 
-:: 复制项目文件
-echo 正在复制项目文件...
+:: Copy project files
+echo Copying project files...
 xcopy /E /I /Y "%PROJECT_DIR%\*" "%APP_DIR%\"
 if exist "%APP_DIR%\.venv" rmdir /S /Q "%APP_DIR%\.venv"
 if exist "%APP_DIR%\__pycache__" rmdir /S /Q "%APP_DIR%\__pycache__"
 
-:: 2. 创建Python虚拟环境
-echo [2/5] 创建Python虚拟环境...
+:: 2. Create the Python virtual environment
+echo [2/5] Creating the Python virtual environment...
 cd /d "%APP_DIR%"
 python -m venv .venv
 call .venv\Scripts\activate.bat
 pip install --upgrade pip -q
 pip install -r requirements.txt -q
 
-:: 3. 复制环境配置
-echo [3/5] 配置环境变量...
+:: 3. Copy the environment configuration
+echo [3/5] Configuring environment variables...
 copy /Y "%APP_DIR%\deploy\env\table-signup.env.example" "%APP_DIR%\.env" >nul
 
-:: 4. 创建启动脚本
-echo [4/5] 创建启动脚本...
+:: 4. Create the startup script
+echo [4/5] Creating the startup script...
 echo @echo off > "%APP_DIR%\start.bat"
 echo cd /d %APP_DIR% >> "%APP_DIR%\start.bat"
 echo call .venv\Scripts\activate.bat >> "%APP_DIR%\start.bat"
 echo python app.py >> "%APP_DIR%\start.bat"
 echo pause >> "%APP_DIR%\start.bat"
 
-:: 创建后台运行脚本
+:: Create the background startup script
 echo @echo off > "%APP_DIR%\start_background.bat"
 echo cd /d %APP_DIR% >> "%APP_DIR%\start_background.bat"
 echo call .venv\Scripts\activate.bat >> "%APP_DIR%\start_background.bat"
 echo start /b pythonw app.py >> "%APP_DIR%\start_background.bat"
-echo echo 服务已启动，访问 http://47.102.100.9:8080 >> "%APP_DIR%\start_background.bat"
+echo echo Service started. Open http://47.102.100.9:8080 >> "%APP_DIR%\start_background.bat"
 
-:: 5. 创建停止脚本
-echo [5/5] 创建停止脚本...
+:: 5. Create the shutdown script
+echo [5/5] Creating the shutdown script...
 echo @echo off > "%APP_DIR%\stop.bat"
 echo taskkill /F /IM pythonw.exe 2>nul >> "%APP_DIR%\stop.bat"
-echo echo 服务已停止 >> "%APP_DIR%\stop.bat"
+echo echo Service stopped >> "%APP_DIR%\stop.bat"
 
 echo.
 echo ==========================================
-echo   部署完成！
+echo   Setup complete!
 echo ==========================================
 echo.
-echo 项目目录: %APP_DIR%
+echo Project directory: %APP_DIR%
 echo.
-echo 后续步骤:
-echo   1. 安装MySQL (如果未安装)
-echo   2. 编辑 %APP_DIR%\.env 配置数据库连接
-echo   3. 运行 %APP_DIR%\start.bat 启动服务
+echo Next steps:
+echo   1. Install MySQL if it is not already installed.
+echo   2. Edit %APP_DIR%\.env and configure the database connection.
+echo   3. Run %APP_DIR%\start.bat to start the service.
 echo.
-echo 访问地址: http://47.102.100.9:8080
+echo Application URL: http://47.102.100.9:8080
 echo.
 pause

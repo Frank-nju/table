@@ -5,10 +5,10 @@ set -euo pipefail
 #   sudo bash deploy/deploy_prod.sh [/opt/table]
 # Then edit /etc/table-signup.env and restart service.
 #
-# 阿里云部署说明:
-#   1. 将项目上传到服务器（git clone 或 scp 均可）
-#   2. 进入项目目录，运行：sudo bash deploy/deploy_prod.sh /opt/table
-#   3. 编辑 /etc/table-signup.env，填入真实的 MySQL 连接信息
+# Aliyun deployment notes:
+#   1. Upload the project to the server (using git clone or scp).
+#   2. Enter the project directory and run: sudo bash deploy/deploy_prod.sh /opt/table
+#   3. Edit /etc/table-signup.env and enter the actual MySQL connection details.
 #   4. sudo systemctl restart table-signup
 #   5. sudo systemctl status table-signup --no-pager
 

@@ -1,31 +1,26 @@
-"""
-缓存工具模块
-
-提供简单的内存缓存功能
-"""
+"""Cache utilities.
+Provides a simple in-memory cache."""
 
 import threading
 from datetime import datetime, timedelta
 from functools import wraps
 
-# 全局缓存存储（线程安全）
+# Thread-safe global cache
 _cache = {}
 _cache_lock = threading.Lock()
 
 
 def cached_build(cache_key, ttl_seconds, builder_func, *args):
-    """
-    带缓存的构建函数
+    """Build a value with caching.
 
-    Args:
-        cache_key: 缓存键
-        ttl_seconds: 缓存过期时间（秒）
-        builder_func: 构建函数
-        *args: 传递给构建函数的参数
+Args:
+    cache_key: Cache key.
+    ttl_seconds: Cache lifetime in seconds.
+    builder_func: Function used to build the value.
+    *args: Arguments passed to the builder.
 
-    Returns:
-        构建函数的结果（从缓存或重新构建）
-    """
+Returns:
+    The cached value or a newly built value."""
     full_key = (cache_key, args)
 
     now = datetime.now()
@@ -35,7 +30,7 @@ def cached_build(cache_key, ttl_seconds, builder_func, *args):
             if now - cached_time < timedelta(seconds=ttl_seconds):
                 return cached_data
 
-    # 重新构建（在锁外执行，避免阻塞）
+    # rebuild（run outside the lock，to avoid blocking）
     result = builder_func()
     with _cache_lock:
         _cache[full_key] = (result, now)
@@ -43,12 +38,10 @@ def cached_build(cache_key, ttl_seconds, builder_func, *args):
 
 
 def clear_cache(cache_key=None):
-    """
-    清除缓存
+    """Clear cached values.
 
-    Args:
-        cache_key: 要清除的缓存键，None 表示清除所有
-    """
+Args:
+    cache_key: Cache key to clear; None clears the entire cache."""
     global _cache
     with _cache_lock:
         if cache_key is None:
@@ -61,9 +54,9 @@ def clear_cache(cache_key=None):
 
 def cache_decorator(ttl_seconds=300):
     """
-    缓存装饰器
+    cachedecorator
 
-    用法:
+    Usage:
         @cache_decorator(ttl_seconds=60)
         def expensive_function():
             ...

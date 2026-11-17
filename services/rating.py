@@ -1,8 +1,5 @@
-"""
-评议评分服务模块
-
-封装评议评分相关的业务逻辑
-"""
+"""Review rating service.
+Encapsulates review rating business logic."""
 
 from config import (
     REVIEW_RATING_TABLE_NAME,
@@ -17,7 +14,7 @@ from utils.versioned_cache import cached_build, touch_version
 
 
 def list_review_ratings():
-    """获取所有评议评分（带版本缓存）"""
+    """List all review ratings using the versioned cache."""
     return cached_build(
         'review_ratings',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -26,7 +23,7 @@ def list_review_ratings():
 
 
 def get_rating_by_id(rating_id):
-    """根据ID获取评分"""
+    """Get a rating by ID."""
     if not rating_id:
         return None
     ratings = list_review_ratings()
@@ -37,13 +34,13 @@ def get_rating_by_id(rating_id):
 
 
 def get_ratings_by_signup(signup_id):
-    """获取报名的评分列表"""
+    """List ratings for a signup."""
     ratings = list_review_ratings()
     return [r for r in ratings if str(r.get(REVIEW_RATING_COL_SIGNUP_ID, '')).strip() == signup_id]
 
 
 def serialize_rating(rating):
-    """序列化评议评分"""
+    """Serialize a review rating."""
     if not rating:
         return None
     return {
@@ -59,12 +56,12 @@ def serialize_rating(rating):
 
 
 def create_review_rating(signup_id, activity_id, reviewer_name, rater_name, score, weight=1.0, comment=''):
-    """创建评议评分"""
+    """Create a review rating."""
     if not signup_id or not activity_id or not reviewer_name or not rater_name:
-        raise ValidationError("请完整填写评分信息")
+        raise ValidationError("Complete all rating fields")
 
     if score < 0 or score > 10:
-        raise ValidationError("评分必须在 0-10 之间")
+        raise ValidationError("The score must be between 0 and 10")
 
     from datetime import datetime
     row_data = {

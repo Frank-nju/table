@@ -1,8 +1,5 @@
-"""
-用户档案服务模块
-
-封装用户档案相关的业务逻辑
-"""
+"""User profile service.
+Encapsulates user profile business logic."""
 
 from datetime import datetime
 
@@ -17,7 +14,7 @@ from utils.versioned_cache import cached_build, touch_version
 
 
 def list_user_profiles():
-    """获取所有用户档案（带版本缓存）"""
+    """List all user profiles using the versioned cache."""
     return cached_build(
         'user_profiles',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -26,7 +23,7 @@ def list_user_profiles():
 
 
 def get_user_profile(name):
-    """根据姓名获取用户档案"""
+    """Get a user profile by name."""
     if not name:
         return None
     profiles = list_user_profiles()
@@ -37,7 +34,7 @@ def get_user_profile(name):
 
 
 def get_user_email(name):
-    """获取用户邮箱"""
+    """Get a user's email address."""
     profile = get_user_profile(name)
     if profile:
         return str(profile.get(USER_COL_EMAIL, '')).strip()
@@ -45,14 +42,14 @@ def get_user_email(name):
 
 
 def upsert_user_profile(name, email='', role='普通用户'):
-    """创建或更新用户档案"""
+    """Create or update a user profile."""
     if not name:
-        raise ValidationError("姓名不能为空")
+        raise ValidationError("Name is required")
 
     profile = get_user_profile(name)
 
     if profile:
-        # 更新现有档案
+        # Update the existing profile
         update_data = {**profile}
         if email:
             update_data[USER_COL_EMAIL] = email
@@ -62,9 +59,9 @@ def upsert_user_profile(name, email='', role='普通用户'):
         touch_version()
         return get_user_profile(name)
     else:
-        # 创建新档案
+        # Create a new profile
         if not email:
-            raise ValidationError("首次使用必须填写邮箱")
+            raise ValidationError("Add an email address before using the system for the first time")
 
         row_data = {
             USER_COL_NAME: name,
@@ -78,7 +75,7 @@ def upsert_user_profile(name, email='', role='普通用户'):
 
 
 def serialize_profile(profile):
-    """序列化用户档案"""
+    """Serialize a user profile."""
     if not profile:
         return None
     return {
@@ -91,18 +88,18 @@ def serialize_profile(profile):
 
 
 def get_profile_summary(name):
-    """获取用户档案摘要（包含活动参与统计）"""
+    """Get a profile summary, including activity participation statistics."""
     profile = get_user_profile(name)
     if not profile:
-        raise NotFoundError("用户档案不存在")
+        raise NotFoundError("Profile not found")
 
-    # 统计参与的活动
+    # Count activities the user participated in
     from services.signup import list_signups, get_signup_name
 
     signups = list_signups()
     user_signups = [s for s in signups if get_signup_name(s) == name]
 
-    # 统计角色分布
+    # Count signups by role
     roles = {}
     for s in user_signups:
         role = str(s.get('角色', '')).strip()

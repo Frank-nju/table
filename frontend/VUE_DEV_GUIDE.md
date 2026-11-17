@@ -1,139 +1,127 @@
-# Vue 3 + Vite 开发规范
+# Vue 3 + Vite Development Guide
 
-## 一、项目结构
+## 1. Project structure
 
-```
+~~~text
 frontend/
 ├── src/
-│   ├── api/              # API 层 - 封装所有后端接口
-│   │   └── index.js      # axios 实例 + 各模块 API
-│   ├── components/       # 公共组件（可复用）
-│   ├── router/           # 路由配置
-│   │   └── index.js      # Vue Router 定义
-│   ├── stores/           # Pinia 状态管理
-│   │   └── user.js       # 用户状态
-│   ├── views/            # 页面组件（路由级）
-│   │   ├── Home.vue      # 首页
-│   │   ├── Admin.vue     # 管理后台
-│   │   ├── Profile.vue   # 个人中心
-│   │   └── ActivityDetail.vue  # 活动详情
-│   ├── App.vue           # 根组件
-│   └── main.js           # 入口文件
-├── vite.config.js        # Vite 配置（代理等）
+│   ├── api/              # Wrappers for backend endpoints
+│   ├── components/       # Reusable UI components
+│   ├── router/           # Vue Router configuration
+│   ├── stores/           # Pinia state
+│   ├── views/             # Route-level pages
+│   ├── App.vue            # Root component
+│   └── main.js            # Application entry point
+├── vite.config.js         # Vite configuration
 └── package.json
-```
+~~~
 
-## 二、组件编写规范
+## 2. Component conventions
 
-### 2.1 使用 Composition API (`<script setup>`)
+### Use the Composition API with <script setup>
 
-```vue
+~~~vue
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 
-// 状态定义
 const loading = ref(true)
-const data = ref([])
+const items = ref([])
 
-// 计算属性
-const filteredData = computed(() => data.value.filter(...))
+const filteredItems = computed(() => items.value.filter(...))
 
-// 监听器
-watch(() => someRef.value, (newVal) => { ... })
+watch(() => someRef.value, (newValue) => {
+  // React to changes here.
+})
 
-// 生命周期
 onMounted(async () => {
   await loadData()
 })
 </script>
-```
+~~~
 
-### 2.2 组件命名
+### Naming
 
-| 类型 | 命名规范 | 示例 |
-|-----|---------|------|
-| 页面组件 | PascalCase | `Home.vue`, `Admin.vue` |
-| 公共组件 | PascalCase + 功能描述 | `ActivityCard.vue`, `UserAvatar.vue` |
-| 组件内变量 | camelCase | `createForm`, `availableClassrooms` |
+| Item | Convention | Example |
+|---|---|---|
+| Page component | PascalCase | Home.vue, Admin.vue |
+| Reusable component | PascalCase with a purpose | ActivityCard.vue, UserAvatar.vue |
+| Component variable | camelCase | createForm, availableRooms |
 
-## 三、API 层设计
+## 3. API layer
 
-### 3.1 统一封装在 `api/index.js`
+Keep API calls in src/api/index.js:
 
-```javascript
+~~~javascript
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-// 创建实例
 const api = axios.create({
   baseURL: '/api',
   timeout: 30000
 })
 
-// 响应拦截器 - 统一处理 ok 字段
-api.interceptors.response.use(response => {
-  const res = response.data
-  if (!res.ok) {
-    ElMessage.error(res.message || '请求失败')
-    return Promise.reject(new Error(res.message))
+api.interceptors.response.use((response) => {
+  const result = response.data
+  if (!result.ok) {
+    ElMessage.error(result.message || 'Request failed')
+    return Promise.reject(new Error(result.message))
   }
-  return res  // 返回 { ok: true, ...data }
+  return result
 })
 
-// 模块化导出
 export const activityApi = {
   list: () => api.get('/activities'),
-  create: (data) => api.post('/activity', data),
-  // ...
+  create: (data) => api.post('/activity', data)
 }
-```
+~~~
 
-### 3.2 在组件中使用
+Use the API layer from a component:
 
-```javascript
-import { activityApi, cacApi } from '../api'
+~~~javascript
+import { activityApi } from '../api'
 
 const loadData = async () => {
-  const res = await activityApi.list()
-  activities.value = res.activities || []
+  const result = await activityApi.list()
+  activities.value = result.activities || []
 }
-```
+~~~
 
-## 四、Element Plus 使用规范
+## 4. Element Plus
 
-### 4.1 常用组件
+Common components:
 
-| 场景 | 组件 |
-|-----|------|
-| 表单 | `el-form`, `el-form-item`, `el-input`, `el-select` |
-| 表格 | `el-table`, `el-table-column` |
-| 对话框 | `el-dialog` |
-| 消息提示 | `ElMessage.success()`, `ElMessage.warning()` |
-| 确认框 | `ElMessageBox.confirm()` |
-| 标签页 | `el-tabs`, `el-tab-pane` |
-| 日期选择 | `el-date-picker` |
+| Use case | Components |
+|---|---|
+| Forms | el-form, el-form-item, el-input, el-select |
+| Tables | el-table, el-table-column |
+| Dialogs | el-dialog |
+| Notifications | ElMessage.success(), ElMessage.warning() |
+| Confirmation | ElMessageBox.confirm() |
+| Tabs | el-tabs, el-tab-pane |
+| Date selection | el-date-picker |
 
-### 4.2 表单验证示例
+Example form:
 
-```vue
-<el-form :model="form" label-width="100px">
-  <el-form-item label="主题" required>
+~~~vue
+<el-form :model="form" label-width="120px">
+  <el-form-item label="Topic" required>
     <el-input v-model="form.topic" />
   </el-form-item>
-  <el-form-item label="类型">
+  <el-form-item label="Activity type">
     <el-select v-model="form.type" style="width: 100%">
-      <el-option value="normal" label="普通活动" />
-      <el-option value="cac有约" label="CAC有约" />
+      <el-option value="normal" label="Regular activity" />
+      <!-- Keep the stored value for compatibility with existing records. -->
+      <el-option value="cac有约" label="CAC-hosted session" />
     </el-select>
   </el-form-item>
 </el-form>
-```
+~~~
 
-## 五、状态管理
+## 5. State management
 
-### 5.1 使用 Pinia
+Use Pinia for shared state:
 
-```javascript
+~~~javascript
 import { defineStore } from 'pinia'
 
 export const useUserStore = defineStore('user', {
@@ -142,7 +130,7 @@ export const useUserStore = defineStore('user', {
     email: ''
   }),
   getters: {
-    isLoggedIn: (state) => !!state.name
+    isLoggedIn: (state) => Boolean(state.name)
   },
   actions: {
     login(name) {
@@ -150,198 +138,141 @@ export const useUserStore = defineStore('user', {
     }
   }
 })
-```
+~~~
 
-### 5.2 在组件中使用
+Access the store from a component:
 
-```javascript
+~~~javascript
 import { useUserStore } from '../stores/user'
 
 const userStore = useUserStore()
-// 读取：userStore.name, userStore.isLoggedIn
-// 修改：userStore.login('test')
-```
+// Read: userStore.name, userStore.isLoggedIn
+// Update: userStore.login('test')
+~~~
 
-## 六、功能拆分原则
+## 6. Component responsibilities
 
-### 6.1 页面组件职责
+| Page | Responsibility |
+|---|---|
+| Home | Activity list and leaderboards |
+| Admin | Activities, CAC administrators, and room slots |
+| Profile | Profile, registrations, and invitations |
+| ActivityDetail | Activity details and signup form |
 
-| 页面 | 职责 |
-|-----|------|
-| Home | 活动列表 + 排行榜展示 |
-| Admin | 管理后台（活动/CAC管理员/教室时间槽） |
-| Profile | 个人信息 + 我的报名 + 我的邀请 |
-| ActivityDetail | 活动详情 + 报名表单 |
+Group component logic by purpose: imports, state, computed values, watchers, lifecycle hooks, event handlers, and helpers. Consider splitting a component when it exceeds 300 lines, contains several independent workflows, or repeats form logic.
 
-### 6.2 一个组件内逻辑分组
+## 7. Styling
 
-```vue
-<script setup>
-// ===== 1. 导入 =====
-import { ref, computed, watch, onMounted } from 'vue'
-import { activityApi } from '../api'
+Prefer scoped styles for component-specific rules:
 
-// ===== 2. 状态定义 =====
-const loading = ref(true)
-const activities = ref([])
-
-// ===== 3. 计算属性 =====
-const activeCount = computed(() => activities.value.length)
-
-// ===== 4. 监听器 =====
-watch(() => form.date, () => { ... })
-
-// ===== 5. 生命周期 =====
-onMounted(async () => { ... })
-
-// ===== 6. 方法（按功能分组）=====
-// ----- 活动管理 -----
-const handleCreate = async () => { ... }
-const handleDelete = async () => { ... }
-
-// ----- CAC管理员 -----
-const handleAddAdmin = async () => { ... }
-
-// ----- 工具函数 -----
-const formatDate = (date) => { ... }
-</script>
-```
-
-### 6.3 复杂组件拆分时机
-
-当组件代码超过 **300 行** 或有以下情况时考虑拆分：
-- 多个独立的业务模块（如 Admin 的三个标签页）
-- 重复的表单逻辑
-- 可复用的 UI 模块
-
-## 七、样式规范
-
-### 7.1 使用 Scoped CSS
-
-```vue
+~~~vue
 <style scoped>
 .card {
   background: white;
   border-radius: 12px;
   padding: 24px;
 }
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-}
 </style>
-```
+~~~
 
-### 7.2 常用 CSS 变量（可选）
+Optional theme variables:
 
-```css
-/* 颜色 */
---primary: #0891b2;    /* 主色-青色 */
---success: #10b981;    /* 成功-绿色 */
---warning: #f59e0b;    /* 警告-橙色 */
---danger: #ef4444;     /* 危险-红色 */
+~~~css
+--primary: #0891b2;
+--success: #10b981;
+--warning: #f59e0b;
+--danger: #ef4444;
 --text-primary: #1e293b;
 --text-secondary: #64748b;
-```
+~~~
 
-## 八、常见功能实现模式
+## 8. Common implementation patterns
 
-### 8.1 列表加载
+### Loading a list
 
-```javascript
+~~~javascript
 const items = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
   try {
-    const res = await api.list()
-    items.value = res.items || []
-  } catch (e) {
-    // 错误已在拦截器处理
+    const result = await api.list()
+    items.value = result.items || []
   } finally {
     loading.value = false
   }
 })
-```
+~~~
 
-### 8.2 创建/编辑（带冲突检测）
+### Creating or editing with conflict checks
 
-```javascript
+~~~javascript
 const dialogVisible = ref(false)
-const form = ref({ ... })
+const form = ref({})
 
 const handleCreate = async () => {
-  // 1. 前端验证
   if (!form.value.name) {
-    ElMessage.warning('请输入名称')
+    ElMessage.warning('Enter a name')
     return
   }
 
-  // 2. 调用 API
   try {
-    const res = await api.create(form.value)
-
-    // 3. 处理后端警告
-    if (res.warnings) {
-      ElMessageBox.alert(res.warnings.join('\n'), '提示', { type: 'warning' })
+    const result = await api.create(form.value)
+    if (result.warnings) {
+      ElMessageBox.alert(result.warnings.join('\n'), 'Notice', { type: 'warning' })
     } else {
-      ElMessage.success('创建成功')
+      ElMessage.success('Created successfully')
     }
-
-    // 4. 关闭弹窗 + 刷新列表
     dialogVisible.value = false
     await loadList()
-  } catch (e) {
-    // 错误已处理
+  } catch {
+    // The response interceptor displays API errors.
   }
 }
-```
+~~~
 
-### 8.3 删除（带确认）
+### Deleting with confirmation
 
-```javascript
+~~~javascript
 const handleDelete = async (id) => {
   try {
-    await ElMessageBox.confirm('确定删除？', '确认', { type: 'warning' })
+    await ElMessageBox.confirm('Delete this item?', 'Confirm', { type: 'warning' })
     await api.delete(id)
-    ElMessage.success('已删除')
+    ElMessage.success('Deleted')
     await loadList()
-  } catch (e) {
-    if (e !== 'cancel') {
-      // 错误已处理
+  } catch (error) {
+    if (error !== 'cancel') {
+      // The response interceptor displays API errors.
     }
   }
 }
-```
+~~~
 
-### 8.4 联动查询（如教室）
+### Querying dependent data
 
-```javascript
-const availableItems = ref([])
-const loadingItems = ref(false)
+~~~javascript
+const availableRooms = ref([])
+const loadingRooms = ref(false)
 
-// 监听前置条件变化
 watch([() => form.date, () => form.time], async ([date, time]) => {
   if (!date || !time) {
-    availableItems.value = []
+    availableRooms.value = []
     return
   }
 
-  loadingItems.value = true
+  loadingRooms.value = true
   try {
-    const res = await api.queryAvailable({ date, time })
-    availableItems.value = res.items || []
+    const result = await api.queryAvailable({ date, time })
+    availableRooms.value = result.rooms || []
   } finally {
-    loadingItems.value = false
+    loadingRooms.value = false
   }
 })
-```
+~~~
 
-## 九、Vite 配置
+## 9. Vite development proxy
 
-```javascript
-// vite.config.js
+~~~javascript
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -351,75 +282,32 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',  // 后端地址
+        target: 'http://localhost:8080',
         changeOrigin: true
       }
     }
   }
 })
-```
+~~~
 
-## 十、调试技巧
+## 10. Debugging
 
-### 10.1 查看 API 响应
+- Inspect API responses in the browser console.
+- Use the browser's **Developer Tools → Network** panel to inspect /api requests.
+- Temporarily render JSON state with JSON.stringify when debugging a component.
 
-```javascript
-const res = await api.list()
-console.log('API response:', res)  // res 已经过拦截器处理
-```
+## 11. API response shape
 
-### 10.2 查看组件状态
+~~~json
+{ "ok": true, "data": [], "message": "Completed successfully" }
+{ "ok": false, "message": "An error occurred" }
+{ "ok": true, "message": "Created successfully", "warnings": ["Warning details"] }
+~~~
 
-```vue
-<template>
-  <!-- 临时调试显示 -->
-  <pre>{{ JSON.stringify(form, null, 2) }}</pre>
-</template>
-```
+## Implemented features
 
-### 10.3 网络请求查看
+- **Admin:** activity list and creation, activity deletion, CAC administrator management, room-slot management, and scheduling conflict warnings
+- **Home:** activity cards and sharing and participation leaderboards
+- **Profile:** profile details, registrations, signup cancellation, and invitations
+- **ActivityDetail:** activity details and signup form with a review prompt for reviewers
 
-浏览器 DevTools → Network → 筛选 `/api`
-
-## 十一、后端 API 响应格式
-
-所有 API 统一返回：
-
-```json
-// 成功
-{ "ok": true, "data": [...], "message": "操作成功" }
-
-// 失败
-{ "ok": false, "message": "错误原因" }
-
-// 带警告
-{ "ok": true, "message": "创建成功", "warnings": ["警告信息"] }
-```
-
----
-
-## 附录：本项目已实现功能清单
-
-### Admin.vue 管理后台
-- [x] 活动列表（展示类型、日期、时间、教室、状态、报名情况）
-- [x] 创建活动（时间下拉选择、教室联动查询、类型选择）
-- [x] 删除活动（确认弹窗）
-- [x] CAC 管理员管理（添加/移除）
-- [x] 教室时间槽管理（添加/删除）
-- [x] 冲突检测（同类型教室冲突拦截、不同类型警告）
-
-### Home.vue 首页
-- [x] 活动列表卡片
-- [x] 分享排行榜
-- [x] 参与排行榜
-
-### Profile.vue 个人中心
-- [x] 个人信息展示
-- [x] 我的报名列表
-- [x] 取消报名
-- [x] 我的邀请列表
-
-### ActivityDetail.vue 活动详情
-- [x] 活动信息展示
-- [x] 报名表单（评议员/旁听）
-- [x] 评议内容填写（仅评议员）

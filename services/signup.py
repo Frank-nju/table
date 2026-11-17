@@ -1,8 +1,5 @@
-"""
-报名服务模块
-
-封装报名相关的业务逻辑
-"""
+"""Signup service.
+Encapsulates registration business logic."""
 
 import json
 from datetime import datetime
@@ -24,7 +21,7 @@ from utils.versioned_cache import cached_build, touch_version
 
 
 def list_signups():
-    """获取所有报名记录（带版本缓存）"""
+    """List all signup records using the versioned cache."""
     return cached_build(
         'signups',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -33,7 +30,7 @@ def list_signups():
 
 
 def get_signup_by_id(signup_id):
-    """根据ID获取报名记录"""
+    """Get a signup record by ID."""
     if not signup_id:
         return None
     signups = list_signups()
@@ -44,27 +41,27 @@ def get_signup_by_id(signup_id):
 
 
 def get_signup_name(signup):
-    """获取报名者姓名"""
+    """Get the signup participant's name."""
     return safe_text(signup.get(SIGNUP_COL_NAME, ''))
 
 
 def get_signup_email(signup):
-    """获取报名者邮箱"""
+    """Get the signup participant's email address."""
     return safe_text(signup.get(SIGNUP_COL_EMAIL, ''))
 
 
 def get_signup_role(signup):
-    """获取报名角色"""
+    """Get the signup role."""
     return safe_text(signup.get(SIGNUP_COL_ROLE, ''))
 
 
 def get_signup_review_doc_url(signup):
-    """获取评议文档链接"""
+    """Get the review document URL."""
     return safe_text(signup.get(SIGNUP_COL_REVIEW_DOC_URL, ''))
 
 
 def get_signups_by_activity(activity_id, role=None):
-    """获取活动的报名列表"""
+    """List signups for an activity."""
     signups = list_signups()
     result = []
     for signup in signups:
@@ -75,12 +72,12 @@ def get_signups_by_activity(activity_id, role=None):
 
 
 def count_signups_by_activity(activity_id, role=None):
-    """统计活动的报名人数"""
+    """Count signups for an activity."""
     return len(get_signups_by_activity(activity_id, role))
 
 
 def serialize_signup(signup):
-    """序列化报名记录"""
+    """Serialize a signup record."""
     activity_id = str(signup.get(SIGNUP_COL_ACTIVITY_ID, '')).strip()
     activity = get_activity_by_id(activity_id)
     activity_details = get_activity_details(activity) if activity else {}
@@ -100,7 +97,7 @@ def serialize_signup(signup):
 
 
 def create_signup(data):
-    """创建报名"""
+    """Create a signup."""
     name = safe_text(data.get('name', ''))
     activity_id = safe_text(data.get('activity_id', ''))
     role = safe_text(data.get('role', ''))
@@ -108,36 +105,36 @@ def create_signup(data):
     email = safe_text(data.get('email', ''))
     review_content = safe_text(data.get('review_content', ''))
 
-    # 验证必填字段
+    # Validate required fields.
     if not name or not activity_id or not role:
-        raise ValidationError("请完整填写姓名、活动和角色")
+        raise ValidationError("Provide a name, activity, and role")
 
-    # 验证角色
+    # Validate the role
     if role not in ['评议员', '旁听']:
-        raise ValidationError("角色必须为'评议员'或'旁听'")
+        raise ValidationError("Role must be Reviewer or Observer")
 
-    # 评议员必填评议内容
+    # Reviewers must provide review content
     if role == '评议员' and not review_content:
-        raise ValidationError("评议员请填写评议内容")
+        raise ValidationError("Reviewers must provide a review topic")
 
-    # 验证活动是否存在
+    # Check that the activity exists.
     activity = get_activity_by_id(activity_id)
     if not activity:
-        raise NotFoundError("活动不存在")
+        raise NotFoundError("Activity not found")
 
-    # 检查评议员是否已满
+    # Check whether the reviewer limit has been reached.
     if role == '评议员':
         reviewer_count = count_signups_by_activity(activity_id, '评议员')
         if reviewer_count >= REVIEWER_LIMIT:
-            raise ConflictError(f"评议员已满 {REVIEWER_LIMIT} 人，无法报名")
+            raise ConflictError(f"Reviewer capacity reached ({REVIEWER_LIMIT}); registration is unavailable")
 
-    # 检查是否已报名
+    # Check whether the user has already signed up
     existing_signups = get_signups_by_activity(activity_id)
     for signup in existing_signups:
         if get_signup_name(signup) == name:
-            raise ConflictError("您已经报名过该活动，不能重复提交")
+            raise ConflictError("You are already registered for this activity")
 
-    # 创建报名记录
+    # Create the signup record.
     row_data = {
         SIGNUP_COL_NAME: name,
         SIGNUP_COL_ACTIVITY_ID: activity_id,
@@ -150,28 +147,28 @@ def create_signup(data):
     result = db.append_row(SIGNUP_TABLE_NAME, row_data)
     touch_version()
 
-    # 发送通知邮件
+    # Send a notification email
     creator_email = get_activity_creator_email(activity)
     if creator_email:
         topic = activity.get('活动主题', '')
         send_email_async(
             creator_email,
-            f"【报名通知】{name} 报名了 {topic}",
-            f"{name} 以「{role}」身份报名了您的活动「{topic}」\n" +
-            (f"评议内容：{review_content}\n" if review_content else "")
+            f"[CAC Share Sessions] New signup: {name} registered for {topic}",
+            f"{name} registered for your activity “{topic}” as {'Reviewer' if role == '评议员' else 'Observer'}.\n" +
+            (f"Review topic: {review_content}\n" if review_content else "")
         )
 
     return str(result.get('_id', ''))
 
 
 def delete_signup(signup_id, name=None):
-    """删除报名"""
+    """Delete a signup."""
     signup = get_signup_by_id(signup_id)
     if not signup:
-        raise NotFoundError("报名记录不存在")
+        raise NotFoundError("Registration not found")
 
     if name and get_signup_name(signup) != name:
-        raise ValidationError("只能取消自己的报名")
+        raise ValidationError("You can only cancel your own registration")
 
     result = db.delete_row(SIGNUP_TABLE_NAME, signup_id)
     if result:
@@ -180,13 +177,13 @@ def delete_signup(signup_id, name=None):
 
 
 def update_signup_review_doc(signup_id, review_doc_url, reviewer_name=None):
-    """更新评议文档链接"""
+    """Update the review document URL."""
     signup = get_signup_by_id(signup_id)
     if not signup:
-        raise NotFoundError("报名记录不存在")
+        raise NotFoundError("Registration not found")
 
     if reviewer_name and get_signup_name(signup) != reviewer_name:
-        raise ValidationError("只能更新自己的评议")
+        raise ValidationError("You can only update your own review")
 
     update_data = {
         **signup,

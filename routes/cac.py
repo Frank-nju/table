@@ -1,8 +1,5 @@
-"""
-CAC 管理路由模块
-
-CAC 管理员和教室时间槽相关的 API 路由
-"""
+"""CAC administration routes.
+API endpoints for CAC administrators and room availability."""
 
 from flask import Blueprint, jsonify, request
 
@@ -15,25 +12,25 @@ from utils import ValidationError, NotFoundError, AuthError
 cac_bp = Blueprint('cac', __name__, url_prefix='/api')
 
 
-# ===== 管理员路由 =====
+# ===== Administrator routes =====
 
 @cac_bp.get("/cac-admins")
 def api_list_cac_admins():
-    """获取CAC管理员列表"""
+    """List CAC administrators."""
     admins = list_cac_admins()
     return jsonify({"ok": True, "admins": admins})
 
 
 @cac_bp.post("/cac-admin")
 def api_add_cac_admin():
-    """添加CAC管理员"""
+    """Add a CAC administrator."""
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
     requester_name = data.get("requester_name", "").strip()
 
     try:
         add_cac_admin(name, requester_name)
-        return jsonify({"ok": True, "message": f"已添加 {name} 为管理员"})
+        return jsonify({"ok": True, "message": f"Added {name} as an administrator"})
     except ValidationError as e:
         return jsonify({"ok": False, "message": str(e)}), 400
     except AuthError as e:
@@ -42,13 +39,13 @@ def api_add_cac_admin():
 
 @cac_bp.delete("/cac-admin/<name>")
 def api_delete_cac_admin(name):
-    """删除CAC管理员"""
+    """Remove a CAC administrator."""
     data = request.get_json(silent=True) or {}
     requester_name = data.get("requester_name", "").strip()
 
     try:
         remove_cac_admin(name, requester_name)
-        return jsonify({"ok": True, "message": f"已移除 {name} 的管理员权限"})
+        return jsonify({"ok": True, "message": f"Removed administrator access for {name}"})
     except ValidationError as e:
         return jsonify({"ok": False, "message": str(e)}), 400
     except AuthError as e:
@@ -57,11 +54,11 @@ def api_delete_cac_admin(name):
         return jsonify({"ok": False, "message": str(e)}), 404
 
 
-# ===== 教室时间槽路由 =====
+# ===== Room time-slot routes =====
 
 @cac_bp.get("/cac-room-slots")
 def api_list_cac_room_slots():
-    """获取CAC教室时间槽列表"""
+    """getCAC room slotlist"""
     date = request.args.get("date", "").strip()
     time_slot = request.args.get("time_slot", "").strip()
 
@@ -71,7 +68,7 @@ def api_list_cac_room_slots():
 
 @cac_bp.post("/cac-room-slot")
 def api_add_cac_room_slot():
-    """添加教室时间槽"""
+    """addroomtime slot"""
     data = request.get_json(silent=True) or {}
     date = data.get("date", "").strip()
     time_slot = data.get("time_slot", "").strip()
@@ -80,7 +77,7 @@ def api_add_cac_room_slot():
 
     try:
         row_id = add_cac_room_slot(date, time_slot, classroom, requester_name)
-        return jsonify({"ok": True, "message": "时间槽添加成功", "id": row_id})
+        return jsonify({"ok": True, "message": "Room slot added", "id": row_id})
     except ValidationError as e:
         return jsonify({"ok": False, "message": str(e)}), 400
     except AuthError as e:
@@ -89,13 +86,13 @@ def api_add_cac_room_slot():
 
 @cac_bp.delete("/cac-room-slot/<slot_id>")
 def api_delete_cac_room_slot(slot_id):
-    """删除教室时间槽"""
+    """Delete a room time slot."""
     data = request.get_json(silent=True) or {}
     requester_name = data.get("requester_name", "").strip()
 
     try:
         remove_cac_room_slot(slot_id, requester_name)
-        return jsonify({"ok": True, "message": "时间槽删除成功"})
+        return jsonify({"ok": True, "message": "Room slot deleted"})
     except AuthError as e:
         return jsonify({"ok": False, "message": str(e)}), 403
     except NotFoundError as e:

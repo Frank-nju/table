@@ -1,8 +1,5 @@
-"""
-数据库模型模块
-
-封装所有数据库操作
-"""
+"""Database model module.
+Encapsulates database operations."""
 
 import json
 import logging
@@ -22,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class Database:
-    """数据库操作封装类"""
+    """Database access wrapper"""
 
     _instance = None
     _lock = threading.Lock()
@@ -44,7 +41,7 @@ class Database:
         self._initialized = True
 
     def _connect(self, database=None):
-        """创建数据库连接"""
+        """Create a database connection."""
         return pymysql.connect(
             host=MYSQL_HOST,
             port=MYSQL_PORT,
@@ -60,7 +57,7 @@ class Database:
         )
 
     def _get_conn(self):
-        """获取当前线程的数据库连接"""
+        """Get the current thread's database connection."""
         conn = getattr(self._local, "conn", None)
         if conn is None or not getattr(conn, "open", False):
             conn = self._connect(MYSQL_DATABASE)
@@ -70,8 +67,8 @@ class Database:
         return conn
 
     def _bootstrap(self):
-        """初始化数据库和表结构"""
-        # 校验数据库名，防止 SQL 注入
+        """Initialize the database and table schema."""
+        # Validate the database name to prevent SQL injection.
         if not MYSQL_DATABASE or not MYSQL_DATABASE.isidentifier():
             raise ValueError(f"Invalid database name: {MYSQL_DATABASE!r}")
         server_conn = self._connect(None)
@@ -113,7 +110,7 @@ class Database:
             conn.close()
 
     def _sync_columns(self, table_name, columns):
-        """同步列定义到 app_table_columns"""
+        """Sync column definitions to app_table_columns."""
         clean_columns = [str(item).strip() for item in (columns or []) if str(item).strip()]
         if not clean_columns:
             return
@@ -125,7 +122,7 @@ class Database:
             )
 
     def _auto_register_columns(self):
-        """启动时自动注册列"""
+        """Register columns automatically at startup."""
         for table_name, columns in AUTO_REGISTER_COLUMNS.items():
             try:
                 self._sync_columns(table_name, columns)
@@ -133,10 +130,10 @@ class Database:
                 logger.warning("Auto register columns for %s failed: %s", table_name, e)
         logger.info("Auto register columns completed")
 
-    # ===== CRUD 操作 =====
+    # ===== CRUD operation =====
 
     def list_rows(self, table_name):
-        """获取表中所有行"""
+        """List all rows in a table."""
         conn = self._get_conn()
         with conn.cursor() as cursor:
             cursor.execute(
@@ -158,7 +155,7 @@ class Database:
         return result
 
     def get_row(self, table_name, row_id):
-        """获取单行"""
+        """Get a single row."""
         conn = self._get_conn()
         with conn.cursor() as cursor:
             cursor.execute(
@@ -176,7 +173,7 @@ class Database:
         return payload
 
     def append_row(self, table_name, row_data):
-        """新增行"""
+        """Insert a row."""
         row_id = uuid.uuid4().hex
         payload = dict(row_data or {})
         payload.pop("_id", None)
@@ -186,12 +183,12 @@ class Database:
                 "INSERT INTO app_rows (table_name, row_id, row_data) VALUES (%s, %s, %s)",
                 (table_name, row_id, json.dumps(payload, ensure_ascii=False)),
             )
-        # 写入后同步列定义，确保后续 _filter_append_row_data 不会过滤新列
+        # Sync column definitions after writes so _filter_append_row_data does not drop new columns.
         self._sync_columns(table_name, payload.keys())
         return {"_id": row_id, **payload}
 
     def update_row(self, table_name, row_id, row_data):
-        """更新行"""
+        """Update a row."""
         payload = dict(row_data or {})
         payload.pop("_id", None)
         conn = self._get_conn()
@@ -201,12 +198,12 @@ class Database:
                 (json.dumps(payload, ensure_ascii=False), table_name, row_id),
             )
             affected = cursor.rowcount > 0
-        # 写入后同步列定义
+        # Sync column definitions after writes.
         self._sync_columns(table_name, payload.keys())
         return {"_id": row_id, **payload} if affected else None
 
     def delete_row(self, table_name, row_id):
-        """删除行"""
+        """Delete a row."""
         conn = self._get_conn()
         with conn.cursor() as cursor:
             cursor.execute(
@@ -216,7 +213,7 @@ class Database:
             return cursor.rowcount > 0
 
     def get_registered_columns(self, table_name):
-        """获取已注册的列"""
+        """Get registered columns."""
         conn = self._get_conn()
         with conn.cursor() as cursor:
             cursor.execute(
@@ -226,19 +223,19 @@ class Database:
             return {row.get("column_name") for row in (cursor.fetchall() or [])}
 
     def list_columns(self, table_name):
-        """列出已注册列（兼容 SeaTable 接口）"""
+        """List registered columns (SeaTable-compatible interface)."""
         columns = self.get_registered_columns(table_name)
         return [{"name": col} for col in sorted(columns)]
 
     def add_table(self, table_name, *args):
-        """添加表（MySQL 模式无操作，仅兼容 SeaTable 接口）"""
+        """Add a table (no-op in MySQL mode; kept for SeaTable compatibility)."""
         return {"name": table_name, "ok": True}
 
     def insert_column(self, table_name, column_name, *args):
-        """插入列（MySQL 模式仅同步列定义，兼容 SeaTable 接口）"""
+        """Add a column (MySQL syncs only the definition; kept for SeaTable compatibility)."""
         self._sync_columns(table_name, [column_name])
         return {"table": table_name, "column": column_name, "ok": True}
 
 
-# 单例实例
+# singleton instance
 db = Database()

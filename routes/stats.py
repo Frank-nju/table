@@ -1,8 +1,5 @@
-"""
-统计路由模块
-
-统计和排行榜相关的 API 路由
-"""
+"""Statistics routes.
+API endpoints for statistics and leaderboards."""
 
 from flask import Blueprint, jsonify
 
@@ -18,7 +15,7 @@ stats_bp = Blueprint('stats', __name__, url_prefix='/api')
 
 @stats_bp.get("/leaderboards")
 def api_leaderboards():
-    """获取各类榜单与边界预警"""
+    """Get leaderboards and participation-threshold alerts."""
     def build_payload():
         _, review_quality_ranking = build_review_quality_stats()
         boundary_stats = build_boundary_stats()
@@ -37,11 +34,11 @@ def api_leaderboards():
 
 @stats_bp.get("/stats")
 def api_stats():
-    """获取统计数据"""
+    """Get statistics."""
     from services.activity import list_activities
     from services.stats import build_boundary_stats
 
-    # TODO: 需要迁移更多辅助函数来完善此接口
+    # TODO: Migrate more helper functions to complete this interface.
     activities = list_activities()
     boundary_watch = build_boundary_stats()
 

@@ -1,8 +1,5 @@
-"""
-CAC 管理服务模块
-
-封装 CAC 管理员和教室时间槽相关的业务逻辑
-"""
+"""CAC administration service.
+Encapsulates CAC administration and room-slot logic."""
 
 import uuid
 from datetime import datetime
@@ -20,10 +17,10 @@ from utils import ValidationError, NotFoundError, AuthError
 from utils.versioned_cache import cached_build, touch_version
 
 
-# ===== 管理员服务 =====
+# ===== Administrator service =====
 
 def list_cac_admins():
-    """获取CAC管理员列表（带版本缓存）"""
+    """List CAC administrators using the versioned cache."""
     return cached_build(
         'cac_admins',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -32,30 +29,30 @@ def list_cac_admins():
 
 
 def is_cac_admin(name):
-    """检查是否是CAC管理员"""
+    """Check whether a user is a CAC administrator."""
     admins = list_cac_admins()
     return any(a['name'] == name for a in admins)
 
 
 def is_cac_user(name):
-    """检查是否是CAC系统用户"""
+    """Check whether a user is a CAC system user."""
     text = str(name).strip().lower() if name else ''
     return text == str(CAC_NAME).strip().lower() or text == "cac"
 
 
 def add_cac_admin(name, requester_name=None):
-    """添加CAC管理员"""
+    """Add a CAC administrator."""
     if not name:
-        raise ValidationError("姓名不能为空")
+        raise ValidationError("Name is required")
 
-    # 检查权限：已有管理员或首次初始化
+    # Allow existing administrators or the initial setup user.
     existing_admins = list_cac_admins()
     if existing_admins and requester_name and not is_cac_admin(requester_name):
-        raise AuthError("只有管理员才能添加新管理员")
+        raise AuthError("Only an administrator can add another administrator")
 
-    # 检查是否已存在
+    # Check whether the record already exists.
     if is_cac_admin(name):
-        raise ValidationError("该用户已是管理员")
+        raise ValidationError("This user is already an administrator")
 
     result = db.append_row(CAC_ADMINS_TABLE_NAME, {
         CAC_ADMIN_COL_NAME: name,
@@ -66,12 +63,12 @@ def add_cac_admin(name, requester_name=None):
 
 
 def remove_cac_admin(name, requester_name):
-    """删除CAC管理员"""
+    """Remove a CAC administrator."""
     if not requester_name:
-        raise ValidationError("缺少请求者姓名")
+        raise ValidationError("The requester's name is required")
 
     if not is_cac_admin(requester_name):
-        raise AuthError("只有管理员才能删除管理员")
+        raise AuthError("Only an administrator can remove an administrator")
 
     rows = db.list_rows(CAC_ADMINS_TABLE_NAME)
     for row in rows:
@@ -80,24 +77,22 @@ def remove_cac_admin(name, requester_name):
             touch_version()
             return True
 
-    raise NotFoundError("该用户不是管理员")
+    raise NotFoundError("This user is not an administrator")
 
 
-# ===== 教室时间槽服务 =====
+# ===== Room time-slot service =====
 
 def list_cac_room_slots(date=None, time_slot=None):
-    """获取CAC教室时间槽列表
-
-    time_slot 可以是单个时间段如 '14:00-14:30' 或合并后的如 '14:00-15:30'
-    当是合并后的时间段时，返回在该时间段内所有半小时槽都可用的教室
-    """
+    """List CAC room slots.
+A time_slot may be a single interval such as '14:00-14:30' or a merged interval such as '14:00-15:30'.
+For merged intervals, return rooms available for every 30-minute slot in the range."""
     rows = cached_build(
         'cac_room_slots',
         TABLE_ROWS_CACHE_TTL_SECONDS,
         lambda: db.list_rows(CAC_ROOM_SLOTS_TABLE_NAME) or [],
     )
 
-    # 解析需要的半小时槽列表
+    # Parse the required 30-minute time slots
     required_slots = []
     if time_slot:
         for ts in time_slot.split(','):
@@ -130,15 +125,15 @@ def list_cac_room_slots(date=None, time_slot=None):
         slot_classroom = str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip()
         slot_status = str(row.get(CAC_SLOT_COL_STATUS, 'available')).strip()
 
-        # 日期过滤
+        # Filter by date
         if date and slot_date != date:
             continue
 
-        # 时间段过滤
+        # time rangefilter
         if required_slots and slot_time not in required_slots:
             continue
 
-        # 状态过滤（只返回可用的）
+        # Filter by status; return available slots only
         if slot_status != 'available':
             continue
 
@@ -150,9 +145,9 @@ def list_cac_room_slots(date=None, time_slot=None):
             'status': slot_status,
         })
 
-    # 如果需要合并时间段，按教室分组
+    # When merging time ranges, group slots by room
     if time_slot and required_slots:
-        # 找出在所有需要的时间槽都可用的教室
+        # Find rooms available for every required time slot
         classroom_slots = {}
         for slot in result:
             classroom = slot['classroom']
@@ -160,7 +155,7 @@ def list_cac_room_slots(date=None, time_slot=None):
                 classroom_slots[classroom] = []
             classroom_slots[classroom].append(slot['time_slot'])
 
-        # 检查每个教室是否覆盖所有需要的时间槽
+        # Check that each room covers every required time slot
         available_classrooms = []
         for classroom, slots in classroom_slots.items():
             if all(req in slots for req in required_slots):
@@ -172,20 +167,20 @@ def list_cac_room_slots(date=None, time_slot=None):
 
 
 def add_cac_room_slot(date, time_slot, classroom, requester_name):
-    """添加教室时间槽"""
+    """addroomtime slot"""
     if not date or not time_slot or not classroom:
-        raise ValidationError("日期、时间段和教室不能为空")
+        raise ValidationError("Date, time slot, and room are required")
 
     if not is_cac_admin(requester_name):
-        raise AuthError("只有管理员才能添加教室时间槽")
+        raise AuthError("Only an administrator can add room slots")
 
-    # 检查是否已存在相同的时间槽
+    # Check whether this time slot already exists
     rows = db.list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
     for row in rows:
         if (str(row.get(CAC_SLOT_COL_DATE, '')).strip() == date and
             str(row.get(CAC_SLOT_COL_TIME_SLOT, '')).strip() == time_slot and
             str(row.get(CAC_SLOT_COL_CLASSROOM, '')).strip() == classroom):
-            raise ValidationError("该时间槽已存在")
+            raise ValidationError("This room slot already exists")
 
     result = db.append_row(CAC_ROOM_SLOTS_TABLE_NAME, {
         CAC_SLOT_COL_DATE: date,
@@ -201,9 +196,9 @@ def add_cac_room_slot(date, time_slot, classroom, requester_name):
 
 
 def remove_cac_room_slot(slot_id, requester_name):
-    """删除教室时间槽"""
+    """Delete a room time slot."""
     if not is_cac_admin(requester_name):
-        raise AuthError("只有管理员才能删除教室时间槽")
+        raise AuthError("Only an administrator can delete room slots")
 
     rows = db.list_rows(CAC_ROOM_SLOTS_TABLE_NAME)
     for row in rows:
@@ -212,4 +207,4 @@ def remove_cac_room_slot(slot_id, requester_name):
             touch_version()
             return True
 
-    raise NotFoundError("时间槽不存在")
+    raise NotFoundError("Room slot not found")

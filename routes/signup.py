@@ -1,8 +1,5 @@
-"""
-报名路由模块
-
-报名相关的 API 路由
-"""
+"""Signup routes.
+API endpoints for activity registrations."""
 
 from flask import Blueprint, jsonify, request
 
@@ -18,7 +15,7 @@ signup_bp = Blueprint('signup', __name__)
 
 @signup_bp.get("/my-signups/<name>")
 def api_my_signups(name):
-    """获取某人的报名记录"""
+    """List signup records for a user."""
     signups = list_signups()
     result = []
 
@@ -34,12 +31,12 @@ def api_my_signups(name):
 
 @signup_bp.post("/signup")
 def api_create_signup():
-    """创建报名"""
+    """Create a signup."""
     data = request.get_json(silent=True) or {}
 
     try:
         row_id = create_signup(data)
-        return jsonify({"ok": True, "message": "报名成功", "id": row_id})
+        return jsonify({"ok": True, "message": "Registration successful", "id": row_id})
     except ValidationError as e:
         return jsonify({"ok": False, "message": str(e)}), 400
     except NotFoundError as e:
@@ -50,13 +47,13 @@ def api_create_signup():
 
 @signup_bp.delete("/signup/<signup_id>")
 def api_delete_signup(signup_id):
-    """删除报名"""
+    """Delete a signup."""
     data = request.get_json(silent=True) or {}
     name = data.get('name', '')
 
     try:
         delete_signup(signup_id, name)
-        return jsonify({"ok": True, "message": "取消报名成功"})
+        return jsonify({"ok": True, "message": "Registration cancelled"})
     except NotFoundError as e:
         return jsonify({"ok": False, "message": str(e)}), 404
     except ValidationError as e:
@@ -65,14 +62,14 @@ def api_delete_signup(signup_id):
 
 @signup_bp.post("/signup/<signup_id>/review-doc")
 def api_submit_review_doc(signup_id):
-    """提交评议文档"""
+    """Submit a review document."""
     data = request.get_json(silent=True) or {}
     review_doc_url = data.get('review_doc_url', '')
     reviewer_name = data.get('reviewer_name', '')
 
     try:
         update_signup_review_doc(signup_id, review_doc_url, reviewer_name)
-        return jsonify({"ok": True, "message": "评议文档提交成功"})
+        return jsonify({"ok": True, "message": "Review document submitted"})
     except NotFoundError as e:
         return jsonify({"ok": False, "message": str(e)}), 404
     except ValidationError as e:

@@ -1,8 +1,5 @@
-"""
-路由模块
-
-按功能分组管理 API 路由
-"""
+"""Route registration module.
+Group API routes by feature."""
 
 from routes.activity import activity_bp
 from routes.signup import signup_bp

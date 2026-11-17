@@ -6,6 +6,12 @@ import { useUserStore } from '../stores/user'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
+const formatStatus = (status) => ({
+  '报名中': 'Open for registration',
+  '已截止': 'Registration closed',
+  '已结束': 'Completed'
+}[status] || status || 'Open for registration')
+const formatActivityType = (type) => type === 'cac有约' || type === 'CAC有约' ? 'CAC-hosted session' : 'Regular activity'
 const router = useRouter()
 const userStore = useUserStore()
 
@@ -21,7 +27,7 @@ const signupForm = ref({
 
 onMounted(async () => {
   await loadActivity()
-  // 默认填入用户名
+  // Prefill the name from the signed-in profile
   if (userStore.name) {
     signupForm.value.name = userStore.name
   }
@@ -32,7 +38,7 @@ const loadActivity = async () => {
     const res = await activityApi.get(route.params.id)
     activity.value = res.activity
   } catch (e) {
-    ElMessage.error('活动不存在')
+    ElMessage.error('Activity not found')
     router.push('/')
   } finally {
     loading.value = false
@@ -41,7 +47,7 @@ const loadActivity = async () => {
 
 const handleSubmit = async () => {
   if (!signupForm.value.name) {
-    ElMessage.warning('请输入姓名')
+    ElMessage.warning('Enter your name')
     return
   }
 
@@ -54,10 +60,10 @@ const handleSubmit = async () => {
       email: signupForm.value.email,
       review_content: signupForm.value.role === '评议员' ? signupForm.value.reviewContent : ''
     })
-    ElMessage.success('报名成功！')
+    ElMessage.success('Registration successful!')
     await loadActivity()
   } catch (e) {
-    // 错误已在拦截器处理
+    // The response interceptor already displays API errors.
   }
 }
 </script>
@@ -67,100 +73,100 @@ const handleSubmit = async () => {
     <el-skeleton :loading="loading" animated>
       <template #default>
         <div v-if="activity" class="activity-detail">
-          <!-- 返回按钮 -->
+          <!-- Back button -->
           <el-button link @click="router.push('/')">
             <el-icon><ArrowLeft /></el-icon>
-            返回列表
+            Back to activities
           </el-button>
 
-          <!-- 活动信息卡片 -->
+          <!-- Activity details -->
           <div class="card info-card">
             <div class="activity-header">
               <h1>{{ activity.topic }}</h1>
               <el-tag :type="activity.status === '报名中' ? 'success' : 'info'">
-                {{ activity.status }}
+                {{ formatStatus(activity.status) }}
               </el-tag>
             </div>
 
             <el-descriptions :column="3" border>
-              <el-descriptions-item label="活动日期">
+              <el-descriptions-item label="Date">
                 {{ activity.date }}
               </el-descriptions-item>
-              <el-descriptions-item label="活动时间">
+              <el-descriptions-item label="Time">
                 {{ activity.time }}
               </el-descriptions-item>
-              <el-descriptions-item label="活动教室">
+              <el-descriptions-item label="Room">
                 {{ activity.classroom }}
               </el-descriptions-item>
-              <el-descriptions-item label="分享者">
+              <el-descriptions-item label="Speakers">
                 {{ activity.speakers }}
               </el-descriptions-item>
-              <el-descriptions-item label="组织者">
+              <el-descriptions-item label="Organizer">
                 {{ activity.creator_name }}
               </el-descriptions-item>
-              <el-descriptions-item label="活动类型">
-                {{ activity.type || '普通分享' }}
+              <el-descriptions-item label="Activity type">
+                {{ formatActivityType(activity.type) }}
               </el-descriptions-item>
             </el-descriptions>
 
             <div class="stats-bar">
               <div class="stat-item">
-                <span class="label">评议员</span>
+                <span class="label">Reviewer</span>
                 <span class="value">{{ activity.reviewers || 0 }}/{{ activity.reviewer_limit || 3 }}</span>
               </div>
               <div class="stat-item">
-                <span class="label">旁听</span>
+                <span class="label">Observer</span>
                 <span class="value">{{ activity.listeners || 0 }}</span>
               </div>
             </div>
           </div>
 
-          <!-- 报名表单 -->
+          <!-- Signup form -->
           <div class="card form-card">
-            <h2>立即报名</h2>
+            <h2>Sign up</h2>
 
             <el-form
               :model="signupForm"
               label-width="80px"
               @submit.prevent="handleSubmit"
             >
-              <el-form-item label="姓名" required>
-                <el-input v-model="signupForm.name" placeholder="请输入姓名" />
+              <el-form-item label="Name" required>
+                <el-input v-model="signupForm.name" placeholder="Enter your name" />
               </el-form-item>
 
-              <el-form-item label="角色">
+              <el-form-item label="Role">
                 <el-radio-group v-model="signupForm.role">
                   <el-radio value="评议员">
-                    评议员（需提交评议）
+                    Reviewer (review required)
                   </el-radio>
-                  <el-radio value="旁听">旁听</el-radio>
+                  <el-radio value="Observer">Observer</el-radio>
                 </el-radio-group>
               </el-form-item>
 
-              <el-form-item label="联系电话">
-                <el-input v-model="signupForm.phone" placeholder="请输入手机号" />
+              <el-form-item label="Phone">
+                <el-input v-model="signupForm.phone" placeholder="Enter your phone number" />
               </el-form-item>
 
-              <el-form-item label="邮箱">
-                <el-input v-model="signupForm.email" placeholder="请输入邮箱" />
+              <el-form-item label="Email">
+                <el-input v-model="signupForm.email" placeholder="Enter your email" />
               </el-form-item>
 
               <el-form-item
                 v-if="signupForm.role === '评议员'"
-                label="评议内容"
+                label="Review topic"
                 required
               >
                 <el-input
                   v-model="signupForm.reviewContent"
                   type="textarea"
                   :rows="3"
-                  placeholder="请简述你希望评议的方向或问题"
+                  placeholder="Briefly describe the topic or question you would like to review"
                 />
               </el-form-item>
 
               <el-form-item>
                 <el-button type="primary" native-type="submit">
-                  提交报名
+                  Submit registration
                 </el-button>
               </el-form-item>
             </el-form>
