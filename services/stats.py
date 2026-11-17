@@ -1,8 +1,5 @@
-"""
-统计服务模块
-
-封装各种统计和排行榜相关的业务逻辑
-"""
+"""Statistics service.
+Encapsulates metrics and leaderboard logic."""
 
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
@@ -26,10 +23,10 @@ from services.profile import list_user_profiles
 from utils.cache import cached_build
 
 
-# ===== 评议质量统计 =====
+# ===== Review quality statistics =====
 
 def build_review_quality_stats():
-    """构建评议质量统计数据"""
+    """Build review quality metrics."""
     def build_stats():
         from services.rating import list_review_ratings, serialize_rating
 
@@ -74,10 +71,10 @@ def build_review_quality_stats():
     return cached_build('review_quality_stats', 300, build_stats)
 
 
-# ===== 排行榜 =====
+# ===== Leaderboards =====
 
 def build_share_leaderboard():
-    """构建分享排行榜"""
+    """Build the sharing leaderboard."""
     counter = Counter()
     for activity in list_activities():
         for speaker in _split_names(activity.get(ACTIVITY_COL_SPEAKERS, '')):
@@ -88,7 +85,7 @@ def build_share_leaderboard():
 
 
 def build_participation_leaderboard():
-    """构建参与排行榜"""
+    """Build the participation leaderboard."""
     counter = Counter()
     for signup in list_signups():
         if get_signup_role(signup) in {'评议员', '旁听'}:
@@ -100,7 +97,7 @@ def build_participation_leaderboard():
 
 
 def build_punctuality_leaderboard():
-    """构建准时率排行榜"""
+    """buildon-time closure leaderboard"""
     stats = defaultdict(lambda: {'on_time': 0, 'closed': 0})
     for activity in list_activities():
         if not activity_is_closed(activity):
@@ -127,10 +124,10 @@ def build_punctuality_leaderboard():
     return ranking
 
 
-# ===== 边界预警 =====
+# ===== Participation-threshold alerts =====
 
 def build_boundary_stats():
-    """构建边界预警统计"""
+    """Build participation-threshold alert counts."""
     known_members = set(_collect_known_member_names())
     known_members = {name for name in known_members if not is_cac_user(name)}
     output_counter = _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS)
@@ -146,7 +143,7 @@ def build_boundary_stats():
 
 
 def _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS):
-    """构建产出统计"""
+    """Build output statistics."""
     output_counter = Counter()
 
     for activity in list_activities():
@@ -173,10 +170,10 @@ def _build_output_counts(lookback_days=BOUNDARY_LOOKBACK_DAYS):
     return output_counter
 
 
-# ===== 辅助函数 =====
+# ===== Helper functions =====
 
 def _split_names(names_str):
-    """分割名字列表"""
+    """Split a list of names."""
     if not names_str:
         return []
     result = []
@@ -188,7 +185,7 @@ def _split_names(names_str):
 
 
 def _within_lookback(date_value, lookback_days=BOUNDARY_LOOKBACK_DAYS):
-    """检查日期是否在回溯范围内"""
+    """Check whether a date falls within the lookback window."""
     target = _parse_date(date_value)
     if not target:
         return False
@@ -196,7 +193,7 @@ def _within_lookback(date_value, lookback_days=BOUNDARY_LOOKBACK_DAYS):
 
 
 def _parse_date(date_value):
-    """解析日期"""
+    """Parse a date."""
     if not date_value:
         return None
     try:
@@ -209,22 +206,22 @@ def _parse_date(date_value):
 
 
 def _compute_activity_on_time(activity):
-    """计算活动是否准时结项（含宽限期）"""
+    """Check whether an activity closed on time, including the grace period."""
     if not activity:
         return False
 
-    # 检查是否已结项
+    # Check whether the activity is closed.
     on_time_flag = str(activity.get(ACTIVITY_COL_ON_TIME, '')).strip().lower()
     if on_time_flag in ('true', '1', 'yes'):
         return True
     status = str(activity.get(ACTIVITY_COL_STATUS, '')).strip()
     if status == '已结项':
-        # 已结项但没有 on_time 标记，尝试用时间计算
+        # If closed without an on_time flag, calculate it from timestamps
         pass
     elif status != '已结项':
-        return False  # 未结项的活动谈不上准时
+        return False  # An event cannot be considered on time before it is closed.
 
-    # 用结项时间和活动结束时间对比
+    # Compare the closure time with the activity end time
     closed_at = _parse_datetime(activity.get(ACTIVITY_COL_CLOSED_AT, ''))
     end_at = _get_activity_end_datetime(activity)
     if not closed_at or not end_at:
@@ -233,7 +230,7 @@ def _compute_activity_on_time(activity):
 
 
 def _parse_datetime(dt_str):
-    """解析日期时间"""
+    """Parse a date and time."""
     if not dt_str:
         return None
     text = str(dt_str).strip()
@@ -246,7 +243,7 @@ def _parse_datetime(dt_str):
 
 
 def _get_activity_end_datetime(activity):
-    """获取活动结束时间"""
+    """Get the activity end time."""
     if not activity:
         return None
     date_str = str(activity.get(ACTIVITY_COL_DATE, '')).strip()
@@ -264,7 +261,7 @@ def _get_activity_end_datetime(activity):
 
 
 def _collect_known_member_names():
-    """收集已知成员名字"""
+    """Collect names of known members."""
     names = set()
     for profile in list_user_profiles():
         name = str(profile.get('姓名', '')).strip()

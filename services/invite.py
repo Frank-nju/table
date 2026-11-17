@@ -1,8 +1,5 @@
-"""
-评议邀请服务模块
-
-封装评议邀请相关的业务逻辑
-"""
+"""Review invitation service.
+Encapsulates review invitation business logic."""
 
 from datetime import datetime
 
@@ -23,7 +20,7 @@ from utils.versioned_cache import cached_build, touch_version
 
 
 def list_review_invites():
-    """获取所有评议邀请（带版本缓存）"""
+    """List all review invitations using the versioned cache."""
     return cached_build(
         'review_invites',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -32,7 +29,7 @@ def list_review_invites():
 
 
 def get_invite_by_id(invite_id):
-    """根据ID获取邀请"""
+    """Get an invitation by ID."""
     if not invite_id:
         return None
     invites = list_review_invites()
@@ -43,19 +40,19 @@ def get_invite_by_id(invite_id):
 
 
 def get_invites_by_activity(activity_id):
-    """获取活动的邀请列表"""
+    """List invitations for an activity."""
     invites = list_review_invites()
     return [i for i in invites if str(i.get(INVITE_COL_ACTIVITY_ID, '')) == str(activity_id)]
 
 
 def get_invites_for_user(name):
-    """获取用户的邀请列表"""
+    """List invitations for a user."""
     invites = list_review_invites()
     return [i for i in invites if str(i.get(INVITE_COL_INVITEE_NAME, '')).strip() == name]
 
 
 def serialize_review_invite(invite):
-    """序列化评议邀请"""
+    """Serialize a review invitation."""
     if not invite:
         return None
     return {
@@ -74,20 +71,20 @@ def serialize_review_invite(invite):
 
 
 def create_review_invite(activity_id, inviter_name, invitee_name, invitee_email='', source_type='分享者指定'):
-    """创建评议邀请"""
+    """Create a review invitation."""
     if not activity_id or not inviter_name or not invitee_name:
-        raise ValidationError("请完整填写活动、邀请人和被邀请人")
+        raise ValidationError("Provide the activity, inviter, and invitee")
 
     if source_type not in {'开放报名', '分享者指定', 'CAC特邀'}:
-        raise ValidationError("邀请来源必须为 开放报名、分享者指定 或 CAC特邀")
+        raise ValidationError("Invitation source must be Open signup, Organizer-selected, or CAC invitation")
 
     activity = get_activity_by_id(activity_id)
     if not activity:
-        raise NotFoundError("活动不存在")
+        raise NotFoundError("Activity not found")
 
     topic = str(activity.get('活动主题', '')).strip()
 
-    # 确保用户档案存在
+    # Ensure the user has a profile.
     upsert_user_profile(invitee_name, email=invitee_email, role='普通用户')
     final_email = get_user_email(invitee_name)
 
@@ -107,13 +104,14 @@ def create_review_invite(activity_id, inviter_name, invitee_name, invitee_email=
     result = db.append_row(REVIEW_INVITE_TABLE_NAME, row_data)
     touch_version()
 
-    # 发送邮件通知
+    # Send an email notification.
     if final_email:
-        subject = f"[CAC 分享会] 评议邀请：{topic}"
+        source_label = {'开放报名': 'open signup', '分享者指定': 'organizer-selected', 'CAC特邀': 'CAC invitation'}.get(source_type, source_type)
+        subject = f"[CAC Share Sessions] Review invitation: {topic}"
         body = (
-            f"{invitee_name}，您好：\n\n"
-            f"{inviter_name} 通过\"{source_type}\"邀请您参与活动《{topic}》评议。\n"
-            "请登录系统确认并报名。"
+            f"Hello, {invitee_name},\n\n"
+            f"{inviter_name} invited you to review “{topic}” through {source_label}.\n"
+            "Sign in to respond to the invitation and register."
         )
         send_email_async(final_email, subject, body)
 
@@ -121,13 +119,13 @@ def create_review_invite(activity_id, inviter_name, invitee_name, invitee_email=
 
 
 def update_invite_status(invite_id, status, updater_name):
-    """更新邀请状态"""
+    """Update an invitation's status."""
     invite = get_invite_by_id(invite_id)
     if not invite:
-        raise NotFoundError("邀请不存在")
+        raise NotFoundError("Invitation not found")
 
     if status not in {'已发送', '已接受', '已拒绝', '已取消'}:
-        raise ValidationError("状态必须为 已发送、已接受、已拒绝 或 已取消")
+        raise ValidationError("Status must be Pending, Accepted, Declined, or Cancelled")
 
     update_data = {
         **invite,

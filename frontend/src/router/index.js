@@ -5,25 +5,25 @@ const routes = [
     path: '/',
     name: 'Home',
     component: () => import('../views/Home.vue'),
-    meta: { title: '首页' }
+    meta: { title: 'Home' }
   },
   {
     path: '/activity/:id',
     name: 'ActivityDetail',
     component: () => import('../views/ActivityDetail.vue'),
-    meta: { title: '活动详情' }
+    meta: { title: 'Activity details' }
   },
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/Profile.vue'),
-    meta: { title: '个人中心' }
+    meta: { title: 'Profile' }
   },
   {
     path: '/admin',
     name: 'Admin',
     component: () => import('../views/Admin.vue'),
-    meta: { title: '管理后台' }
+    meta: { title: 'Admin' }
   }
 ]
 
@@ -32,9 +32,9 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫 - 设置页面标题
+// Route guard: set the page title
 router.beforeEach((to, from, next) => {
-  document.title = to.meta.title ? `${to.meta.title} - CAC分享会` : 'CAC分享会'
+  document.title = to.meta.title ? `${to.meta.title} - CAC Share Sessions` : 'CAC Share Sessions'
   next()
 })
 

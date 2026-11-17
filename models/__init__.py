@@ -1,8 +1,5 @@
-"""
-模型模块
-
-导出数据库操作和模型类
-"""
+"""Models package.
+Exports database operations and model classes."""
 
 from models.database import db, Database
 from utils import DatabaseError

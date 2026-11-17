@@ -1,8 +1,5 @@
-"""
-服务模块
-
-封装业务逻辑服务，如邮件发送等
-"""
+"""Email service.
+Encapsulates email delivery and related business logic."""
 
 import logging
 import smtplib
@@ -18,16 +15,16 @@ logger = logging.getLogger(__name__)
 
 
 class EmailService:
-    """邮件发送服务"""
+    """Email delivery service."""
 
     @staticmethod
     def is_configured():
-        """检查邮件服务是否已配置"""
+        """Check whether email is configured."""
         return bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD)
 
     @staticmethod
     def send(recipient, subject, body):
-        """发送邮件"""
+        """Send an email."""
         if not EmailService.is_configured():
             logger.warning("Email not configured, skip sending")
             return False
@@ -55,7 +52,7 @@ class EmailService:
 
     @staticmethod
     def send_async(recipient, subject, body):
-        """异步发送邮件"""
+        """Send an email asynchronously."""
         thread = threading.Thread(
             target=EmailService.send,
             args=(recipient, subject, body),
@@ -64,12 +61,12 @@ class EmailService:
         thread.start()
 
 
-# 便捷函数
+# Convenience helpers
 def send_email(recipient, subject, body):
-    """发送邮件"""
+    """Send an email."""
     return EmailService.send(recipient, subject, body)
 
 
 def send_email_async(recipient, subject, body):
-    """异步发送邮件"""
+    """Send an email asynchronously."""
     EmailService.send_async(recipient, subject, body)

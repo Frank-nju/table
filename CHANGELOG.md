@@ -1,59 +1,60 @@
 # Changelog
 
-## [2026-03] - 架构重构版本
+## [2026-03] Architecture refactor
 
-### 架构变更
+### Architecture
 
-- **后端模块化**：从单文件 app.py (3800行) 拆分为 routes/services/models 三层架构
-- **前端重构**：从原生 JS + Jinja2 模板迁移到 Vue 3 + Vite + Element Plus
-- **前后端分离**：API 与前端完全解耦，前端独立构建
+- Split the former monolithic `app.py` into `routes/`, `services/`, and `models/`
+- Migrated the frontend from vanilla JavaScript and Jinja2 templates to Vue 3, Vite, and Element Plus
+- Decoupled the frontend from the API and added an independent frontend build
 
-### 新增功能
+### Features
 
-- 创建活动时间选择改为下拉（开始/结束时间分开选择）
-- 教室联动查询（选择日期时间后自动显示可用教室）
-- 活动类型选择（普通活动 / CAC有约）
-- 教室冲突强制拦截（同类型活动）
-- 删除操作确认弹窗
-- 前端冲突警告弹窗显示
+- Replaced free-form activity times with separate start and end time selectors
+- Added room availability lookup for the selected date and time
+- Added activity-type selection for regular activities and CAC-hosted sessions
+- Blocked room conflicts between activities of the same type
+- Added confirmation dialogs for destructive actions
+- Added frontend conflict warnings
 
-### 改进
+### Improvements
 
-- 代码结构清晰，便于维护
-- 前端组件化开发，状态管理规范
-- API 层统一封装，错误处理一致
-- 数据库列自动注册机制
+- Clarified the code structure for easier maintenance
+- Standardized component-based frontend development and state management
+- Centralized API handling and error reporting
+- Added automatic database-column registration
 
-### 文档更新
+### Documentation
 
-- 重写 README.md 反映新架构
-- 新增 frontend/VUE_DEV_GUIDE.md 前端开发规范
-- 删除过时的 ARCHITECTURE.md、CODE_REVIEW.md
-- 更新 SETUP_GUIDE.md 部署步骤
-
----
-
-## [2026-02] - MySQL 迁移版本
-
-### 新增
-
-- MySQL 数据后端支持
-- SeaTable 到 MySQL 迁移脚本
-- 治理看板时间冲突检测
-- 评议文档评分面板
-
-### 改进
-
-- 数据层由 SeaTable 切换为 MySQL
-- 活动/报名统计增加聚合缓存
+- Rewrote the README to reflect the new architecture
+- Added the Vue development guide
+- Removed outdated architecture and code-review documents
+- Updated the setup guide
 
 ---
 
-## [2026-01] - 基础版本
+## [2026-02] MySQL migration
 
-### 功能覆盖
+### Added
 
-- 活动全流程：创建、报名、评议、结项
-- 三入口：首页报名、分享者工作台、个人中心
-- 组织治理：月报、组健康、评议预警、边界预警
-- 个人工作台：任务聚合与推荐活动
+- MySQL backend support
+- SeaTable-to-MySQL migration script
+- Scheduling-conflict detection in the governance dashboard
+- Review-document scoring panel
+
+### Improved
+
+- Migrated the data layer from SeaTable to MySQL
+- Added aggregate caching for activity and signup statistics
+
+---
+
+## [2026-01] Initial release
+
+### Feature coverage
+
+- End-to-end activity workflow: creation, signup, peer review, and closure
+- Three entry points: home page, speaker workspace, and personal profile
+- Organizational reporting: monthly reports, group health, review reminders, and participation-threshold alerts
+- Personal workspace with aggregated tasks and activity recommendations
+

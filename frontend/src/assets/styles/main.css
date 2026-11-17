@@ -1,4 +1,4 @@
-/* 全局样式 */
+/* Global styles */
 * {
   margin: 0;
   padding: 0;
@@ -31,14 +31,14 @@ body {
   min-height: 100vh;
 }
 
-/* 页面容器 */
+/* Page container */
 .page-container {
   max-width: 1280px;
   margin: 0 auto;
   padding: 24px;
 }
 
-/* 卡片样式 */
+/* Card styles */
 .card {
   background: var(--card-bg);
   border-radius: 12px;
@@ -46,7 +46,7 @@ body {
   padding: 24px;
 }
 
-/* 页面标题 */
+/* Page title */
 .page-title {
   font-size: 28px;
   font-weight: 700;
@@ -54,7 +54,7 @@ body {
   color: var(--text-color);
 }
 
-/* Element Plus 样式覆盖 */
+/* Element Plus style overrides */
 .el-button--primary {
   --el-button-bg-color: var(--primary-color);
   --el-button-border-color: var(--primary-color);

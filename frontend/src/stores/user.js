@@ -3,14 +3,14 @@ import { ref, computed } from 'vue'
 import { profileApi } from '../api'
 
 export const useUserStore = defineStore('user', () => {
-  // 状态
+  // State
   const name = ref(localStorage.getItem('userName') || '')
   const profile = ref(null)
 
-  // 计算属性
+  // Getters
   const isLoggedIn = computed(() => !!name.value)
 
-  // 方法
+  // Actions
   const login = async (userName) => {
     name.value = userName
     localStorage.setItem('userName', userName)
@@ -29,11 +29,11 @@ export const useUserStore = defineStore('user', () => {
       const res = await profileApi.get(name.value)
       profile.value = res.profile
     } catch (e) {
-      // 用户不存在，创建新档案
+      // Create a profile when the user does not exist yet.
     }
   }
 
-  // 初始化
+  // Initialize
   if (name.value) {
     fetchProfile()
   }

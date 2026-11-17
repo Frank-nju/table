@@ -1,11 +1,11 @@
-# CAC分享会系统 - 停止服务脚本
+# CAC Share Session System — stop service script
 
-Write-Host "停止 CAC分享会系统..." -ForegroundColor Yellow
+Write-Host "Stopping CAC Share Session System..." -ForegroundColor Yellow
 
 $pythonProcess = Get-Process -Name python -ErrorAction SilentlyContinue
 if ($pythonProcess) {
     $pythonProcess | Stop-Process -Force
-    Write-Host "服务已停止" -ForegroundColor Green
+    Write-Host "Service stopped." -ForegroundColor Green
 } else {
-    Write-Host "没有运行中的服务" -ForegroundColor Gray
+    Write-Host "No running service was found." -ForegroundColor Gray
 }

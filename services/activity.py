@@ -1,8 +1,5 @@
-"""
-活动服务模块
-
-封装活动相关的业务逻辑
-"""
+"""Activity service.
+Encapsulates activity-related business logic."""
 
 import json
 from datetime import datetime, timedelta
@@ -24,7 +21,7 @@ from utils.versioned_cache import cached_build, touch_version
 
 
 def list_activities():
-    """获取所有活动列表（带版本缓存）"""
+    """List all activities using the versioned cache."""
     return cached_build(
         'activities',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -33,14 +30,14 @@ def list_activities():
 
 
 def get_activity_by_id(activity_id):
-    """根据ID获取活动（O(1) 索引查找）"""
+    """Look up an activity by ID using the O(1) index."""
     if not activity_id:
         return None
     return get_activity_index().get(str(activity_id))
 
 
 def get_activity_index():
-    """获取活动ID索引字典（O(1) 查找，带版本缓存）"""
+    """Build an O(1) index of activities by ID."""
     return cached_build(
         'activity_index',
         TABLE_ROWS_CACHE_TTL_SECONDS,
@@ -49,7 +46,7 @@ def get_activity_index():
 
 
 def get_activity_details(activity):
-    """获取活动详情"""
+    """getactivity details"""
     if not activity:
         return {}
     return {
@@ -74,29 +71,29 @@ def get_activity_details(activity):
 
 
 def get_activity_creator_name(activity):
-    """获取活动创建者姓名"""
+    """Get the activity organizer's name."""
     return safe_text(activity.get(ACTIVITY_COL_CREATOR_NAME, ''))
 
 
 def get_activity_creator_email(activity):
-    """获取活动创建者邮箱"""
+    """Get the activity organizer's email address."""
     return safe_text(activity.get(ACTIVITY_COL_CREATOR_EMAIL, ''))
 
 
 def activity_is_closed(activity):
-    """检查活动是否已结项"""
+    """Check whether an activity is closed."""
     return safe_bool(activity.get(ACTIVITY_COL_ON_TIME)) or \
            safe_text(activity.get(ACTIVITY_COL_STATUS, '')) == '已结项' or \
            bool(get_activity_closed_at(activity))
 
 
 def get_activity_closed_at(activity):
-    """获取活动结项时间"""
+    """getactivity closuretime"""
     return _parse_datetime(activity.get(ACTIVITY_COL_CLOSED_AT, ''))
 
 
 def get_activity_state(activity):
-    """获取活动状态"""
+    """Get the current activity status."""
     if not activity:
         return "未开始"
     if activity_is_closed(activity):
@@ -108,13 +105,13 @@ def get_activity_state(activity):
 
 
 def get_activity_end_datetime(activity):
-    """获取活动结束时间"""
+    """Get the activity end time."""
     date_str = safe_text(activity.get(ACTIVITY_COL_DATE, ''))
     time_str = safe_text(activity.get(ACTIVITY_COL_TIME, ''))
     if not date_str or not time_str:
         return None
     try:
-        # 解析时间范围如 "14:00-15:00"
+        # Parse a time range, such as "14:00-15:00".
         time_parts = time_str.split('-')
         if len(time_parts) >= 2:
             end_time = time_parts[-1].strip()
@@ -125,7 +122,7 @@ def get_activity_end_datetime(activity):
 
 
 def get_activity_signups(activity_id, role=None):
-    """获取活动的报名列表"""
+    """List signups for an activity."""
     signups = db.list_rows(SIGNUP_TABLE_NAME)
     result = []
     for signup in signups:
@@ -136,12 +133,12 @@ def get_activity_signups(activity_id, role=None):
 
 
 def count_signups_by_activity(activity_id, role=None):
-    """统计活动的报名人数"""
+    """Count signups for an activity."""
     return len(get_activity_signups(activity_id, role))
 
 
 def get_signup_stats(activity_id):
-    """获取活动报名统计"""
+    """Count signups for an activity."""
     signups = get_activity_signups(activity_id)
     reviewers = [s for s in signups if s.get(SIGNUP_COL_ROLE) == '评议员']
     listeners = [s for s in signups if s.get(SIGNUP_COL_ROLE) == '旁听']
@@ -156,11 +153,11 @@ def get_signup_stats(activity_id):
 
 
 def create_activity(data):
-    """创建活动"""
+    """Create an activity."""
     required_fields = ['date', 'time', 'speakers', 'topic', 'creator_name']
     for field in required_fields:
         if not data.get(field):
-            raise ValidationError(f"{field} 不能为空")
+            raise ValidationError(f"{field} is required")
 
     row_data = {
         ACTIVITY_COL_DATE: data['date'],
@@ -184,13 +181,13 @@ def create_activity(data):
 
 
 def update_activity(activity_id, data, creator_name=None):
-    """更新活动"""
+    """Update an activity."""
     activity = get_activity_by_id(activity_id)
     if not activity:
-        raise NotFoundError("活动不存在")
+        raise NotFoundError("Activity not found")
 
     if creator_name and get_activity_creator_name(activity) != creator_name:
-        raise ValidationError("只有活动创建者才能修改")
+        raise ValidationError("Only the activity organizer can edit this activity")
 
     update_data = {}
     for key, env_key in [
@@ -214,15 +211,15 @@ def update_activity(activity_id, data, creator_name=None):
 
 
 def delete_activity(activity_id, creator_name=None):
-    """删除活动"""
+    """Delete an activity."""
     activity = get_activity_by_id(activity_id)
     if not activity:
-        raise NotFoundError("活动不存在")
+        raise NotFoundError("Activity not found")
 
     if creator_name and get_activity_creator_name(activity) != creator_name:
-        raise ValidationError("只有活动创建者才能删除")
+        raise ValidationError("Only the activity organizer can delete this activity")
 
-    # 检查是否有报名
+    # Check whether the activity has any signups
     signup_count = count_signups_by_activity(activity_id)
     if signup_count > 0:
         signups = get_activity_signups(activity_id)
@@ -237,13 +234,13 @@ def delete_activity(activity_id, creator_name=None):
 
 
 def close_activity(activity_id, closer_name):
-    """结项活动"""
+    """Close an activity."""
     activity = get_activity_by_id(activity_id)
     if not activity:
-        raise NotFoundError("活动不存在")
+        raise NotFoundError("Activity not found")
 
     if activity_is_closed(activity):
-        raise ValidationError("活动已经结项")
+        raise ValidationError("This activity has already been closed")
 
     closed_at = datetime.now()
     end_at = get_activity_end_datetime(activity)
@@ -261,7 +258,7 @@ def close_activity(activity_id, closer_name):
     return result
 
 def _parse_datetime(dt_str):
-    """解析日期时间"""
+    """Parse a date and time."""
     if not dt_str:
         return None
     try:
@@ -274,5 +271,5 @@ def _parse_datetime(dt_str):
 
 
 def _now():
-    """获取当前时间"""
+    """Get the current time."""
     return datetime.now()

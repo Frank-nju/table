@@ -7,12 +7,12 @@ from dotenv import load_dotenv
 try:
     import pymysql
 except Exception as exc:
-    raise RuntimeError("缺少 pymysql 依赖，请先安装 requirements.txt") from exc
+    raise RuntimeError("Missing the pymysql dependency. Install requirements.txt first.") from exc
 
 try:
     from seatable_api import Base
 except Exception as exc:
-    raise RuntimeError("缺少 seatable-api 依赖，请先安装 requirements.txt") from exc
+    raise RuntimeError("Missing the seatable-api dependency. Install requirements.txt first.") from exc
 
 
 load_dotenv()
@@ -123,7 +123,7 @@ def migrate_table(base, conn, table_name):
 
 def main():
     if not API_TOKEN:
-        raise RuntimeError("SEATABLE_API_TOKEN 为空，无法迁移")
+        raise RuntimeError("SEATABLE_API_TOKEN is empty; migration cannot continue.")
 
     base = Base(API_TOKEN, SERVER_URL)
     base.auth()
@@ -136,7 +136,7 @@ def main():
     finally:
         conn.close()
 
-    print("迁移完成。请将 DB_BACKEND=mysql 后重启服务。")
+    print("Migration complete. Set DB_BACKEND=mysql and restart the service.")
 
 
 if __name__ == "__main__":

@@ -5,13 +5,19 @@ import { activityApi, statsApi } from '../api'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
+
+const formatStatus = (status) => ({
+  '报名中': 'Open for registration',
+  '已截止': 'Registration closed',
+  '已结束': 'Completed'
+}[status] || status || 'Open for registration')
 const userStore = useUserStore()
 
 const loading = ref(true)
 const activities = ref([])
 const leaderboards = ref({})
 
-// 加载数据
+// Load page data
 onMounted(async () => {
   try {
     const [actRes, statsRes] = await Promise.all([
@@ -27,13 +33,13 @@ onMounted(async () => {
   }
 })
 
-// 格式化日期
+// Format a date
 const formatDate = (date) => {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('zh-CN')
+  return new Date(date).toLocaleDateString('en-US')
 }
 
-// 获取状态颜色
+// Map activity status to a tag style
 const getStatusType = (status) => {
   const map = {
     '报名中': 'success',
@@ -46,21 +52,21 @@ const getStatusType = (status) => {
 
 <template>
   <div class="page-container">
-    <!-- 欢迎横幅 -->
+    <!-- Welcome banner -->
     <div class="welcome-banner">
-      <h1>CAC 分享会报名系统</h1>
-      <p>欢迎 {{ userStore.name || '访客' }}！发现精彩活动，开启学习之旅。</p>
+      <h1>CAC Share Session Signup</h1>
+      <p>Welcome, {{ userStore.name || 'guest' }}! Explore upcoming activities and find your next learning opportunity.</p>
     </div>
 
     <el-row :gutter="24">
-      <!-- 活动列表 -->
+      <!-- Activity list -->
       <el-col :span="18">
         <div class="card">
           <div class="section-header">
-            <h2>活动列表</h2>
+            <h2>Activities</h2>
             <el-button type="primary" @click="router.push('/admin')">
               <el-icon><Plus /></el-icon>
-              创建活动
+              Create activity
             </el-button>
           </div>
 
@@ -74,9 +80,9 @@ const getStatusType = (status) => {
                   @click="router.push(`/activity/${activity.id}`)"
                 >
                   <div class="activity-header">
-                    <h3>{{ activity.topic || '未命名活动' }}</h3>
+                    <h3>{{ activity.topic || 'Untitled activity' }}</h3>
                     <el-tag :type="getStatusType(activity.status)">
-                      {{ activity.status || '报名中' }}
+                      {{ formatStatus(activity.status) }}
                     </el-tag>
                   </div>
 
@@ -87,36 +93,36 @@ const getStatusType = (status) => {
                     </div>
                     <div class="info-item">
                       <el-icon><Clock /></el-icon>
-                      <span>{{ activity.time || '待定' }}</span>
+                      <span>{{ activity.time || 'TBD' }}</span>
                     </div>
                     <div class="info-item">
                       <el-icon><Location /></el-icon>
-                      <span>{{ activity.classroom || '待定' }}</span>
+                      <span>{{ activity.classroom || 'TBD' }}</span>
                     </div>
                   </div>
 
                   <div class="activity-footer">
                     <div class="speakers">
-                      分享者：{{ activity.speakers || '待定' }}
+                      Speakers: {{ activity.speakers || 'TBD' }}
                     </div>
                     <div class="stats">
-                      <el-tag size="small">评议员 {{ activity.reviewers || 0 }}/{{ activity.reviewer_limit || 3 }}</el-tag>
-                      <el-tag size="small" type="info">旁听 {{ activity.listeners || 0 }}</el-tag>
+                      <el-tag size="small">Reviewers {{ activity.reviewers || 0 }}/{{ activity.reviewer_limit || 3 }}</el-tag>
+                      <el-tag size="small" type="info">Observers {{ activity.listeners || 0 }}</el-tag>
                     </div>
                   </div>
                 </div>
 
-                <el-empty v-if="!loading && activities.length === 0" description="暂无活动" />
+                <el-empty v-if="!loading && activities.length === 0" description="No activities yet" />
               </div>
             </template>
           </el-skeleton>
         </div>
       </el-col>
 
-      <!-- 排行榜侧边栏 -->
+      <!-- Leaderboard sidebar -->
       <el-col :span="6">
         <div class="card leaderboard-card">
-          <h2>分享排行榜</h2>
+          <h2>Sharing leaderboard</h2>
           <div class="leaderboard-list">
             <div
               v-for="(item, index) in leaderboards.sharing?.slice(0, 5)"
@@ -125,13 +131,13 @@ const getStatusType = (status) => {
             >
               <span class="rank" :class="{ top: index < 3 }">{{ index + 1 }}</span>
               <span class="name">{{ item.name }}</span>
-              <span class="count">{{ item.count }}次</span>
+              <span class="count">{{ item.count }} times</span>
             </div>
           </div>
         </div>
 
         <div class="card leaderboard-card">
-          <h2>参与排行榜</h2>
+          <h2>Participation leaderboard</h2>
           <div class="leaderboard-list">
             <div
               v-for="(item, index) in leaderboards.participation?.slice(0, 5)"
@@ -140,7 +146,7 @@ const getStatusType = (status) => {
             >
               <span class="rank" :class="{ top: index < 3 }">{{ index + 1 }}</span>
               <span class="name">{{ item.name }}</span>
-              <span class="count">{{ item.count }}次</span>
+              <span class="count">{{ item.count }} times</span>
             </div>
           </div>
         </div>

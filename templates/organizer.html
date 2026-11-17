@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>分享会活动管理 - CAC</title>
+  <title>Event Management - CAC</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -573,82 +573,82 @@
 </head>
 <body>
   <div class="container">
-    <!-- 登录界面 -->
+    <!-- Login screen -->
     <div id="login-section" class="login-form" style="display: block;">
       <div class="login-card">
-        <h2>🎤 分享会活动管理系统</h2>
-        <p>分享者专用管理界面</p>
+        <h2>🎤 CAC Event Management</h2>
+        <p>Speaker dashboard</p>
 
         <div class="form-group" style="text-align: left;">
-          <label>您的姓名</label>
-          <input type="text" id="login-name" placeholder="如：张三" maxlength="30" />
+          <label>Your name</label>
+          <input type="text" id="login-name" placeholder="e.g., Alex Smith" maxlength="30" />
         </div>
 
-        <button class="btn-primary" onclick="handleLogin()" style="width: 100%;">进入管理系统</button>
+        <button class="btn-primary" onclick="handleLogin()" style="width: 100%;">Open Dashboard</button>
 
         <div id="login-msg" class="msg" style="margin-top: 12px; display: none;"></div>
       </div>
     </div>
 
-    <!-- 管理界面 -->
+    <!-- Management dashboard -->
     <div id="main-section" style="display: none;">
       <div class="header">
         <div>
-          <h1>🎤 我的分享活动</h1>
-          <p class="header-user-info">姓名：<strong id="current-user-name"></strong> · <a href="/profile">🧭 打开个人主页</a></p>
+          <h1>🎤 My Events</h1>
+          <p class="header-user-info">Name: <strong id="current-user-name"></strong> · <a href="/profile">🧭 Open My Dashboard</a></p>
         </div>
-        <button class="logout-btn" onclick="handleLogout()">退出登录</button>
+        <button class="logout-btn" onclick="handleLogout()">Log out</button>
       </div>
 
       <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('list')">📋 我的活动</button>
-        <button class="tab-btn" onclick="switchTab('create')">➕ 创建活动</button>
-        <button class="tab-btn" onclick="switchTab('output')">🧾 输出记录</button>
-        <button class="tab-btn" onclick="switchTab('group')">👥 兴趣组管理</button>
-        <button class="tab-btn" onclick="switchTab('invite')">✉️ 评议邀请</button>
-        <button class="tab-btn" onclick="switchTab('governance')">📈 治理看板</button>
-        <button class="tab-btn" id="cac-admin-btn" onclick="switchTab('cac-admin')" style="display: none;">🏫 CAC管理</button>
+        <button class="tab-btn active" onclick="switchTab('list')">📋 My Events</button>
+        <button class="tab-btn" onclick="switchTab('create')">➕ Create Event</button>
+        <button class="tab-btn" onclick="switchTab('output')">🧾 Contributions</button>
+        <button class="tab-btn" onclick="switchTab('group')">👥 Groups</button>
+        <button class="tab-btn" onclick="switchTab('invite')">✉️ Review Invitations</button>
+        <button class="tab-btn" onclick="switchTab('governance')">📈 Governance</button>
+        <button class="tab-btn" id="cac-admin-btn" onclick="switchTab('cac-admin')" style="display: none;">🏫 CAC Admin</button>
       </div>
 
-      <!-- 活动列表标签页 -->
+      <!-- Event list tab -->
       <div id="list-tab" class="tab-content active">
         <div id="activities-container">
           <div class="empty-state">
             <div class="empty-state-icon">⏳</div>
-            <div>加载中...</div>
+            <div>Loading…</div>
           </div>
         </div>
       </div>
 
-      <!-- 创建活动标签页 -->
+      <!-- Create event tab -->
       <div id="create-tab" class="tab-content">
         <div class="card">
-          <div class="card-title">创建新的分享活动</div>
+          <div class="card-title">Create Event</div>
 
           <form id="create-form">
             <div class="form-grid">
               <div class="form-group">
-                <label>活动类型 *</label>
+                <label>Event Type *</label>
                 <select id="form-activity-type" required>
-                  <option value="normal">normal（常规分享）</option>
-                  <option value="cac有约">cac有约（组内活动）</option>
+                  <option value="normal">Regular talk</option>
+                  <option value="cac有约">CAC Meetup</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label>所属兴趣组（常规分享可选）</label>
+                <label>Group (optional for regular talks)</label>
                 <select id="form-group-id">
-                  <option value="">不选择</option>
+                  <option value="">None</option>
                 </select>
               </div>
 
               <div class="form-group">
-                <label>活动日期 *</label>
+                <label>Date *</label>
                 <input type="date" id="form-date" required />
               </div>
 
               <div class="form-group form-full">
-                <label>活动时间 * <span style="color: var(--sub); font-weight: normal; font-size: 12px;">（点击选择一个或连续多个时间块）</span></label>
+                <label>Time * <span style="color: var(--sub); font-weight: normal; font-size: 12px;">(Select one or more consecutive time slots)</span></label>
                 <div id="time-slots-grid" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
                   {% for i in range(time_slots|length - 1) %}
                   <div class="time-slot" data-start="{{ time_slots[i] }}" data-end="{{ time_slots[i+1] }}" onclick="toggleTimeSlot(this)" style="padding: 6px 10px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; font-size: 13px; transition: all 0.15s;">
@@ -657,41 +657,41 @@
                   {% endfor %}
                 </div>
                 <div id="selected-time-display" style="margin-top: 8px; font-size: 13px; color: var(--sub);">
-                  已选择：<span id="selected-time-text">未选择</span>
+                  Selected: <span id="selected-time-text">None selected</span>
                 </div>
                 <input type="hidden" id="form-time" />
               </div>
 
               <div class="form-group form-full">
-                <label>分享者姓名 * (多人用逗号分隔)</label>
-                <input type="text" id="form-speakers" placeholder="如：张三，李四" required />
+                <label>Speaker name(s) * (comma-separated)</label>
+                <input type="text" id="form-speakers" placeholder="e.g., Alex Smith, Taylor Lee" required />
               </div>
 
               <div class="form-group form-full">
-                <label>活动主题 *</label>
-                <input type="text" id="form-topic" placeholder="如：Python 异步编程" required />
+                <label>Event title *</label>
+                <input type="text" id="form-topic" placeholder="e.g., Asynchronous Python" required />
               </div>
 
               <div class="form-group form-full">
-                <label>活动教室</label>
+                <label>Room</label>
                 <select id="form-classroom-select" onchange="updateClassroomFromSelect()">
-                  <option value="">请先选择日期和时间查看预设教室</option>
+                  <option value="">Select a date and time to view available rooms</option>
                 </select>
-                <input type="text" id="form-classroom" placeholder="或自定义输入教室（如：理科楼 404）" style="margin-top: 8px;" />
+                <input type="text" id="form-classroom" placeholder="Or enter a room (e.g., Building 1, Room 404)" style="margin-top: 8px;" />
               </div>
 
               <div class="form-group form-full">
-                <label>线上视频号（可选）</label>
-                <input type="text" id="form-videourl" placeholder="如：https://meeting.tencent.com/..." />
+                <label>Meeting URL (optional)</label>
+                <input type="text" id="form-videourl" placeholder="e.g., https://meeting.example.com/..." />
               </div>
 
               <div class="form-group form-full">
-                <label>提醒邮箱（可选）</label>
-                <input type="email" id="form-creator-email" placeholder="如：yourname@example.com" />
+                <label>Notification email (optional)</label>
+                <input type="email" id="form-creator-email" placeholder="e.g., alex@example.com" />
               </div>
             </div>
 
-            <button type="submit" class="btn-primary" style="width: 100%;">创建活动</button>
+            <button type="submit" class="btn-primary" style="width: 100%;">Create Event</button>
             <div id="create-msg" class="msg" style="margin-top: 12px; display: none;"></div>
           </form>
         </div>
@@ -699,33 +699,33 @@
 
       <div id="output-tab" class="tab-content">
         <div class="card">
-          <div class="card-title">登记站外输出活动</div>
-          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">用于补录 CAC有约 或未通过本站报名的输出活动，参与边界统计。</p>
+          <div class="card-title">Log an external contribution</div>
+          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">Log a CAC Meetup or contribution that was not registered through this site. It will count toward participation tracking.</p>
           <form id="output-form">
             <div class="form-grid">
               <div class="form-group">
-                <label>姓名 *</label>
+                <label>Name *</label>
                 <input type="text" id="output-name" required />
               </div>
               <div class="form-group">
-                <label>输出类型 *</label>
+                <label>Contribution type *</label>
                 <select id="output-type" required>
-                  <option value="">请选择</option>
-                  <option value="分享">分享</option>
-                  <option value="评议">评议</option>
-                  <option value="CAC有约">CAC有约</option>
+                  <option value="">Select one</option>
+                  <option value="分享">Talk</option>
+                  <option value="评议">Review</option>
+                  <option value="CAC有约">CAC Meetup</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>日期 *</label>
+                <label>Date *</label>
                 <input type="date" id="output-date" required />
               </div>
               <div class="form-group form-full">
-                <label>备注</label>
-                <input type="text" id="output-note" placeholder="可选：补录说明、相关链接等" />
+                <label>Notes</label>
+                <input type="text" id="output-note" placeholder="Optional: context or related links" />
               </div>
             </div>
-            <button type="submit" class="btn-primary" style="width: 100%;">保存输出记录</button>
+            <button type="submit" class="btn-primary" style="width: 100%;">Save contribution</button>
             <div id="output-msg" class="msg" style="margin-top: 12px; display: none;"></div>
           </form>
         </div>
@@ -733,52 +733,52 @@
 
       <div id="group-tab" class="tab-content">
         <div class="card">
-          <div class="card-title">创建兴趣组</div>
-          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">至少 2 人（含组长）可创建兴趣组；创建后可用于活动归属。</p>
+          <div class="card-title">Create Group</div>
+          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">Groups require at least two members, including the lead. Once created, they can be assigned to events.</p>
           <form id="group-form">
             <div class="form-grid">
               <div class="form-group">
-                <label>组名 *</label>
+                <label>Group name *</label>
                 <input type="text" id="group-name" required />
               </div>
               <div class="form-group">
-                <label>组长 *</label>
+                <label>Group lead *</label>
                 <input type="text" id="group-leader" required />
               </div>
               <div class="form-group form-full">
-                <label>组长邮箱（首次建档建议填写）</label>
+                <label>Group lead email (recommended for first-time setup)</label>
                 <input type="email" id="group-leader-email" />
               </div>
               <div class="form-group form-full">
-                <label>成员名单（逗号分隔）*</label>
-                <input type="text" id="group-members" placeholder="如：张三，李四" required />
+                <label>Members (comma-separated) *</label>
+                <input type="text" id="group-members" placeholder="e.g., Alex Smith, Taylor Lee" required />
               </div>
               <div class="form-group form-full">
-                <label>主题目标 *</label>
+                <label>Topic goal *</label>
                 <textarea id="group-topic-goal" required></textarea>
               </div>
               <div class="form-group form-full">
-                <label>时间边界 *</label>
+                <label>Time commitment *</label>
                 <textarea id="group-time-boundary" required></textarea>
               </div>
               <div class="form-group form-full">
-                <label>执行方案 *</label>
+                <label>Action plan *</label>
                 <textarea id="group-execution-plan" required></textarea>
               </div>
               <div class="form-group form-full">
-                <label>简介</label>
+                <label>Description</label>
                 <textarea id="group-description"></textarea>
               </div>
             </div>
-            <button type="submit" class="btn-primary" style="width: 100%;">创建兴趣组</button>
+            <button type="submit" class="btn-primary" style="width: 100%;">Create Group</button>
             <div id="group-msg" class="msg" style="margin-top: 12px; display: none;"></div>
           </form>
         </div>
 
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-            <div class="card-title" style="margin: 0;">已有兴趣组</div>
-            <button type="button" class="btn-secondary" onclick="loadGroups()">刷新列表</button>
+            <div class="card-title" style="margin: 0;">Existing Groups</div>
+            <button type="button" class="btn-secondary" onclick="loadGroups()">Refresh list</button>
           </div>
           <div id="my-groups-list" style="margin-top: 12px;"></div>
         </div>
@@ -786,42 +786,42 @@
 
       <div id="invite-tab" class="tab-content">
         <div class="card">
-          <div class="card-title">发送评议邀请</div>
-          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">按活动邀请评议员，支持开放报名、分享者指定、CAC 特邀三种来源。</p>
+          <div class="card-title">Send a review invitation</div>
+          <p style="color: var(--sub); font-size: 13px; margin-top: 4px;">Invite reviewers to an event. Invitations can be open, speaker-selected, or sent by CAC.</p>
           <form id="invite-form">
             <div class="form-grid">
               <div class="form-group form-full">
-                <label>活动 *</label>
+                <label>Event *</label>
                 <select id="invite-activity-id" required>
-                  <option value="">请选择活动</option>
+                  <option value="">Select an event</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>被邀请人姓名 *</label>
+                <label>Invitee name *</label>
                 <input type="text" id="invitee-name" required />
               </div>
               <div class="form-group">
-                <label>被邀请人邮箱（首次建档建议填写）</label>
+                <label>Invitee email (recommended for first-time setup)</label>
                 <input type="email" id="invitee-email" />
               </div>
               <div class="form-group form-full">
-                <label>邀请来源 *</label>
+                <label>Invitation source *</label>
                 <select id="invite-source-type" required>
-                  <option value="分享者指定">分享者指定</option>
-                  <option value="开放报名">开放报名</option>
-                  <option value="CAC 特邀">CAC 特邀</option>
+                  <option value="分享者指定">Speaker-selected</option>
+                  <option value="开放报名">Open signup</option>
+                  <option value="CAC 特邀">CAC invitation</option>
                 </select>
               </div>
             </div>
-            <button type="submit" class="btn-primary" style="width: 100%;">发送邀请</button>
+            <button type="submit" class="btn-primary" style="width: 100%;">Send invitation</button>
             <div id="invite-msg" class="msg" style="margin-top: 12px; display: none;"></div>
           </form>
         </div>
 
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-            <div class="card-title" style="margin: 0;">当前活动邀请记录</div>
-            <button type="button" class="btn-secondary" onclick="loadActivityInvites()">刷新邀请记录</button>
+            <div class="card-title" style="margin: 0;">Invitations for this event</div>
+            <button type="button" class="btn-secondary" onclick="loadActivityInvites()">Refresh invitations</button>
           </div>
           <div id="invite-list" style="margin-top: 12px;"></div>
         </div>
@@ -830,67 +830,67 @@
       <div id="governance-tab" class="tab-content">
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
-            <div class="card-title" style="margin: 0;">治理月报</div>
-            <button type="button" class="btn-secondary" onclick="loadGovernanceDashboard()">刷新看板</button>
+            <div class="card-title" style="margin: 0;">Monthly governance report</div>
+            <button type="button" class="btn-secondary" onclick="loadGovernanceDashboard()">Refresh dashboard</button>
           </div>
           <div id="governance-summary" style="margin-top: 12px;"></div>
         </div>
 
         <div class="card">
-          <div class="card-title">兴趣组健康度</div>
+          <div class="card-title">Group health</div>
           <div id="governance-groups"></div>
         </div>
 
         <div class="card">
-          <div class="card-title">评议质量预警</div>
+          <div class="card-title">Review quality alerts</div>
           <div id="governance-reviewers"></div>
         </div>
 
         <div class="card">
-          <div class="card-title">边界预警</div>
+          <div class="card-title">Participation threshold alerts</div>
           <div id="governance-boundary"></div>
         </div>
 
         <div class="card">
-          <div class="card-title">时间冲突检测</div>
+          <div class="card-title">Schedule conflicts</div>
           <div id="governance-conflicts"></div>
         </div>
 
         <div class="card">
-          <div class="card-title">评议文档评分</div>
-          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">对已结项活动中他人已提交的评议文档进行评分</div>
+          <div class="card-title">Review document ratings</div>
+          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">Rate review documents submitted by others for closed events</div>
           <div id="governance-rating-panel"></div>
         </div>
       </div>
 
-      <!-- CAC管理标签页 -->
+      <!-- CAC admin tab -->
       <div id="cac-admin-tab" class="tab-content">
         <div class="card">
-          <div class="card-title">CAC管理员</div>
-          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">管理可添加教室时间槽的管理员名单</div>
+          <div class="card-title">CAC administrators</div>
+          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">Manage who can add room time slots</div>
           <form id="cac-admin-form" style="margin-bottom: 12px;">
             <div style="display: flex; gap: 8px;">
-              <input type="text" id="cac-admin-name" placeholder="输入姓名" style="flex: 1;" />
-              <button type="submit" class="btn-primary">添加管理员</button>
+              <input type="text" id="cac-admin-name" placeholder="Enter a name" style="flex: 1;" />
+              <button type="submit" class="btn-primary">Add administrator</button>
             </div>
           </form>
           <div id="cac-admins-list"></div>
         </div>
 
         <div class="card">
-          <div class="card-title">教室时间槽管理</div>
-          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">添加已借好的教室和时间段，供分享者创建活动时选择</div>
+          <div class="card-title">Room time slots</div>
+          <div style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">Add reserved rooms and time slots for speakers to use when creating events</div>
           <form id="cac-slot-form" style="margin-bottom: 12px;">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <input type="date" id="cac-slot-date" required />
               <select id="cac-slot-time" required>
-                <option value="">选择时间段</option>
+                <option value="">Select a time slot</option>
                 {% for i in range(time_slots|length - 1) %}
                 <option value="{{ time_slots[i] }}-{{ time_slots[i+1] }}">{{ time_slots[i] }}-{{ time_slots[i+1] }}</option>
                 {% endfor %}
               </select>
-              <input type="text" id="cac-slot-classroom" placeholder="教室名称" style="flex: 1;" required />
-              <button type="submit" class="btn-primary">添加</button>
+              <input type="text" id="cac-slot-classroom" placeholder="Room name" style="flex: 1;" required />
+              <button type="submit" class="btn-primary">Add</button>
             </div>
           </form>
           <div id="cac-slots-list"></div>
@@ -899,11 +899,11 @@
     </div>
   </div>
 
-  <!-- 编辑活动模态框 -->
+  <!-- Edit event modal -->
   <div id="edit-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>编辑活动</h2>
+        <h2>Edit event</h2>
         <button class="modal-close" onclick="closeEditModal()">✕</button>
       </div>
 
@@ -912,29 +912,29 @@
 
         <div class="form-grid">
           <div class="form-group">
-            <label>活动类型</label>
+            <label>Event type</label>
             <select id="edit-activity-type">
-              <option value="normal">normal（常规分享）</option>
-              <option value="cac有约">cac有约（组内活动）</option>
+              <option value="normal">Regular talk</option>
+              <option value="cac有约">CAC Meetup</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>所属兴趣组</label>
+            <label>Group</label>
             <select id="edit-group-id">
-              <option value="">不选择</option>
+              <option value="">None</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label>活动日期</label>
+            <label>Date</label>
             <input type="date" id="edit-date" />
           </div>
 
           <div class="form-group">
-            <label>活动时间</label>
+            <label>Time</label>
             <select id="edit-time">
-              <option value="">请选择</option>
+              <option value="">Select one</option>
               {% for pair in time_slot_pairs %}
               <option value="{{ pair }}">{{ pair }}</option>
               {% endfor %}
@@ -942,34 +942,34 @@
           </div>
 
           <div class="form-group form-full">
-            <label>分享者姓名 (逗号分隔)</label>
+            <label>Speaker name(s) (comma-separated)</label>
             <input type="text" id="edit-speakers" />
           </div>
 
           <div class="form-group form-full">
-            <label>活动主题</label>
+            <label>Event title</label>
             <input type="text" id="edit-topic" />
           </div>
 
           <div class="form-group form-full">
-            <label>活动教室</label>
+            <label>Room</label>
             <input type="text" id="edit-classroom" />
           </div>
 
           <div class="form-group form-full">
-            <label>线上视频号</label>
+            <label>Meeting URL</label>
             <input type="text" id="edit-videourl" />
           </div>
 
           <div class="form-group form-full">
-            <label>提醒邮箱</label>
+            <label>Notification email</label>
             <input type="email" id="edit-creator-email" />
           </div>
         </div>
 
         <div class="btn-group" style="margin-top: 24px;">
-          <button type="submit" class="btn-primary">保存更改</button>
-          <button type="button" class="btn-secondary" onclick="closeEditModal()">取消</button>
+          <button type="submit" class="btn-primary">Save changes</button>
+          <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
         </div>
 
         <div id="edit-msg" class="msg" style="margin-top: 12px; display: none;"></div>
@@ -978,45 +978,68 @@
   </div>
 
   <script>
+    // Keep stored API values intact and translate only labels rendered in the interface.
+    function formatActivityType(value) {
+      return ({ 'cac有约': 'CAC Meetup', '普通活动': 'Regular activity', normal: 'Regular activity' })[value] || value || '—';
+    }
+    function formatActivityStatus(value) {
+      return ({ '未开始': 'Not started', '进行中': 'In progress', '待结项': 'Pending closeout', '已结项': 'Closed' })[value] || value || '—';
+    }
+    function formatRole(value) {
+      return ({ '评议员': 'Reviewer', '旁听': 'Observer', '参与者': 'Participant', '组长': 'Group lead', '组员': 'Member', '普通用户': 'Member', 'CAC管理员': 'CAC administrator' })[value] || value || '—';
+    }
+    function formatInviteStatus(value) {
+      return ({ '已发送': 'Sent', '已接受': 'Accepted', '已拒绝': 'Declined', '已撤回': 'Withdrawn', '已取消': 'Cancelled' })[value] || value || '—';
+    }
+    function formatInviteSource(value) {
+      return ({ '分享者指定': 'Speaker invitation', '开放报名': 'Open signup', 'CAC 特邀': 'CAC invitation', 'CAC特邀': 'CAC invitation' })[value] || value || '—';
+    }
+    function formatGroupStatus(value) {
+      return ({ '活跃': 'Active', healthy: 'Healthy', at_risk: 'At risk' })[value] || value || '—';
+    }
+    function formatOutputType(value) {
+      return ({ '分享': 'Talk', '评议': 'Review', 'CAC有约': 'CAC Meetup' })[value] || value || '—';
+    }
+
     let currentUserName = null;
-    let myActivities = [];  // 缓存已加载的活动数据
+    let myActivities = [];  // Cache loaded event data
     let availableGroups = [];
 
     function renderGovernanceSummary(report) {
       const typeBreakdown = report.activity_type_breakdown || {};
       return `
         <div class="activity-meta">
-          <div class="meta-item"><div class="meta-label">📅 月份</div><div class="meta-value">${report.year_month || '-'}</div></div>
-          <div class="meta-item"><div class="meta-label">🎤 活动数</div><div class="meta-value">${report.activity_count || 0}</div></div>
-          <div class="meta-item"><div class="meta-label">📝 报名数</div><div class="meta-value">${report.signup_count || 0}</div></div>
-          <div class="meta-item"><div class="meta-label">🧾 输出补录</div><div class="meta-value">${report.output_record_count || 0}</div></div>
-          <div class="meta-item"><div class="meta-label">👥 活跃组织者</div><div class="meta-value">${report.active_creator_count || 0}</div></div>
-          <div class="meta-item"><div class="meta-label">🙋 活跃参与者</div><div class="meta-value">${report.active_participant_count || 0}</div></div>
-          <div class="meta-item"><div class="meta-label">✅ 已结项</div><div class="meta-value">${report.closed_count || 0}</div></div>
-          <div class="meta-item"><div class="meta-label">⏳ 待结项</div><div class="meta-value">${report.pending_close_count || 0}</div></div>
-          <div class="meta-item"><div class="meta-label">⏱️ 准时率</div><div class="meta-value">${Math.round((report.on_time_close_rate || 0) * 100)}%</div></div>
+          <div class="meta-item"><div class="meta-label">📅 Month</div><div class="meta-value">${report.year_month || '-'}</div></div>
+          <div class="meta-item"><div class="meta-label">🎤 Events</div><div class="meta-value">${report.activity_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">📝 Signups</div><div class="meta-value">${report.signup_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">🧾 External contributions</div><div class="meta-value">${report.output_record_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">👥 Active organizers</div><div class="meta-value">${report.active_creator_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">🙋 Active participants</div><div class="meta-value">${report.active_participant_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">✅ Closed</div><div class="meta-value">${report.closed_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">⏳ Pending closeout</div><div class="meta-value">${report.pending_close_count || 0}</div></div>
+          <div class="meta-item"><div class="meta-label">⏱️ On-time rate</div><div class="meta-value">${Math.round((report.on_time_close_rate || 0) * 100)}%</div></div>
         </div>
-        <div style="margin-top: 12px; color: var(--sub); font-size: 13px;">类型分布：normal ${typeBreakdown.normal || 0} 场，cac有约 ${typeBreakdown['cac有约'] || 0} 场</div>
+        <div style="margin-top: 12px; color: var(--sub); font-size: 13px;">By type: ${typeBreakdown.normal || 0} regular talks, ${typeBreakdown['cac有约'] || 0} CAC Meetups</div>
       `;
     }
 
     function renderGovernanceGroups(groups) {
       if (!groups || !groups.length) {
-        return '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>暂无兴趣组数据</div></div>';
+        return '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>No group data available</div></div>';
       }
       return groups.map(group => `
         <div class="activity-item" style="margin-bottom: 12px;">
           <div class="activity-header">
             <div>
-              <h4 style="margin: 0 0 4px;">${group.name || '(未命名兴趣组)'}</h4>
-              <div style="font-size: 13px; color: var(--sub);">组长：${group.leader_name || '-'} · 成员 ${group.member_count || 0} 人 · 活跃成员 ${group.active_member_count || 0} 人</div>
+              <h4 style="margin: 0 0 4px;">${group.name || '(Unnamed group)'}</h4>
+              <div style="font-size: 13px; color: var(--sub);">Lead: ${group.leader_name || '-'} · ${group.member_count || 0} members · ${group.active_member_count || 0} active</div>
             </div>
-            <span class="tag ${group.status === 'healthy' ? '' : (group.status === 'at_risk' ? 'warn' : 'bad')}">${group.status === 'healthy' ? '健康' : (group.status === 'at_risk' ? '需关注' : '接近停摆')}</span>
+            <span class="tag ${group.status === 'healthy' ? '' : (group.status === 'at_risk' ? 'warn' : 'bad')}">${formatGroupStatus(group.status)}</span>
           </div>
           <div class="activity-meta">
-            <div class="meta-item"><div class="meta-label">近 30 天活动</div><div class="meta-value">${group.recent_activity_count || 0}</div></div>
-            <div class="meta-item"><div class="meta-label">待结项</div><div class="meta-value">${group.pending_close_count || 0}</div></div>
-            <div class="meta-item"><div class="meta-label">健康分</div><div class="meta-value">${group.health_score || 0}</div></div>
+            <div class="meta-item"><div class="meta-label">Events in the last 30 days</div><div class="meta-value">${group.recent_activity_count || 0}</div></div>
+            <div class="meta-item"><div class="meta-label">Pending closeout</div><div class="meta-value">${group.pending_close_count || 0}</div></div>
+            <div class="meta-item"><div class="meta-label">Health score</div><div class="meta-value">${group.health_score || 0}</div></div>
           </div>
         </div>
       `).join('');
@@ -1024,16 +1047,16 @@
 
     function renderGovernanceReviewers(items) {
       if (!items || !items.length) {
-        return '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>暂无评议预警</div></div>';
+        return '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>No review alerts</div></div>';
       }
       return items.slice(0, 12).map(item => `
         <div class="activity-item" style="margin-bottom: 12px;">
           <div class="activity-header">
             <div>
-              <h4 style="margin: 0 0 4px;">${item.name || '(未命名)'}</h4>
-              <div style="font-size: 13px; color: var(--sub);">均分 ${item.score || 0} · 评分数 ${item.rating_count || 0} · 评议数 ${item.review_count || 0}</div>
+              <h4 style="margin: 0 0 4px;">${item.name || '(Unnamed)'}</h4>
+              <div style="font-size: 13px; color: var(--sub);">Average: ${item.score || 0} · Ratings: ${item.rating_count || 0} · Reviews: ${item.review_count || 0}</div>
             </div>
-            <span class="tag ${item.status === 'ok' ? '' : (item.status === 'pending_docs' ? 'bad' : 'warn')}">${item.status === 'pending_docs' ? `待交文档 ${item.pending_doc_count || 0}` : (item.status === 'low_score' ? '质量偏低' : (item.status === 'not_enough_feedback' ? '反馈不足' : '正常'))}</span>
+            <span class="tag ${item.status === 'ok' ? '' : (item.status === 'pending_docs' ? 'bad' : 'warn')}">${item.status === 'pending_docs' ? `${item.pending_doc_count || 0} documents pending` : (item.status === 'low_score' ? 'Low quality' : (item.status === 'not_enough_feedback' ? 'Insufficient feedback' : 'Normal'))}</span>
           </div>
         </div>
       `).join('');
@@ -1042,27 +1065,27 @@
     function renderGovernanceBoundary(boundaryWatch) {
       const names = boundaryWatch.non_compliant_names || [];
       return `
-        <div style="font-size: 13px; color: var(--sub);">最近 ${boundaryWatch.lookback_days || 14} 天未达输出底线成员：${boundaryWatch.non_compliant_count || 0} / ${boundaryWatch.tracked_member_count || 0}</div>
-        ${names.length ? `<div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">${names.map(name => `<span class="tag bad">${name}</span>`).join('')}</div>` : '<div class="empty-state" style="padding: 20px; margin-top: 12px;">当前没有边界预警</div>'}
+        <div style="font-size: 13px; color: var(--sub);">Below the contribution threshold over the last ${boundaryWatch.lookback_days || 14} days: ${boundaryWatch.non_compliant_count || 0} / ${boundaryWatch.tracked_member_count || 0}</div>
+        ${names.length ? `<div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;">${names.map(name => `<span class="tag bad">${name}</span>`).join('')}</div>` : '<div class="empty-state" style="padding: 20px; margin-top: 12px;">No participation alerts</div>'}
       `;
     }
 
     function renderGovernanceConflicts(data) {
       const conflicts = (data && data.conflicts) || [];
       if (!conflicts.length) {
-        return '<div class="empty-state" style="padding: 20px;">未检测到时间冲突 ✅</div>';
+        return '<div class="empty-state" style="padding: 20px;">No schedule conflicts detected ✅</div>';
       }
       return conflicts.map(c => `
         <div class="activity-item" style="margin-bottom: 12px;">
           <div class="activity-header">
             <div>
               <h4 style="margin: 0 0 4px;">${c.date} ${c.time_slot}</h4>
-              <div style="font-size: 13px; color: var(--sub);">${c.count} 个活动同时段冲突${c.is_cac_slot ? ' ⚡CAC有约固定档' : ''}</div>
+              <div style="font-size: 13px; color: var(--sub);">${c.count} events share this time slot${c.is_cac_slot ? ' ⚡ CAC Meetup recurring slot' : ''}</div>
             </div>
-            <span class="tag bad">冲突</span>
+            <span class="tag bad">Conflict</span>
           </div>
           <div style="margin-top: 8px;">
-            ${c.activities.map(a => `<div style="font-size:12px; color:var(--sub); margin-bottom:4px;">· ${a.topic || '(无主题)'} / ${a.speakers || '-'} [${a.type || 'normal'}]</div>`).join('')}
+            ${c.activities.map(a => `<div style="font-size:12px; color:var(--sub); margin-bottom:4px;">· ${a.topic || '(Untitled)'} / ${a.speakers || '-'} [${a.type || 'normal'}]</div>`).join('')}
           </div>
         </div>
       `).join('');
@@ -1071,14 +1094,14 @@
     async function loadRatingPanel() {
       const el = document.getElementById('governance-rating-panel');
       if (!el || !currentUserName) return;
-      el.innerHTML = '<div style="color:var(--sub); font-size:13px;">加载中...</div>';
+      el.innerHTML = '<div style="color:var(--sub); font-size:13px;">Loading…</div>';
       try {
         const res = await fetch(`/api/reviewer-submitted-docs?rater=${encodeURIComponent(currentUserName)}`, { cache: 'no-store' });
         const data = await res.json();
         if (!data.ok) { el.innerHTML = `<div class="msg error">${data.message}</div>`; return; }
         const docs = data.docs || [];
         if (!docs.length) {
-          el.innerHTML = '<div class="empty-state" style="padding: 20px;">暂无待评分的评议文档</div>';
+          el.innerHTML = '<div class="empty-state" style="padding: 20px;">No review documents awaiting ratings</div>';
           return;
         }
         el.innerHTML = docs.map(doc => `
@@ -1087,11 +1110,11 @@
               <strong>${doc.reviewer_name}</strong>
               <span style="font-size:12px; color:var(--sub);">· ${doc.activity_topic || '-'} (${doc.activity_date || '-'})</span>
             </div>
-            <div style="margin-bottom: 8px;"><a href="${doc.doc_url}" target="_blank" style="font-size:12px; color:var(--primary);">查看评议文档 ↗</a></div>
+            <div style="margin-bottom: 8px;"><a href="${doc.doc_url}" target="_blank" style="font-size:12px; color:var(--primary);">View review document ↗</a></div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <input type="number" min="1" max="10" step="0.5" placeholder="评分 1-10" id="rating-score-${doc.signup_id}" style="width:110px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" />
-              <input type="text" placeholder="备注（选填）" id="rating-comment-${doc.signup_id}" style="flex:1; min-width:160px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" />
-              <button class="btn-primary" style="font-size:12px; padding:4px 12px;" onclick="submitRating('${doc.signup_id}', '${doc.reviewer_name}')">提交评分</button>
+              <input type="number" min="1" max="10" step="0.5" placeholder="Score (1–10)" id="rating-score-${doc.signup_id}" style="width:110px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" />
+              <input type="text" placeholder="Comment (optional)" id="rating-comment-${doc.signup_id}" style="flex:1; min-width:160px; padding:4px 8px; border:1px solid var(--border); border-radius:6px; font-size:13px;" />
+              <button class="btn-primary" style="font-size:12px; padding:4px 12px;" onclick="submitRating('${doc.signup_id}', '${doc.reviewer_name}')">Submit rating</button>
             </div>
             <div id="rating-msg-${doc.signup_id}" style="display:none; margin-top:6px; font-size:12px;"></div>
           </div>
@@ -1107,7 +1130,7 @@
       const msgEl = document.getElementById(`rating-msg-${signupId}`);
       const score = parseFloat(scoreEl.value);
       if (!score || score < 1 || score > 10) {
-        msgEl.textContent = '请填写 1-10 的评分';
+        msgEl.textContent = 'Enter a score from 1 to 10';
         msgEl.style.color = 'var(--bad)';
         msgEl.style.display = 'block';
         return;
@@ -1119,7 +1142,7 @@
           body: JSON.stringify({ signup_id: signupId, rater_name: currentUserName, score, comment: (commentEl.value || '').trim() }),
         });
         const data = await res.json();
-        msgEl.textContent = data.ok ? '✅ 评分已提交' : ('❌ ' + (data.message || '提交失败'));
+        msgEl.textContent = data.ok ? '✅ Rating submitted' : ('❌ ' + (data.message || 'Submission failed'));
         msgEl.style.color = data.ok ? '#059669' : 'var(--bad)';
         msgEl.style.display = 'block';
         if (data.ok) { setTimeout(() => loadRatingPanel(), 1200); }
@@ -1139,12 +1162,12 @@
       if (!summaryEl || !groupsEl || !reviewersEl || !boundaryEl) {
         return;
       }
-      summaryEl.innerHTML = '<div class="empty-state" style="padding: 20px;">加载中...</div>';
+      summaryEl.innerHTML = '<div class="empty-state" style="padding: 20px;">Loading…</div>';
       try {
         const res = await fetch('/api/admin/dashboard', { cache: 'no-store' });
         const data = await res.json();
         if (!data.ok) {
-          summaryEl.innerHTML = `<div class="msg error">❌ ${data.message || '加载失败'}</div>`;
+          summaryEl.innerHTML = `<div class="msg error">❌ ${data.message || 'Failed to load'}</div>`;
           return;
         }
         summaryEl.innerHTML = renderGovernanceSummary(data.monthly_report || {});
@@ -1174,7 +1197,7 @@
     function handleLogin() {
       const userName = document.getElementById('login-name').value.trim();
       if (!userName) {
-        showMsg('login-msg', '❌ 请输入姓名', 'error');
+        showMsg('login-msg', '❌ Enter your name', 'error');
         return;
       }
 
@@ -1203,7 +1226,7 @@
     }
 
     function renderGroupSelectOptions() {
-      const options = ['<option value="">不选择</option>']
+      const options = ['<option value="">None</option>']
         .concat(availableGroups.map(group => `<option value="${group.id}">${group.name}</option>`));
 
       const createSelect = document.getElementById('form-group-id');
@@ -1223,7 +1246,7 @@
         box.innerHTML = `
           <div class="empty-state" style="padding: 24px 20px;">
             <div class="empty-state-icon">📭</div>
-            <div>暂无兴趣组</div>
+            <div>No groups available</div>
           </div>
         `;
         return;
@@ -1233,18 +1256,18 @@
         <div class="activity-item" style="margin-bottom: 12px;">
           <div class="activity-header">
             <div>
-              <h4 style="margin: 0 0 4px;">${group.name || '(未命名兴趣组)'}</h4>
-              <div style="font-size: 13px; color: var(--sub);">组长：${group.leader_name || '未设置'} · 成员 ${group.member_count || 0} 人</div>
+              <h4 style="margin: 0 0 4px;">${group.name || '(Unnamed group)'}</h4>
+              <div style="font-size: 13px; color: var(--sub);">Lead: ${group.leader_name || 'Not set'} · ${group.member_count || 0} members</div>
             </div>
             <div>
-              <span class="tag">${group.status || '活跃'}</span>
+              <span class="tag">${formatGroupStatus(group.status || '活跃')}</span>
               ${renderGroupActionButtons(group)}
             </div>
           </div>
           <div style="font-size: 13px; color: var(--sub); line-height: 1.6; margin-top: 8px;">
-            <div><strong>主题目标：</strong>${group.topic_goal || '未填写'}</div>
-            <div><strong>时间边界：</strong>${group.time_boundary || '未填写'}</div>
-            <div><strong>执行方案：</strong>${group.execution_plan || '未填写'}</div>
+            <div><strong>Topic goal:</strong> ${group.topic_goal || 'Not provided'}</div>
+            <div><strong>Time commitment:</strong> ${group.time_boundary || 'Not provided'}</div>
+            <div><strong>Action plan:</strong> ${group.execution_plan || 'Not provided'}</div>
           </div>
         </div>
       `).join('');
@@ -1256,12 +1279,12 @@
       if (!me) return '';
       const myMembership = members.find(item => (item.name || '').trim() === me);
       if (!myMembership) {
-        return `<button type="button" class="btn-primary" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;" onclick="joinGroup('${group.id}')">加入</button>`;
+        return `<button type="button" class="btn-primary" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;" onclick="joinGroup('${group.id}')">Join</button>`;
       }
       if ((myMembership.role || '') === '组长') {
-        return `<span class="tag" style="margin-left: 8px;">我是组长</span>`;
+        return `<span class="tag" style="margin-left: 8px;">I am the group lead</span>`;
       }
-      return `<button type="button" class="btn-danger" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;" onclick="leaveGroup('${group.id}')">退出</button>`;
+      return `<button type="button" class="btn-danger" style="margin-left: 8px; padding: 4px 8px; font-size: 12px;" onclick="leaveGroup('${group.id}')">Leave</button>`;
     }
 
     async function joinGroup(groupId) {
@@ -1269,7 +1292,7 @@
         name: (currentUserName || '').trim(),
       };
       if (!payload.name) {
-        alert('请先登录姓名后再加入兴趣组');
+        alert('Log in with your name before joining a group.');
         return;
       }
       try {
@@ -1280,11 +1303,11 @@
         });
         const data = await res.json();
         if (!data.ok) {
-          if ((data.message || '').includes('首次使用请填写邮箱')) {
-            const email = prompt('首次加入兴趣组需要邮箱，请输入邮箱：') || '';
+          if ((data.message || '').includes('首次使用请填写邮箱') || (data.message || '').includes('Please enter your email to continue')) {
+            const email = prompt('An email address is required the first time you join a group. Enter your email:') || '';
             const emailTrimmed = email.trim();
             if (!emailTrimmed) {
-              alert('❌ 未填写邮箱，无法加入兴趣组');
+              alert('❌ Email is required to join a group.');
               return;
             }
             const retryRes = await fetch(`/api/group/${groupId}/join`, {
@@ -1294,17 +1317,17 @@
             });
             const retryData = await retryRes.json();
             if (!retryData.ok) {
-              alert('❌ ' + (retryData.message || '加入失败'));
+              alert('❌ ' + (retryData.message || 'Could not join group'));
               return;
             }
-            alert('✅ ' + (retryData.message || '加入成功'));
+            alert('✅ ' + (retryData.message || 'Joined group'));
             await loadGroups();
             return;
           }
-          alert('❌ ' + (data.message || '加入失败'));
+          alert('❌ ' + (data.message || 'Could not join group'));
           return;
         }
-        alert('✅ ' + (data.message || '加入成功'));
+        alert('✅ ' + (data.message || 'Joined group'));
         await loadGroups();
       } catch (err) {
         alert('❌ ' + err.message);
@@ -1316,10 +1339,10 @@
         name: (currentUserName || '').trim(),
       };
       if (!payload.name) {
-        alert('请先登录姓名后再退出兴趣组');
+        alert('Log in with your name before leaving a group.');
         return;
       }
-      if (!confirm('确认退出该兴趣组？')) {
+      if (!confirm('Leave this group?')) {
         return;
       }
       try {
@@ -1330,10 +1353,10 @@
         });
         const data = await res.json();
         if (!data.ok) {
-          alert('❌ ' + (data.message || '退出失败'));
+          alert('❌ ' + (data.message || 'Could not leave group'));
           return;
         }
-        alert('✅ ' + (data.message || '退出成功'));
+        alert('✅ ' + (data.message || 'Left group'));
         await loadGroups();
       } catch (err) {
         alert('❌ ' + err.message);
@@ -1343,8 +1366,8 @@
     function populateInviteActivityOptions() {
       const select = document.getElementById('invite-activity-id');
       if (!select) return;
-      const options = ['<option value="">请选择活动</option>']
-        .concat(myActivities.map(activity => `<option value="${activity.id}">${activity.date || '日期未定'} ${activity.time || ''} · ${activity.topic || '(未命名活动)'}</option>`));
+      const options = ['<option value="">Select an event</option>']
+        .concat(myActivities.map(activity => `<option value="${activity.id}">${activity.date || 'Date TBD'} ${activity.time || ''} · ${activity.topic || '(Untitled event)'}</option>`));
       select.innerHTML = options.join('');
     }
 
@@ -1354,31 +1377,31 @@
       if (!select || !box) return;
       const activityId = (select.value || '').trim();
       if (!activityId) {
-        box.innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>请选择活动后查看邀请记录</div></div>';
+        box.innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>Select an event to view its invitations</div></div>';
         return;
       }
       try {
         const res = await fetch(`/api/activity/${activityId}/invites`, { cache: 'no-store' });
         const data = await res.json();
         if (!data.ok) {
-          box.innerHTML = `<div class="msg error">❌ ${data.message || '加载邀请记录失败'}</div>`;
+          box.innerHTML = `<div class="msg error">❌ ${data.message || 'Could not load invitations'}</div>`;
           return;
         }
         const invites = data.invites || [];
         if (!invites.length) {
-          box.innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>该活动暂无邀请记录</div></div>';
+          box.innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>No invitations for this event</div></div>';
           return;
         }
         box.innerHTML = invites.map(invite => `
           <div class="activity-item" style="margin-bottom: 10px;">
             <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center;">
               <div>
-                <div style="font-weight: 700; color: var(--primary);">${invite.invitee_name || '(未命名)'}</div>
-                <div style="font-size: 13px; color: var(--sub); margin-top: 4px;">来源：${invite.source_type || '分享者指定'} · 邀请人：${invite.inviter_name || '-'}</div>
-                <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">邮箱：${invite.invitee_email || '未填写'} · 发起：${invite.created_at || '未知'}</div>
-                <div style="font-size: 12px; color: var(--sub); margin-top: 2px;">最近状态更新：${invite.updated_at || '-'} · 操作人：${invite.updated_by || '-'}</div>
+                <div style="font-weight: 700; color: var(--primary);">${invite.invitee_name || '(Unnamed)'}</div>
+                <div style="font-size: 13px; color: var(--sub); margin-top: 4px;">Source: ${formatInviteSource(invite.source_type)} · Invited by: ${invite.inviter_name || '-'}</div>
+                <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">Email: ${invite.invitee_email || 'Not provided'} · Sent: ${invite.created_at || 'Unknown'}</div>
+                <div style="font-size: 12px; color: var(--sub); margin-top: 2px;">Last updated: ${invite.updated_at || '-'} · By: ${invite.updated_by || '-'}</div>
               </div>
-              <span class="tag ${((invite.status || '已发送') === '已发送') ? 'warn' : (((invite.status || '已发送') === '已拒绝' || (invite.status || '已发送') === '已撤回') ? 'bad' : '')}">${invite.status || '已发送'}</span>
+              <span class="tag ${((invite.status || '已发送') === '已发送') ? 'warn' : (((invite.status || '已发送') === '已拒绝' || (invite.status || '已发送') === '已撤回') ? 'bad' : '')}">${formatInviteStatus(invite.status || '已发送')}</span>
             </div>
             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
               ${renderInviteActionButtons(invite)}
@@ -1394,9 +1417,9 @@
       const status = invite.status || '已发送';
       const canUpdate = status === '已发送';
       return `
-        <button type="button" class="btn-primary" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已接受')">标记接受</button>
-        <button type="button" class="btn-danger" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已拒绝')">标记拒绝</button>
-        <button type="button" class="btn-secondary" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已撤回')">撤回邀请</button>
+        <button type="button" class="btn-primary" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已接受')">Mark accepted</button>
+        <button type="button" class="btn-danger" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已拒绝')">Mark declined</button>
+        <button type="button" class="btn-secondary" style="padding: 6px 10px; font-size: 12px;" ${canUpdate ? '' : 'disabled'} onclick="updateInviteStatus('${invite.id}', '已撤回')">Withdraw invitation</button>
       `;
     }
 
@@ -1415,10 +1438,10 @@
         });
         const data = await res.json();
         if (!data.ok) {
-          alert('❌ ' + (data.message || '邀请状态更新失败'));
+          alert('❌ ' + (data.message || 'Could not update invitation status'));
           return;
         }
-        showMsg('invite-msg', '✅ ' + (data.message || '邀请状态已更新'), 'success');
+        showMsg('invite-msg', '✅ ' + (data.message || 'Invitation status updated'), 'success');
         await loadActivityInvites();
       } catch (err) {
         alert('❌ ' + err.message);
@@ -1426,7 +1449,7 @@
     }
 
     function handleLogout() {
-      if (confirm('确认退出登录？')) {
+      if (confirm('Log out?')) {
         currentUserName = null;
         document.getElementById('login-name').value = '';
         document.getElementById('output-name').value = '';
@@ -1437,7 +1460,7 @@
     }
 
     function switchTab(tab) {
-      // 隐藏所有标签页
+      // Hide all tabs
       document.querySelectorAll('.tab-content').forEach(el => {
         el.classList.remove('active');
       });
@@ -1445,7 +1468,7 @@
         el.classList.remove('active');
       });
 
-      // 显示选中的标签页
+      // Show the selected tab
       document.getElementById(tab + '-tab').classList.add('active');
       event.target.classList.add('active');
       if (tab === 'governance') {
@@ -1469,93 +1492,93 @@
         myActivities = activities;
         populateInviteActivityOptions();
         if (!activities.length) {
-          document.getElementById('invite-list').innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>暂无可邀请的活动</div></div>';
+          document.getElementById('invite-list').innerHTML = '<div class="empty-state" style="padding: 24px 20px;"><div class="empty-state-icon">📭</div><div>No events available for invitations</div></div>';
         }
 
         if (activities.length === 0) {
           container.innerHTML = `
             <div class="empty-state">
               <div class="empty-state-icon">📭</div>
-              <div>还没有创建任何活动，点击"创建活动"开始吧！</div>
+              <div>No events yet. Select “Create Event” to get started!</div>
             </div>
           `;
           return;
         }
 
-        myActivities = activities;  // 缓存活动数据供编辑框使用
+        myActivities = activities;  // Cache event data for the editor
 
         container.innerHTML = activities.map(activity => `
           <div class="activity-item">
             <div class="activity-header">
               <div>
-                <h4 style="margin: 0 0 4px;">${activity.topic || '(未设置主题)'}</h4>
-                <p style="margin: 0; color: var(--sub); font-size: 13px;">${activity.speakers || '(未设置分享者)'}</p>
+                <h4 style="margin: 0 0 4px;">${activity.topic || '(Untitled)'}</h4>
+                <p style="margin: 0; color: var(--sub); font-size: 13px;">${activity.speakers || '(No speakers set)'}</p>
                 <div style="margin-top: 6px;">
-                  <span class="tag ${activity.status === '已结项' ? (activity.on_time ? '' : 'warn') : 'warn'}">${activity.status || '进行中'}</span>
-                  ${activity.status === '已结项' ? `<span class="tag ${activity.on_time ? '' : 'bad'}" style="margin-left: 6px;">${activity.on_time ? '准时结项' : '逾期结项'}</span>` : ''}
-                  ${(activity.activity_type || 'normal') === 'cac有约' ? '<span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:6px;">☕ cac有约</span>' : '<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:6px;">📋 分享会</span>'}
-                  ${activity.group_name ? `<span class="tag" style="margin-left: 6px;">兴趣组：${activity.group_name}</span>` : ''}
+                  <span class="tag ${activity.status === '已结项' ? (activity.on_time ? '' : 'warn') : 'warn'}">${formatActivityStatus(activity.status || '进行中')}</span>
+                  ${activity.status === '已结项' ? `<span class="tag ${activity.on_time ? '' : 'bad'}" style="margin-left: 6px;">${activity.on_time ? 'Closed on time' : 'Closed late'}</span>` : ''}
+                  ${(activity.activity_type || 'normal') === 'cac有约' ? '<span style="background:#fef3c7;color:#d97706;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:6px;">☕ CAC Meetup</span>' : '<span style="background:#dbeafe;color:#2563eb;padding:2px 8px;border-radius:4px;font-size:12px;margin-left:6px;">📋 Regular Talk</span>'}
+                  ${activity.group_name ? `<span class="tag" style="margin-left: 6px;">Group: ${activity.group_name}</span>` : ''}
                 </div>
               </div>
               <div style="text-align: right;">
                 <div style="font-size: 12px; color: ${(Boolean(activity.reviewer_full) || (Number(activity.reviewers) || 0) >= (Number(activity.reviewer_limit) || 3)) ? 'var(--bad)' : 'var(--warn)'};">
-                  评议员 ${(Number(activity.reviewers) || 0)}/${(Number(activity.reviewer_limit) || 3)}
+                  Reviewers ${(Number(activity.reviewers) || 0)}/${(Number(activity.reviewer_limit) || 3)}
                 </div>
               </div>
             </div>
 
             <div class="activity-meta">
               <div class="meta-item">
-                <div class="meta-label">📅 日期</div>
-                <div class="meta-value">${activity.date || '未设置'}</div>
+                <div class="meta-label">📅 Date</div>
+                <div class="meta-value">${activity.date || 'Not set'}</div>
               </div>
               <div class="meta-item">
-                <div class="meta-label">⏰ 时间</div>
-                <div class="meta-value">${activity.time || '未设置'}</div>
+                <div class="meta-label">⏰ Time</div>
+                <div class="meta-value">${activity.time || 'Not set'}</div>
               </div>
               <div class="meta-item">
-                <div class="meta-label">🏢 教室</div>
-                <div class="meta-value">${activity.classroom || '待定'}</div>
+                <div class="meta-label">🏢 Room</div>
+                <div class="meta-value">${activity.classroom || 'TBD'}</div>
               </div>
             </div>
 
             <div style="margin-bottom: 12px; padding: 8px 12px; background: white; border-radius: 8px; font-size: 13px;">
-              <div style="color: var(--sub);">📊 拟参加人数</div>
+              <div style="color: var(--sub);">📊 Expected attendees</div>
               <div style="font-weight: 600; color: var(--primary);">${activity.expected_attendance || 0}</div>
-              ${activity.closed_at ? `<div style="margin-top: 4px; color: var(--sub);">结项时间：${activity.closed_at}</div>` : ''}
+              ${activity.closed_at ? `<div style="margin-top: 4px; color: var(--sub);">Closed: ${activity.closed_at}</div>` : ''}
             </div>
 
             ${activity.signups && activity.signups.length > 0 ? `
               <div style="margin-bottom: 12px; padding: 8px 12px; background: white; border-radius: 8px; font-size: 13px;">
-                <div style="color: var(--sub); margin-bottom: 6px;">📝 报名详情</div>
+                <div style="color: var(--sub); margin-bottom: 6px;">📝 Signups</div>
                 ${activity.signups.filter(s => s.role === '评议员').map(s => `
                   <div style="padding: 4px 0; border-bottom: 1px dashed var(--line);">
                     <span style="font-weight: 500;">${s.name}</span>
-                    <span style="color: var(--primary); font-size: 12px;">评议员</span>
-                    ${s.review_content ? `<div style="color: var(--sub); font-size: 12px; margin-top: 2px;">评议内容：${s.review_content}</div>` : ''}
+                    <span style="color: var(--primary); font-size: 12px;">Reviewer</span>
+                    ${s.review_content ? `<div style="color: var(--sub); font-size: 12px; margin-top: 2px;">Review focus: ${s.review_content}</div>` : ''}
                   </div>
                 `).join('')}
                 ${activity.signups.filter(s => s.role === '旁听').length > 0 ? `
                   <div style="padding: 4px 0; color: var(--sub); font-size: 12px;">
-                    旁听：${activity.signups.filter(s => s.role === '旁听').map(s => s.name).join('、')}
+                    Observers: ${activity.signups.filter(s => s.role === '旁听').map(s => s.name).join(', ')}
                   </div>
                 ` : ''}
               </div>
             ` : ''}
 
             <div class="activity-actions">
-              <button class="btn-secondary" onclick="openEditModal('${activity.id}')">编辑</button>
-              ${activity.status !== '已结项' ? `<button class="btn-primary" onclick="closeActivity('${activity.id}')">结项</button>` : ''}
-              <button class="btn-danger" onclick="deleteActivity('${activity.id}')">删除</button>
+              <button class="btn-secondary" onclick="openEditModal('${activity.id}')">Edit</button>
+              ${activity.status !== '已结项' ? `<button class="btn-primary" onclick="closeActivity('${activity.id}')">Close out</button>` : ''}
+              <button class="btn-danger" onclick="deleteActivity('${activity.id}')">Delete</button>
             </div>
           </div>
         `).join('');
       } catch (err) {
-        container.innerHTML = `<div class="msg error">❌ 加载失败：${err.message}</div>`;
+        container.innerHTML = `<div class="msg error">❌ Failed to load: ${err.message}</div>`;
       }
     }
 
-    // ===== 时间块多选逻辑 =====
+    // ===== Time-slot selection logic =====
     let selectedTimeSlots = [];
 
     function toggleTimeSlot(el) {
@@ -1564,14 +1587,14 @@
       const slotKey = `${start}-${end}`;
 
       if (el.classList.contains('selected')) {
-        // 取消选择
+        // Deselect a time slot
         el.classList.remove('selected');
         el.style.background = '';
         el.style.color = '';
         el.style.borderColor = '';
         selectedTimeSlots = selectedTimeSlots.filter(s => s !== slotKey);
       } else {
-        // 选择
+        // Select a slot.
         el.classList.add('selected');
         el.style.background = 'var(--primary)';
         el.style.color = 'white';
@@ -1579,7 +1602,7 @@
         selectedTimeSlots.push(slotKey);
       }
 
-      // 自动合并连续时间块
+      // Merge consecutive time slots
       updateTimeDisplay();
       loadAvailableClassrooms();
     }
@@ -1587,7 +1610,7 @@
     function mergeTimeSlots(slots) {
       if (slots.length === 0) return [];
 
-      // 解析时间并排序
+      // Parse and sort time slots
       const parsed = slots.map(s => {
         const [start, end] = s.split('-');
         return { start, end, startMin: timeToMinutes(start), endMin: timeToMinutes(end) };
@@ -1598,7 +1621,7 @@
 
       for (let i = 1; i < parsed.length; i++) {
         if (parsed[i].startMin === current.endMin) {
-          // 连续，合并
+          // Merge adjacent slots.
           current.end = parsed[i].end;
           current.endMin = parsed[i].endMin;
         } else {
@@ -1620,7 +1643,7 @@
       const hiddenInput = document.getElementById('form-time');
 
       if (selectedTimeSlots.length === 0) {
-        textEl.textContent = '未选择';
+        textEl.textContent = 'None selected';
         hiddenInput.value = '';
       } else {
         const merged = mergeTimeSlots(selectedTimeSlots);
@@ -1640,7 +1663,7 @@
       updateTimeDisplay();
     }
 
-    // CAC有约时间限制：周日14:00-18:00
+    // CAC Meetup hours: Sunday, 2:00–6:00 p.m.
     const cacAllowedSlots = ['14:00-14:30', '14:30-15:00', '15:00-15:30', '15:30-16:00',
                              '16:00-16:30', '16:30-17:00', '17:00-17:30', '17:30-18:00'];
 
@@ -1650,13 +1673,13 @@
       const groupSelect = document.getElementById('form-group-id');
       const timeSlotsGrid = document.getElementById('time-slots-grid');
 
-      // 清除之前的选择
+      // Clear the previous selection.
       clearTimeSelection();
 
       if (activityType === 'cac有约') {
-        // 隐藏兴趣组选择
+        // Hide group selection
         groupSelect.parentElement.style.display = 'none';
-        // 只显示CAC有约允许的时间块
+        // Show only time slots available for CAC Meetups
         document.querySelectorAll('.time-slot').forEach(el => {
           const slotKey = `${el.dataset.start}-${el.dataset.end}`;
           if (cacAllowedSlots.includes(slotKey)) {
@@ -1666,9 +1689,9 @@
           }
         });
       } else {
-        // 显示兴趣组选择
+        // Show group selection
         groupSelect.parentElement.style.display = 'block';
-        // 显示所有时间块
+        // Show all time slots
         document.querySelectorAll('.time-slot').forEach(el => {
           el.style.display = 'block';
         });
@@ -1682,7 +1705,7 @@
       const select = document.getElementById('form-classroom-select');
 
       if (!date || !timeSlot) {
-        select.innerHTML = '<option value="">请先选择日期和时间</option>';
+        select.innerHTML = '<option value="">Select a date and time first</option>';
         return;
       }
 
@@ -1690,13 +1713,13 @@
         const res = await fetch(`/api/cac-room-slots?date=${date}&time_slot=${encodeURIComponent(timeSlot)}`);
         const data = await res.json();
         if (data.ok && data.slots.length > 0) {
-          select.innerHTML = '<option value="">选择预设教室（或自定义输入）</option>' +
+          select.innerHTML = '<option value="">Choose a reserved room (or enter one manually)</option>' +
             data.slots.map(s => `<option value="${s.classroom}">${s.classroom}</option>`).join('');
         } else {
-          select.innerHTML = '<option value="">暂无预设教室，请自定义输入</option>';
+          select.innerHTML = '<option value="">No reserved rooms. Enter one manually.</option>';
         }
       } catch (err) {
-        select.innerHTML = '<option value="">加载失败，请自定义输入</option>';
+        select.innerHTML = '<option value="">Could not load rooms. Enter one manually.</option>';
       }
     }
 
@@ -1715,8 +1738,8 @@
         const date = this.value;
         if (date) {
           const dt = new Date(date);
-          if (dt.getDay() !== 0) {  // 0 = 周日
-            alert('⚠️ CAC有约 只能在周日举办，请选择周日日期');
+          if (dt.getDay() !== 0) {  // 0 = Sunday
+            alert('⚠️ CAC Meetups can only be held on Sundays. Choose a Sunday.');
           }
         }
       }
@@ -1744,7 +1767,7 @@
       };
 
       if (!payload.date || !payload.time || !payload.speakers || !payload.topic) {
-        showMsg('create-msg', '❌ 请完整填写必填字段', 'error');
+        showMsg('create-msg', '❌ Complete all required fields', 'error');
         return;
       }
 
@@ -1759,18 +1782,18 @@
         if (data.ok) {
           let successMsg = '✅ ' + data.message;
           if (data.warnings && data.warnings.length > 0) {
-            successMsg += '<br>⚠️ 注意：' + data.warnings.join('<br>⚠️ ');
+            successMsg += '<br>⚠️ Note: ' + data.warnings.join('<br>⚠️ ');
           }
           showMsg('create-msg', successMsg, data.warnings ? 'info' : 'success');
           document.getElementById('create-form').reset();
           document.getElementById('form-activity-type').value = 'normal';
           document.getElementById('form-group-id').value = '';
 
-          // 清除消息并刷新列表
+          // Clear the message and refresh the list
           setTimeout(() => {
             hideMsg('create-msg');
             loadMyActivities();
-            // 切换回列表标签页
+            // Return to the event list tab
             document.getElementById('list-tab').classList.add('active');
             document.getElementById('create-tab').classList.remove('active');
             document.querySelectorAll('.tab-btn')[0].classList.add('active');
@@ -1780,7 +1803,7 @@
           showMsg('create-msg', '❌ ' + data.message, 'error');
         }
       } catch (err) {
-        showMsg('create-msg', '❌ 网络错误：' + err.message, 'error');
+        showMsg('create-msg', '❌ Network error: ' + err.message, 'error');
       }
     });
 
@@ -1799,7 +1822,7 @@
       };
 
       if (!payload.activity_id || !payload.invitee_name) {
-        showMsg('invite-msg', '❌ 请完整填写必填字段', 'error');
+        showMsg('invite-msg', '❌ Complete all required fields', 'error');
         return;
       }
 
@@ -1811,16 +1834,16 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showMsg('invite-msg', '✅ ' + (data.message || '邀请已发送'), 'success');
+          showMsg('invite-msg', '✅ ' + (data.message || 'Invitation sent'), 'success');
           document.getElementById('invite-form').reset();
           setTimeout(() => {
             loadActivityInvites();
           }, 1500);
         } else {
-          showMsg('invite-msg', '❌ ' + (data.message || '发送失败'), 'error');
+          showMsg('invite-msg', '❌ ' + (data.message || 'Could not send invitation'), 'error');
         }
       } catch (err) {
-        showMsg('invite-msg', '❌ 网络错误：' + err.message, 'error');
+        showMsg('invite-msg', '❌ Network error: ' + err.message, 'error');
       }
     });
 
@@ -1834,7 +1857,7 @@
       };
 
       if (!payload.name || !payload.output_type || !payload.date) {
-        showMsg('output-msg', '❌ 请完整填写必填字段', 'error');
+        showMsg('output-msg', '❌ Complete all required fields', 'error');
         return;
       }
 
@@ -1846,14 +1869,14 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showMsg('output-msg', '✅ ' + (data.message || '记录已保存'), 'success');
+          showMsg('output-msg', '✅ ' + (data.message || 'Contribution saved'), 'success');
           document.getElementById('output-form').reset();
           document.getElementById('output-name').value = currentUserName || '';
         } else {
-          showMsg('output-msg', '❌ ' + (data.message || '保存失败'), 'error');
+          showMsg('output-msg', '❌ ' + (data.message || 'Could not save'), 'error');
         }
       } catch (err) {
-        showMsg('output-msg', '❌ 网络错误：' + err.message, 'error');
+        showMsg('output-msg', '❌ Network error: ' + err.message, 'error');
       }
     });
 
@@ -1871,7 +1894,7 @@
       };
 
       if (!payload.name || !payload.leader_name || !payload.members || !payload.topic_goal || !payload.time_boundary || !payload.execution_plan) {
-        showMsg('group-msg', '❌ 请完整填写必填字段', 'error');
+        showMsg('group-msg', '❌ Complete all required fields', 'error');
         return;
       }
 
@@ -1883,16 +1906,16 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showMsg('group-msg', '✅ ' + (data.message || '兴趣组已创建'), 'success');
+          showMsg('group-msg', '✅ ' + (data.message || 'Group created'), 'success');
           document.getElementById('group-form').reset();
           setTimeout(() => {
             loadGroups();
           }, 1500);
         } else {
-          showMsg('group-msg', '❌ ' + (data.message || '创建失败'), 'error');
+          showMsg('group-msg', '❌ ' + (data.message || 'Could not create group'), 'error');
         }
       } catch (err) {
-        showMsg('group-msg', '❌ 网络错误：' + err.message, 'error');
+        showMsg('group-msg', '❌ Network error: ' + err.message, 'error');
       }
     });
 
@@ -1944,21 +1967,21 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showMsg('edit-msg', '✅ ' + (data.message || '活动已更新'), 'success');
+          showMsg('edit-msg', '✅ ' + (data.message || 'Event updated'), 'success');
           setTimeout(() => {
             closeEditModal();
             loadMyActivities();
           }, 1500);
         } else {
-          showMsg('edit-msg', '❌ ' + (data.message || '更新失败'), 'error');
+          showMsg('edit-msg', '❌ ' + (data.message || 'Could not update event'), 'error');
         }
       } catch (err) {
-        showMsg('edit-msg', '❌ 网络错误：' + err.message, 'error');
+        showMsg('edit-msg', '❌ Network error: ' + err.message, 'error');
       }
     });
 
     async function closeActivity(activityId) {
-      if (!confirm('确认结项该活动？')) return;
+      if (!confirm('Close out this event?')) return;
 
       try {
         const res = await fetch(`/api/activity/${activityId}/close`, {
@@ -1968,10 +1991,10 @@
         });
         const data = await res.json();
         if (data.ok) {
-          alert('✅ 活动已结项');
+          alert('✅ Event closed out');
           loadMyActivities();
         } else {
-          alert('❌ ' + (data.message || '结项失败'));
+          alert('❌ ' + (data.message || 'Could not close out event'));
         }
       } catch (err) {
         alert('❌ ' + err.message);
@@ -1979,7 +2002,7 @@
     }
 
     async function deleteActivity(activityId) {
-      if (!confirm('确认删除该活动？\n\n如有报名者，系统将自动发送取消通知邮件给他们。')) return;
+      if (!confirm('Delete this event?\n\nAnyone who signed up will automatically receive a cancellation email.')) return;
 
       try {
         const res = await fetch(`/api/activity/${activityId}`, {
@@ -1992,14 +2015,14 @@
           alert('✅ ' + data.message);
           loadMyActivities();
         } else {
-          alert('❌ ' + (data.message || '删除失败'));
+          alert('❌ ' + (data.message || 'Could not delete'));
         }
       } catch (err) {
         alert('❌ ' + err.message);
       }
     }
 
-    // ===== CAC管理员功能 =====
+    // ===== CAC admin functions =====
     let isCacAdmin = false;
 
     async function checkCacAdmin() {
@@ -2025,13 +2048,13 @@
         const data = await res.json();
         const container = document.getElementById('cac-admins-list');
         if (!data.ok || !data.admins.length) {
-          container.innerHTML = '<div style="color: var(--sub); font-size: 13px;">暂无管理员</div>';
+          container.innerHTML = '<div style="color: var(--sub); font-size: 13px;">No administrators</div>';
           return;
         }
         container.innerHTML = data.admins.map(a => `
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line);">
             <span>${a.name}</span>
-            <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteCacAdmin('${a.name}')">移除</button>
+            <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteCacAdmin('${a.name}')">Remove</button>
           </div>
         `).join('');
       } catch (err) {
@@ -2040,7 +2063,7 @@
     }
 
     async function deleteCacAdmin(name) {
-      if (!confirm(`确认移除 ${name} 的管理员权限？`)) return;
+      if (!confirm(`Remove administrator access for ${name}?`)) return;
       try {
         const res = await fetch(`/api/cac-admin/${encodeURIComponent(name)}`, {
           method: 'DELETE',
@@ -2051,7 +2074,7 @@
         if (data.ok) {
           loadCacAdmins();
         } else {
-          alert('❌ ' + (data.message || '删除失败'));
+          alert('❌ ' + (data.message || 'Could not delete'));
         }
       } catch (err) {
         alert('❌ ' + err.message);
@@ -2064,13 +2087,13 @@
         const data = await res.json();
         const container = document.getElementById('cac-slots-list');
         if (!data.ok || !data.slots.length) {
-          container.innerHTML = '<div style="color: var(--sub); font-size: 13px;">暂无教室时间槽</div>';
+          container.innerHTML = '<div style="color: var(--sub); font-size: 13px;">No room time slots</div>';
           return;
         }
         container.innerHTML = data.slots.map(s => `
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line);">
             <span>${s.date} ${s.time_slot} · ${s.classroom}</span>
-            <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteCacSlot('${s.id}')">删除</button>
+            <button class="btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteCacSlot('${s.id}')">Delete</button>
           </div>
         `).join('');
       } catch (err) {
@@ -2079,7 +2102,7 @@
     }
 
     async function deleteCacSlot(slotId) {
-      if (!confirm('确认删除该教室时间槽？')) return;
+      if (!confirm('Delete this room time slot?')) return;
       try {
         const res = await fetch(`/api/cac-room-slot/${slotId}`, {
           method: 'DELETE',
@@ -2090,7 +2113,7 @@
         if (data.ok) {
           loadCacSlots();
         } else {
-          alert('❌ ' + (data.message || '删除失败'));
+          alert('❌ ' + (data.message || 'Could not delete'));
         }
       } catch (err) {
         alert('❌ ' + err.message);
@@ -2112,7 +2135,7 @@
           document.getElementById('cac-admin-name').value = '';
           loadCacAdmins();
         } else {
-          alert('❌ ' + (data.message || '添加失败'));
+          alert('❌ ' + (data.message || 'Could not add'));
         }
       } catch (err) {
         alert('❌ ' + err.message);
@@ -2136,16 +2159,16 @@
           document.getElementById('cac-slot-classroom').value = '';
           loadCacSlots();
         } else {
-          alert('❌ ' + (data.message || '添加失败'));
+          alert('❌ ' + (data.message || 'Could not add'));
         }
       } catch (err) {
         alert('❌ ' + err.message);
       }
     });
 
-    // 页面加载完成后，如果是从个人主页跳转过来的，尝试自动登录
+    // After the page loads, try automatic login when arriving from the member dashboard
     window.addEventListener('DOMContentLoaded', () => {
-      // 初始化时间选择器
+      // Initialize the time selector
       updateDateTimeConstraints();
 
       const urlParams = new URLSearchParams(window.location.search);

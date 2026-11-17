@@ -1,8 +1,5 @@
-"""
-配置模块
-
-集中管理所有配置常量和环境变量
-"""
+"""Configuration module.
+Centralizes application settings and environment variables."""
 
 import os
 import tempfile
@@ -10,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ===== 数据库配置 =====
+# ===== Database configuration =====
 DB_BACKEND = os.getenv("DB_BACKEND", "mysql").strip().lower()
 MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1").strip()
 MYSQL_PORT = int(os.getenv("MYSQL_PORT", "3306"))
@@ -22,11 +19,11 @@ MYSQL_READ_TIMEOUT = int(os.getenv("MYSQL_READ_TIMEOUT", "30"))
 MYSQL_WRITE_TIMEOUT = int(os.getenv("MYSQL_WRITE_TIMEOUT", "30"))
 TABLE_ROWS_CACHE_TTL_SECONDS = int(os.getenv("TABLE_ROWS_CACHE_TTL_SECONDS", "120"))
 
-# SeaTable 配置
+# SeaTable configuration
 SERVER_URL = os.getenv("SEATABLE_SERVER_URL", "https://table.nju.edu.cn").rstrip("/")
 API_TOKEN = os.getenv("SEATABLE_API_TOKEN", "")
 
-# ===== 表名配置 =====
+# ===== Table name configuration =====
 ACTIVITY_TABLE_NAME = os.getenv("ACTIVITY_TABLE_NAME", "分享会活动")
 SIGNUP_TABLE_NAME = os.getenv("SIGNUP_TABLE_NAME", "分享会报名")
 REVIEW_RATING_TABLE_NAME = os.getenv("REVIEW_RATING_TABLE_NAME", "评议评分")
@@ -38,7 +35,7 @@ REVIEW_INVITE_TABLE_NAME = os.getenv("REVIEW_INVITE_TABLE_NAME", "评议邀请")
 CAC_ADMINS_TABLE_NAME = os.getenv("CAC_ADMINS_TABLE_NAME", "CAC管理员")
 CAC_ROOM_SLOTS_TABLE_NAME = os.getenv("CAC_ROOM_SLOTS_TABLE_NAME", "CAC教室时间槽")
 
-# ===== 活动表字段 =====
+# ===== Activity table fields =====
 ACTIVITY_COL_DATE = os.getenv("ACTIVITY_COL_DATE", "活动日期")
 ACTIVITY_COL_TIME = os.getenv("ACTIVITY_COL_TIME", "活动时间")
 ACTIVITY_COL_SPEAKERS = os.getenv("ACTIVITY_COL_SPEAKERS", "分享者")
@@ -57,7 +54,7 @@ ACTIVITY_COL_GROUP_NAME = os.getenv("ACTIVITY_COL_GROUP_NAME", "所属兴趣组"
 ACTIVITY_COL_EXPECTED_ATTENDANCE = os.getenv("ACTIVITY_COL_EXPECTED_ATTENDANCE", "预期人数")
 LEGACY_ACTIVITY_COL_CREATOR_STUDENT_ID = os.getenv("ACTIVITY_COL_CREATOR_STUDENT_ID", "组织者学号")
 
-# ===== 报名表字段 =====
+# ===== Signup table fields =====
 SIGNUP_COL_NAME = os.getenv("SIGNUP_COL_NAME", "姓名")
 SIGNUP_COL_ACTIVITY_ID = os.getenv("SIGNUP_COL_ACTIVITY_ID", "关联活动")
 SIGNUP_COL_ROLE = os.getenv("SIGNUP_COL_ROLE", "角色")
@@ -69,7 +66,7 @@ SIGNUP_COL_LAST_REVIEW_REMINDER_AT = os.getenv("SIGNUP_COL_LAST_REVIEW_REMINDER_
 SIGNUP_COL_REVIEW_CONTENT = os.getenv("SIGNUP_COL_REVIEW_CONTENT", "评议内容")
 LEGACY_SIGNUP_COL_STUDENT_ID = os.getenv("SIGNUP_COL_STUDENT_ID", "学号")
 
-# ===== 评议评分表字段 =====
+# ===== Review rating table fields =====
 REVIEW_RATING_COL_SIGNUP_ID = os.getenv("REVIEW_RATING_COL_SIGNUP_ID", "评议报名ID")
 REVIEW_RATING_COL_ACTIVITY_ID = os.getenv("REVIEW_RATING_COL_ACTIVITY_ID", "活动ID")
 REVIEW_RATING_COL_REVIEWER_NAME = os.getenv("REVIEW_RATING_COL_REVIEWER_NAME", "评议者姓名")
@@ -78,19 +75,19 @@ REVIEW_RATING_COL_SCORE = os.getenv("REVIEW_RATING_COL_SCORE", "评分")
 REVIEW_RATING_COL_WEIGHT = os.getenv("REVIEW_RATING_COL_WEIGHT", "权重")
 REVIEW_RATING_COL_COMMENT = os.getenv("REVIEW_RATING_COL_COMMENT", "评分备注")
 
-# ===== 输出活动记录表字段 =====
+# ===== Contribution table fields =====
 OUTPUT_RECORD_COL_NAME = os.getenv("OUTPUT_RECORD_COL_NAME", "姓名")
 OUTPUT_RECORD_COL_TYPE = os.getenv("OUTPUT_RECORD_COL_TYPE", "输出类型")
 OUTPUT_RECORD_COL_DATE = os.getenv("OUTPUT_RECORD_COL_DATE", "输出日期")
 OUTPUT_RECORD_COL_NOTE = os.getenv("OUTPUT_RECORD_COL_NOTE", "备注")
 
-# ===== 用户档案字段 =====
+# ===== User profile fields =====
 USER_COL_NAME = os.getenv("USER_COL_NAME", "姓名")
 USER_COL_EMAIL = os.getenv("USER_COL_EMAIL", "邮箱")
 USER_COL_ROLE = os.getenv("USER_COL_ROLE", "角色")
 USER_COL_FIRST_SEEN_AT = os.getenv("USER_COL_FIRST_SEEN_AT", "首次使用时间")
 
-# ===== 兴趣组字段 =====
+# ===== interest groupfield =====
 GROUP_COL_NAME = os.getenv("GROUP_COL_NAME", "组名")
 GROUP_COL_LEADER_NAME = os.getenv("GROUP_COL_LEADER_NAME", "组长")
 GROUP_COL_TOPIC_GOAL = os.getenv("GROUP_COL_TOPIC_GOAL", "主题目标")
@@ -100,7 +97,7 @@ GROUP_COL_DESCRIPTION = os.getenv("GROUP_COL_DESCRIPTION", "简介")
 GROUP_COL_STATUS = os.getenv("GROUP_COL_STATUS", "状态")
 GROUP_COL_CREATED_AT = os.getenv("GROUP_COL_CREATED_AT", "创建时间")
 
-# ===== 兴趣组成员字段 =====
+# ===== interest group memberfield =====
 GROUP_MEMBER_COL_GROUP_ID = os.getenv("GROUP_MEMBER_COL_GROUP_ID", "兴趣组ID")
 GROUP_MEMBER_COL_GROUP_NAME = os.getenv("GROUP_MEMBER_COL_GROUP_NAME", "兴趣组名")
 GROUP_MEMBER_COL_MEMBER_NAME = os.getenv("GROUP_MEMBER_COL_MEMBER_NAME", "成员姓名")
@@ -108,7 +105,7 @@ GROUP_MEMBER_COL_MEMBER_EMAIL = os.getenv("GROUP_MEMBER_COL_MEMBER_EMAIL", "成�
 GROUP_MEMBER_COL_MEMBER_ROLE = os.getenv("GROUP_MEMBER_COL_MEMBER_ROLE", "成员身份")
 GROUP_MEMBER_COL_JOINED_AT = os.getenv("GROUP_MEMBER_COL_JOINED_AT", "加入时间")
 
-# ===== 评议邀请字段 =====
+# ===== Review invitation fields =====
 INVITE_COL_ACTIVITY_ID = os.getenv("INVITE_COL_ACTIVITY_ID", "活动ID")
 INVITE_COL_ACTIVITY_TOPIC = os.getenv("INVITE_COL_ACTIVITY_TOPIC", "活动主题")
 INVITE_COL_INVITER_NAME = os.getenv("INVITE_COL_INVITER_NAME", "邀请人")
@@ -120,11 +117,11 @@ INVITE_COL_CREATED_AT = os.getenv("INVITE_COL_CREATED_AT", "邀请时间")
 INVITE_COL_UPDATED_AT = os.getenv("INVITE_COL_UPDATED_AT", "状态更新时间")
 INVITE_COL_UPDATED_BY = os.getenv("INVITE_COL_UPDATED_BY", "状态更新人")
 
-# ===== CAC管理员字段 =====
+# ===== CAC administrator fields =====
 CAC_ADMIN_COL_NAME = os.getenv("CAC_ADMIN_COL_NAME", "姓名")
 CAC_ADMIN_COL_CREATED_AT = os.getenv("CAC_ADMIN_COL_CREATED_AT", "添加时间")
 
-# ===== CAC教室时间槽字段 =====
+# ===== CAC room slotfield =====
 CAC_SLOT_COL_CLASSROOM = os.getenv("CAC_SLOT_COL_CLASSROOM", "教室")
 CAC_SLOT_COL_DATE = os.getenv("CAC_SLOT_COL_DATE", "日期")
 CAC_SLOT_COL_TIME_SLOT = os.getenv("CAC_SLOT_COL_TIME_SLOT", "时间段")
@@ -133,7 +130,7 @@ CAC_SLOT_COL_ACTIVITY_ID = os.getenv("CAC_SLOT_COL_ACTIVITY_ID", "关联活动ID
 CAC_SLOT_COL_CREATED_BY = os.getenv("CAC_SLOT_COL_CREATED_BY", "创建者")
 CAC_SLOT_COL_CREATED_AT = os.getenv("CAC_SLOT_COL_CREATED_AT", "创建时间")
 
-# ===== 自动注册列配置 =====
+# ===== Automatic column registration =====
 AUTO_REGISTER_COLUMNS = {
     "分享会活动": [
         "活动日期", "活动时间", "分享者", "活动主题", "活动教室", "线上视频号",
@@ -159,39 +156,39 @@ AUTO_REGISTER_COLUMNS = {
     "CAC教室时间槽": ["教室", "日期", "时间段", "状态", "关联活动ID", "创建者", "创建时间"],
 }
 
-# ===== 报名限额配置 =====
+# ===== Signup limits =====
 REVIEWER_LIMIT = int(os.getenv("REVIEWER_LIMIT", "3"))
 LISTENER_UNLIMITED = os.getenv("LISTENER_UNLIMITED", "true").lower() == "true"
 
-# ===== 时间槽配置 =====
+# ===== Time-slot configuration =====
 TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00,18:30,19:00,19:30,20:00,20:30,21:00,21:30,22:00").split(",") if x.strip()]
 
-# ===== 时间槽配置 =====
-# 半小时一档，从09:00到22:00
+# ===== Time-slot configuration =====
+# Time slots run in 30-minute increments, from 09:00 to 22:00
 TIME_SLOTS = [x.strip() for x in os.getenv("TIME_SLOTS", "09:00,09:30,10:00,10:30,11:00,11:30,12:00,12:30,13:00,13:30,14:00,14:30,15:00,15:30,16:00,16:30,17:00,17:30,18:00,18:30,19:00,19:30,20:00,20:30,21:00,21:30,22:00").split(",") if x.strip()]
 
-# ===== CAC有约冲突检测配置 =====
+# ===== CAC Meetup conflict detection =====
 CAC_FIXED_WEEKDAY = int(os.getenv("CAC_FIXED_WEEKDAY", "4"))
 CAC_FIXED_TIME = os.getenv("CAC_FIXED_TIME", "18:00-19:00")
 
-# ===== 邮件提醒配置 =====
+# ===== Email reminder settings =====
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "true").lower() == "true"
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", SMTP_USER)
-SENDER_NAME = os.getenv("SENDER_NAME", "CAC分享会")
-# 兼容旧变量名
+SENDER_NAME = os.getenv("SENDER_NAME", "CAC Events")
+# Backward-compatible variable names
 EMAIL_FROM = os.getenv("EMAIL_FROM", SENDER_EMAIL)
 
-# ===== 个人主页配置 =====
+# ===== Profile page configuration =====
 PROFILE_EXPLORE_DEFAULT_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_DEFAULT_PAGE_SIZE", "10"))
 PROFILE_EXPLORE_MAX_PAGE_SIZE = int(os.getenv("PROFILE_EXPLORE_MAX_PAGE_SIZE", "100"))
 PROFILE_CACHE_TTL_SECONDS = int(os.getenv("PROFILE_CACHE_TTL_SECONDS", "120"))
 PROFILE_FEED_DEFAULT_LIMIT = int(os.getenv("PROFILE_FEED_DEFAULT_LIMIT", "30"))
 
-# ===== 边界预警配置 =====
+# ===== Participation-threshold alerts =====
 BOUNDARY_LOOKBACK_DAYS = int(os.getenv("BOUNDARY_LOOKBACK_DAYS", "14"))
 BOUNDARY_REPORT_EMAIL = os.getenv("BOUNDARY_REPORT_EMAIL", "nova@nju.edu.cn").strip()
 BOUNDARY_FIRST_REPORT_AT = os.getenv("BOUNDARY_FIRST_REPORT_AT", "2026-03-22 22:00:00").strip()
@@ -203,16 +200,16 @@ BOUNDARY_REPORT_STATE_FILE = os.getenv(
     os.path.join(tempfile.gettempdir(), "table_signup_boundary_report.state"),
 )
 
-# ===== CAC 配置 =====
+# ===== CAC configuration =====
 CAC_NAME = os.getenv("CAC_NAME", "cac").strip()
 CAC_EMAIL = os.getenv("CAC_EMAIL", "nova@nju.edu.cn").strip()
 
-# ===== 后台任务配置 =====
+# ===== Background task settings =====
 REVIEW_REMINDER_INTERVAL_HOURS = int(os.getenv("REVIEW_REMINDER_INTERVAL_HOURS", "24"))
 BACKGROUND_SCAN_INTERVAL_SECONDS = int(os.getenv("BACKGROUND_SCAN_INTERVAL_SECONDS", "3600"))
 ROSTER_FILE_PATH = os.getenv("ROSTER_FILE_PATH", os.path.join(os.path.dirname(__file__), "member_roster.local.txt"))
 
-# ===== 其他配置 =====
+# ===== Other settings =====
 TASK_LOCK_FILE = os.path.join(tempfile.gettempdir(), "table_signup_task.lock")
-ACTIVITY_CLOSE_GRACE_MINUTES = int(os.getenv("ACTIVITY_CLOSE_GRACE_MINUTES", "1440"))  # 24小时
+ACTIVITY_CLOSE_GRACE_MINUTES = int(os.getenv("ACTIVITY_CLOSE_GRACE_MINUTES", "1440"))  # 24 hours
 MEMBER_ROSTER_FILE = os.getenv("MEMBER_ROSTER_FILE", "member_roster.txt")

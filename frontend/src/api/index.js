@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-// 创建 axios 实例
+// Create the Axios instance
 const api = axios.create({
   baseURL: '/api',
   timeout: 30000,
@@ -10,10 +10,10 @@ const api = axios.create({
   }
 })
 
-// 请求拦截器
+// Request interceptor
 api.interceptors.request.use(
   config => {
-    // 可以在这里添加 token 等
+    // Add authentication tokens here if needed.
     return config
   },
   error => {
@@ -21,23 +21,23 @@ api.interceptors.request.use(
   }
 )
 
-// 响应拦截器
+// Response interceptor
 api.interceptors.response.use(
   response => {
     const res = response.data
     if (!res.ok) {
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      ElMessage.error(res.message || 'Request failed')
+      return Promise.reject(new Error(res.message || 'Request failed'))
     }
     return res
   },
   error => {
-    ElMessage.error(error.message || '网络错误')
+    ElMessage.error(error.message || 'Network error')
     return Promise.reject(error)
   }
 )
 
-// ===== 活动 API =====
+// ===== Activity API =====
 export const activityApi = {
   list: () => api.get('/activities'),
   get: (id) => api.get(`/activity/${id}`),
@@ -47,7 +47,7 @@ export const activityApi = {
   close: (id, data) => api.post(`/activity/${id}/close`, data)
 }
 
-// ===== 报名 API =====
+// ===== Signup API =====
 export const signupApi = {
   create: (data) => api.post('/signup', data),
   delete: (id) => api.delete(`/signup/${id}`),
@@ -55,20 +55,20 @@ export const signupApi = {
   submitReviewDoc: (id, data) => api.post(`/signup/${id}/review-doc`, data)
 }
 
-// ===== 用户档案 API =====
+// ===== Profile API =====
 export const profileApi = {
   upsert: (data) => api.post('/profile/upsert', data),
   get: (name) => api.get(`/profile/${name}`),
   summary: (name) => api.get(`/profile-summary/${name}`)
 }
 
-// ===== 统计 API =====
+// ===== Statistics API =====
 export const statsApi = {
   leaderboards: () => api.get('/leaderboards'),
   stats: () => api.get('/stats')
 }
 
-// ===== 兴趣组 API =====
+// ===== Interest group API =====
 export const groupApi = {
   list: () => api.get('/groups'),
   get: (id) => api.get(`/group/${id}`),
@@ -78,14 +78,14 @@ export const groupApi = {
   leave: (id, data) => api.post(`/group/${id}/leave`, data)
 }
 
-// ===== 邀请 API =====
+// ===== Invitation API =====
 export const inviteApi = {
   create: (data) => api.post('/invite-reviewer', data),
   myInvites: (name) => api.get(`/my-invites/${name}`),
   updateStatus: (id, data) => api.post(`/invite/${id}/status`, data)
 }
 
-// ===== CAC 管理 API =====
+// ===== CAC administration API =====
 export const cacApi = {
   listAdmins: () => api.get('/cac-admins'),
   addAdmin: (data) => api.post('/cac-admin', data),

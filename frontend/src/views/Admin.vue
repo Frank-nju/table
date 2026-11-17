@@ -3,16 +3,23 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { activityApi, statsApi, cacApi } from '../api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+const formatActivityType = (type) => type === 'cac有约' ? 'CAC-hosted session' : 'Regular activity'
+const formatActivityStatus = (status) => ({
+  '报名中': 'Open for registration',
+  '已截止': 'Registration closed',
+  '已结束': 'Completed'
+}[status] || status || 'Open for registration')
+
 const loading = ref(true)
 const activities = ref([])
 const stats = ref({})
 const cacAdmins = ref([])
 const roomSlots = ref([])
 
-// 当前选中的标签
+// Currently selected tab
 const activeTab = ref('activities')
 
-// 时间点选项（半小时一档）
+// Time options in 30-minute increments
 const timePointOptions = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
   '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
@@ -20,13 +27,13 @@ const timePointOptions = [
   '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00'
 ]
 
-// 活动类型选项
+// Activity type options
 const activityTypeOptions = [
-  { value: 'normal', label: '普通活动' },
-  { value: 'cac有约', label: 'CAC有约' }
+  { value: 'normal', label: 'Regular activity' },
+  { value: 'cac有约', label: 'CAC-hosted session' }
 ]
 
-// 新建活动表单
+// New activity form
 const createDialogVisible = ref(false)
 const createForm = ref({
   topic: '',
@@ -41,11 +48,11 @@ const createForm = ref({
   type: 'normal'
 })
 
-// 可用教室列表（根据日期时间动态查询）
+// Available rooms queried for the selected date and time
 const availableClassrooms = ref([])
 const loadingClassrooms = ref(false)
 
-// 计算合并后的时间段字符串
+// Combine adjacent slots into a single time range
 const mergedTimeSlot = computed(() => {
   if (createForm.value.startTime && createForm.value.endTime) {
     return `${createForm.value.startTime}-${createForm.value.endTime}`
@@ -53,14 +60,14 @@ const mergedTimeSlot = computed(() => {
   return ''
 })
 
-// 结束时间选项（必须大于开始时间）
+// End-time options must follow the start time
 const endTimeOptions = computed(() => {
   const startIdx = timePointOptions.indexOf(createForm.value.startTime)
   if (startIdx === -1) return timePointOptions
   return timePointOptions.slice(startIdx + 1)
 })
 
-// 监听日期和时间变化，查询可用教室
+// Look up available rooms when the date or time changes
 watch(
   [() => createForm.value.date, () => createForm.value.startTime, () => createForm.value.endTime],
   async ([date, startTime, endTime]) => {
@@ -82,7 +89,7 @@ watch(
   }
 )
 
-// 格式化日期为 API 格式
+// Format the date for API requests
 const formatDateForApi = (date) => {
   if (!date) return ''
   if (typeof date === 'string') return date
@@ -90,13 +97,13 @@ const formatDateForApi = (date) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-// CAC管理员表单
+// CAC administrator form
 const adminDialogVisible = ref(false)
 const adminForm = ref({
   name: ''
 })
 
-// 教室时间槽表单
+// Room availability form
 const slotDialogVisible = ref(false)
 const slotForm = ref({
   date: '',
@@ -137,32 +144,32 @@ const loadRoomSlots = async () => {
   } catch (e) {}
 }
 
-// ===== 活动管理 =====
+// ===== Activity management =====
 const handleCreate = async () => {
-  // 验证必填字段
+  // Validate required fields
   if (!createForm.value.topic.trim()) {
-    ElMessage.warning('请输入活动主题')
+    ElMessage.warning('Enter an activity title')
     return
   }
   if (!createForm.value.date) {
-    ElMessage.warning('请选择活动日期')
+    ElMessage.warning('Select an activity date')
     return
   }
   if (!createForm.value.startTime || !createForm.value.endTime) {
-    ElMessage.warning('请选择活动时间')
+    ElMessage.warning('Select an activity time')
     return
   }
   if (!createForm.value.classroom) {
-    ElMessage.warning('请选择教室')
+    ElMessage.warning('Select a room')
     return
   }
 
-  // 检查是否选择了不在可用列表中的教室（可能有冲突）
+  // Check whether the selected room is unavailable for this time
   const selectedClassroomAvailable = availableClassrooms.value.some(
     s => s.classroom === createForm.value.classroom && s.status === 'available'
   )
   if (availableClassrooms.value.length > 0 && !selectedClassroomAvailable) {
-    ElMessage.warning('所选教室在该时间段已被占用，请选择其他教室')
+    ElMessage.warning('This room is already reserved for the selected time. Choose another room.')
     return
   }
 
@@ -179,29 +186,29 @@ const handleCreate = async () => {
       type: createForm.value.type
     })
 
-    // 如果有警告，显示弹窗
+    // Show any scheduling warnings
     if (res.warnings && res.warnings.length > 0) {
       ElMessageBox.alert(
         res.warnings.join('\n'),
-        '时间冲突提醒',
-        { type: 'warning', confirmButtonText: '知道了' }
+        'Scheduling conflict',
+        { type: 'warning', confirmButtonText: 'Got it' }
       )
     } else {
-      ElMessage.success('活动创建成功')
+      ElMessage.success('Activity created')
     }
 
     createDialogVisible.value = false
     resetCreateForm()
     await loadActivities()
-    await loadRoomSlots() // 刷新时间槽状态
+    await loadRoomSlots() // Refresh room-slot availability
   } catch (e) {}
 }
 
 const handleDeleteActivity = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个活动吗？', '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm('Delete this activity?', 'Confirm deletion', { type: 'warning' })
     await activityApi.delete(id)
-    ElMessage.success('活动已删除')
+    ElMessage.success('Activity deleted')
     await loadActivities()
     await loadRoomSlots()
   } catch (e) {
@@ -225,15 +232,15 @@ const resetCreateForm = () => {
   availableClassrooms.value = []
 }
 
-// ===== CAC管理员管理 =====
+// ===== CAC administrator management =====
 const handleAddAdmin = async () => {
   if (!adminForm.value.name.trim()) {
-    ElMessage.warning('请输入姓名')
+    ElMessage.warning('Enter a name')
     return
   }
   try {
     await cacApi.addAdmin({ name: adminForm.value.name, requester_name: 'admin' })
-    ElMessage.success('管理员添加成功')
+    ElMessage.success('Administrator added')
     adminDialogVisible.value = false
     adminForm.value.name = ''
     await loadCacAdmins()
@@ -242,19 +249,19 @@ const handleAddAdmin = async () => {
 
 const handleRemoveAdmin = async (name) => {
   try {
-    await ElMessageBox.confirm(`确定要移除管理员 "${name}" 吗？`, '移除确认', { type: 'warning' })
+    await ElMessageBox.confirm(`Remove administrator "${name}"?`, 'Confirm removal', { type: 'warning' })
     await cacApi.removeAdmin(name)
-    ElMessage.success('管理员已移除')
+    ElMessage.success('Administrator removed')
     await loadCacAdmins()
   } catch (e) {
     if (e !== 'cancel') {}
   }
 }
 
-// ===== 教室时间槽管理 =====
+// ===== Room availability management =====
 const handleAddSlot = async () => {
   if (!slotForm.value.date || !slotForm.value.time_slot) {
-    ElMessage.warning('请填写完整信息')
+    ElMessage.warning('Complete all required fields')
     return
   }
   try {
@@ -264,7 +271,7 @@ const handleAddSlot = async () => {
       classroom: slotForm.value.classroom,
       requester_name: 'admin'
     })
-    ElMessage.success('时间槽添加成功')
+    ElMessage.success('Room slot added')
     slotDialogVisible.value = false
     slotForm.value = { date: '', time_slot: '', classroom: 'CAC-101' }
     await loadRoomSlots()
@@ -273,9 +280,9 @@ const handleAddSlot = async () => {
 
 const handleRemoveSlot = async (id) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个时间槽吗？', '删除确认', { type: 'warning' })
+    await ElMessageBox.confirm('Delete this room slot?', 'Confirm deletion', { type: 'warning' })
     await cacApi.removeRoomSlot(id)
-    ElMessage.success('时间槽已删除')
+    ElMessage.success('Room slot deleted')
     await loadRoomSlots()
   } catch (e) {
     if (e !== 'cancel') {}
@@ -287,7 +294,7 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString('zh-CN')
 }
 
-// 时间槽选项（半小时一档）
+// Room slots use 30-minute increments
 const timeSlotOptions = [
   '09:00-09:30', '09:30-10:00', '10:00-10:30', '10:30-11:00',
   '11:00-11:30', '11:30-12:00', '14:00-14:30', '14:30-15:00',
@@ -301,9 +308,9 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
 
 <template>
   <div class="page-container">
-    <h1 class="page-title">管理后台</h1>
+    <h1 class="page-title">Admin</h1>
 
-    <!-- 统计卡片 -->
+    <!-- Summary cards -->
     <el-row :gutter="16" style="margin-bottom: 24px">
       <el-col :span="6">
         <div class="stat-card">
@@ -312,7 +319,7 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
           </div>
           <div class="stat-info">
             <span class="value">{{ stats.total_activities || activities.length }}</span>
-            <span class="label">活动总数</span>
+            <span class="label">Total activities</span>
           </div>
         </div>
       </el-col>
@@ -323,7 +330,7 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
           </div>
           <div class="stat-info">
             <span class="value">{{ cacAdmins.length }}</span>
-            <span class="label">CAC管理员</span>
+            <span class="label">CAC administrators</span>
           </div>
         </div>
       </el-col>
@@ -334,55 +341,55 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
           </div>
           <div class="stat-info">
             <span class="value">{{ roomSlots.length }}</span>
-            <span class="label">可用时间槽</span>
+            <span class="label">Available room slots</span>
           </div>
         </div>
       </el-col>
     </el-row>
 
-    <!-- 标签页 -->
+    <!-- Tabs -->
     <el-tabs v-model="activeTab">
-      <!-- 活动管理 -->
-      <el-tab-pane label="活动管理" name="activities">
+      <!-- Activity management -->
+      <el-tab-pane label="Activities" name="activities">
         <div class="card">
           <div class="card-header">
-            <h2>活动列表</h2>
+            <h2>Activities</h2>
             <el-button type="primary" @click="createDialogVisible = true">
               <el-icon><Plus /></el-icon>
-              创建活动
+              Create activity
             </el-button>
           </div>
 
           <el-table :data="activities" style="width: 100%">
-            <el-table-column prop="topic" label="活动主题" min-width="200" />
-            <el-table-column prop="activity_type" label="类型" width="100">
+            <el-table-column prop="topic" label="Title" min-width="200" />
+            <el-table-column prop="activity_type" label="Type" width="100">
               <template #default="{ row }">
                 <el-tag :type="row.activity_type === 'cac有约' ? 'warning' : 'info'">
-                  {{ row.activity_type || '普通活动' }}
+                  {{ formatActivityType(row.activity_type) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="date" label="日期" width="120">
+            <el-table-column prop="date" label="Date" width="120">
               <template #default="{ row }">{{ formatDate(row.date) }}</template>
             </el-table-column>
-            <el-table-column prop="time" label="时间" width="120" />
-            <el-table-column prop="classroom" label="教室" width="120" />
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="time" label="Time" width="120" />
+            <el-table-column prop="classroom" label="Room" width="120" />
+            <el-table-column prop="status" label="Status" width="100">
               <template #default="{ row }">
                 <el-tag :type="row.status === '报名中' ? 'success' : 'info'">
-                  {{ row.status || '报名中' }}
+                  {{ formatActivityStatus(row.status) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="报名" width="120">
+            <el-table-column label="Signups" width="120">
               <template #default="{ row }">
-                {{ row.reviewers || 0 }}/{{ row.reviewer_limit || 3 }} 评 / {{ row.listeners || 0 }} 听
+                {{ row.reviewers || 0 }}/{{ row.reviewer_limit || 3 }} reviewers / {{ row.listeners || 0 }} observers
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="80" fixed="right">
+            <el-table-column label="Actions" width="80" fixed="right">
               <template #default="{ row }">
                 <el-button type="danger" size="small" link @click="handleDeleteActivity(row.id)">
-                  删除
+                  Delete
                 </el-button>
               </template>
             </el-table-column>
@@ -390,111 +397,111 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
         </div>
       </el-tab-pane>
 
-      <!-- CAC管理员管理 -->
-      <el-tab-pane label="CAC管理员" name="admins">
+      <!-- CAC administrator management -->
+      <el-tab-pane label="CAC administrators" name="admins">
         <div class="card">
           <div class="card-header">
-            <h2>管理员列表</h2>
+            <h2>Administrators</h2>
             <el-button type="primary" @click="adminDialogVisible = true">
               <el-icon><Plus /></el-icon>
-              添加管理员
+              Add administrator
             </el-button>
           </div>
 
           <el-table :data="cacAdmins" style="width: 100%">
-            <el-table-column prop="name" label="姓名" />
-            <el-table-column label="操作" width="80">
+            <el-table-column prop="name" label="Name" />
+            <el-table-column label="Actions" width="80">
               <template #default="{ row }">
                 <el-button type="danger" size="small" link @click="handleRemoveAdmin(row.name)">
-                  移除
+                  Remove
                 </el-button>
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-if="cacAdmins.length === 0" description="暂无管理员" />
+          <el-empty v-if="cacAdmins.length === 0" description="No administrators yet" />
         </div>
       </el-tab-pane>
 
-      <!-- 教室时间槽管理 -->
-      <el-tab-pane label="教室时间槽" name="slots">
+      <!-- Room availability management -->
+      <el-tab-pane label="Room slots" name="slots">
         <div class="card">
           <div class="card-header">
-            <h2>可用时间槽</h2>
+            <h2>Available room slots</h2>
             <el-button type="primary" @click="slotDialogVisible = true">
               <el-icon><Plus /></el-icon>
-              添加时间槽
+              Add room slot
             </el-button>
           </div>
 
           <el-table :data="roomSlots" style="width: 100%">
-            <el-table-column prop="classroom" label="教室" width="120" />
-            <el-table-column prop="date" label="日期" width="120">
+            <el-table-column prop="classroom" label="Room" width="120" />
+            <el-table-column prop="date" label="Date" width="120">
               <template #default="{ row }">{{ formatDate(row.date) }}</template>
             </el-table-column>
-            <el-table-column prop="time_slot" label="时间段" width="120" />
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="time_slot" label="Time slot" width="120" />
+            <el-table-column prop="status" label="Status" width="100">
               <template #default="{ row }">
                 <el-tag :type="row.status === 'available' ? 'success' : 'warning'">
-                  {{ row.status === 'available' ? '可用' : '已预约' }}
+                  {{ row.status === 'available' ? 'Available' : 'Reserved' }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="80">
+            <el-table-column label="Actions" width="80">
               <template #default="{ row }">
                 <el-button type="danger" size="small" link @click="handleRemoveSlot(row.id)">
-                  删除
+                  Delete
                 </el-button>
               </template>
             </el-table-column>
           </el-table>
-          <el-empty v-if="roomSlots.length === 0" description="暂无时间槽" />
+          <el-empty v-if="roomSlots.length === 0" description="No room slots yet" />
         </div>
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 创建活动对话框 -->
-    <el-dialog v-model="createDialogVisible" title="创建活动" width="600px" @closed="resetCreateForm">
+    <!-- Create activity dialog -->
+    <el-dialog v-model="createDialogVisible" title="Create activity" width="600px" @closed="resetCreateForm">
       <el-form :model="createForm" label-width="100px">
-        <el-form-item label="活动主题" required>
-          <el-input v-model="createForm.topic" placeholder="请输入活动主题" />
+        <el-form-item label="Title" required>
+          <el-input v-model="createForm.topic" placeholder="Enter an activity title" />
         </el-form-item>
 
-        <el-form-item label="活动类型" required>
-          <el-select v-model="createForm.type" placeholder="选择活动类型" style="width: 100%">
+        <el-form-item label="Activity type" required>
+          <el-select v-model="createForm.type" placeholder="Select an activity type" style="width: 100%">
             <el-option v-for="t in activityTypeOptions" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="活动日期" required>
+        <el-form-item label="Date" required>
           <el-date-picker
             v-model="createForm.date"
             type="date"
-            placeholder="选择日期"
+            placeholder="Select a date"
             style="width: 100%"
             :disabled-date="(d) => d < new Date(Date.now() - 86400000)"
           />
         </el-form-item>
 
-        <el-form-item label="开始时间" required>
-          <el-select v-model="createForm.startTime" placeholder="选择开始时间" style="width: 100%">
+        <el-form-item label="Start time" required>
+          <el-select v-model="createForm.startTime" placeholder="Select a start time" style="width: 100%">
             <el-option v-for="t in timePointOptions" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="结束时间" required>
-          <el-select v-model="createForm.endTime" placeholder="选择结束时间" style="width: 100%">
+        <el-form-item label="End time" required>
+          <el-select v-model="createForm.endTime" placeholder="Select an end time" style="width: 100%">
             <el-option v-for="t in endTimeOptions" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="活动教室" required>
+        <el-form-item label="Room" required>
           <el-select
             v-model="createForm.classroom"
-            placeholder="选择教室"
+            placeholder="Select a room"
             style="width: 100%"
             :loading="loadingClassrooms"
           >
-            <el-option-group v-if="availableClassrooms.length > 0" label="可用教室">
+            <el-option-group v-if="availableClassrooms.length > 0" label="Available rooms">
               <el-option
                 v-for="s in availableClassrooms.filter(s => s.status === 'available')"
                 :key="s.classroom"
@@ -502,80 +509,80 @@ const classroomOptions = ['CAC-101', 'CAC-102', 'CAC-201', 'CAC-202']
                 :value="s.classroom"
               />
             </el-option-group>
-            <el-option-group v-if="availableClassrooms.length > 0" label="已占用教室">
+            <el-option-group v-if="availableClassrooms.length > 0" label="Reserved rooms">
               <el-option
                 v-for="s in availableClassrooms.filter(s => s.status !== 'available')"
                 :key="s.classroom"
-                :label="`${s.classroom} (已占用)`"
+                :label="`${s.classroom} (reserved)`"
                 :value="s.classroom"
                 disabled
               />
             </el-option-group>
-            <el-option-group v-if="availableClassrooms.length === 0" label="手动选择">
+            <el-option-group v-if="availableClassrooms.length === 0" label="Choose manually">
               <el-option v-for="c in classroomOptions" :key="c" :label="c" :value="c" />
             </el-option-group>
           </el-select>
           <div v-if="availableClassrooms.length === 0 && createForm.date && mergedTimeSlot" class="classroom-hint">
-            <el-text type="warning">该时间段暂无预设教室，可手动选择或先添加时间槽</el-text>
+            <el-text type="warning">No room slots are configured for this time. Choose a room manually or add a room slot first.</el-text>
           </div>
         </el-form-item>
 
-        <el-form-item label="分享者">
-          <el-input v-model="createForm.speakers" placeholder="多人用逗号分隔" />
+        <el-form-item label="Speakers">
+          <el-input v-model="createForm.speakers" placeholder="Separate multiple names with commas" />
         </el-form-item>
 
-        <el-form-item label="组织者姓名">
-          <el-input v-model="createForm.creator_name" placeholder="请输入组织者姓名" />
+        <el-form-item label="Organizer name">
+          <el-input v-model="createForm.creator_name" placeholder="Enter the organizer's name" />
         </el-form-item>
 
-        <el-form-item label="组织者邮箱">
-          <el-input v-model="createForm.creator_email" placeholder="请输入邮箱" />
+        <el-form-item label="Organizer email">
+          <el-input v-model="createForm.creator_email" placeholder="Enter an email address" />
         </el-form-item>
 
-        <el-form-item label="预期人数">
+        <el-form-item label="Expected attendance">
           <el-input-number v-model="createForm.expected_attendance" :min="1" :max="100" />
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="createDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleCreate">创建</el-button>
+        <el-button @click="createDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="handleCreate">Create</el-button>
       </template>
     </el-dialog>
 
-    <!-- 添加管理员对话框 -->
-    <el-dialog v-model="adminDialogVisible" title="添加CAC管理员" width="400px">
+    <!-- Add administrator dialog -->
+    <el-dialog v-model="adminDialogVisible" title="Add CAC administrator" width="400px">
       <el-form :model="adminForm" label-width="80px">
-        <el-form-item label="姓名" required>
-          <el-input v-model="adminForm.name" placeholder="请输入姓名" />
+        <el-form-item label="Name" required>
+          <el-input v-model="adminForm.name" placeholder="Enter a name" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="adminDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAddAdmin">添加</el-button>
+        <el-button @click="adminDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="handleAddAdmin">Add</el-button>
       </template>
     </el-dialog>
 
-    <!-- 添加时间槽对话框 -->
-    <el-dialog v-model="slotDialogVisible" title="添加教室时间槽" width="400px">
+    <!-- Add room slot dialog -->
+    <el-dialog v-model="slotDialogVisible" title="Add room slot" width="400px">
       <el-form :model="slotForm" label-width="80px">
-        <el-form-item label="教室" required>
-          <el-select v-model="slotForm.classroom" placeholder="选择教室" style="width: 100%">
+        <el-form-item label="Room" required>
+          <el-select v-model="slotForm.classroom" placeholder="Select a room" style="width: 100%">
             <el-option v-for="c in classroomOptions" :key="c" :label="c" :value="c" />
           </el-select>
         </el-form-item>
-        <el-form-item label="日期" required>
-          <el-date-picker v-model="slotForm.date" type="date" placeholder="选择日期" style="width: 100%" />
+        <el-form-item label="Date" required>
+          <el-date-picker v-model="slotForm.date" type="date" placeholder="Select a date" style="width: 100%" />
         </el-form-item>
-        <el-form-item label="时间段" required>
-          <el-select v-model="slotForm.time_slot" placeholder="选择时间段" style="width: 100%">
+        <el-form-item label="Time slot" required>
+          <el-select v-model="slotForm.time_slot" placeholder="Select a time slot" style="width: 100%">
             <el-option v-for="t in timeSlotOptions" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="slotDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAddSlot">添加</el-button>
+        <el-button @click="slotDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="handleAddSlot">Add</el-button>
       </template>
     </el-dialog>
   </div>
