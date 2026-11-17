@@ -73,7 +73,7 @@ def test_admin_dashboard_reports(history, as_user, make_user, create_activity):
     assert m["activity_count"] == 1 and m["signup_count"] == 2 and m["closed_count"] == 1
     assert m["on_time_close_rate"] == 1.0
     reviewers = {e["user"]["name"]: e for e in dash["reviewers"]}
-    assert reviewers["Bob"]["status"] == "needs_feedback" or reviewers["Bob"]["rating_count"] == 1
+    assert reviewers["Bob"]["status"] == "ok" and reviewers["Bob"]["rating_count"] == 1
     assert admin.get("/api/admin/dashboard", params={"month": "2026-13"}).status_code == 400
     member = as_user("Member")
     assert member.get("/api/admin/dashboard").status_code == 403
@@ -285,3 +285,21 @@ def test_leaderboard_window(history, anon):
     boards = anon.get("/api/stats/leaderboards", params={"days": 30}).json()
     assert boards["since"] == (date(2026, 11, 17) - timedelta(days=30)).isoformat()
     assert boards["sharing"][0]["count"] == 1
+
+
+def test_reviewer_watch_only_counts_closed_sessions(as_user, create_activity):
+    alice, bob, carol = as_user("Alice"), as_user("Bob"), as_user("Carol")
+    done = create_activity(alice, title="Done")
+    upcoming = create_activity(alice, title="Later", date="2026-11-20")
+    bob.post(f"/api/activities/{done['id']}/signups", json={"role": "reviewer", "review_topic": "x"})
+    carol.post(f"/api/activities/{done['id']}/signups", json={"role": "reviewer", "review_topic": "y"})
+    carol.post(f"/api/activities/{upcoming['id']}/signups", json={"role": "reviewer", "review_topic": "z"})
+    admin = as_user("Admin", admin=True)
+    assert admin.get("/api/admin/dashboard").json()["reviewers"] == []  # nothing has happened yet
+    set_now(datetime(2026, 11, 17, 16, 0, tzinfo=TZ))
+    alice.post(f"/api/activities/{done['id']}/close")
+    s = next(x for x in bob.get(f"/api/activities/{done['id']}").json()["signups"] if x["user"]["name"] == "Bob")
+    bob.put(f"/api/signups/{s['id']}/review", json={"review_doc_url": "https://doc"})
+    watch = {e["user"]["name"]: e for e in admin.get("/api/admin/dashboard").json()["reviewers"]}
+    assert watch["Carol"]["status"] == "missing_docs" and watch["Carol"]["review_count"] == 1
+    assert watch["Bob"]["status"] == "needs_feedback"

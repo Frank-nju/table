@@ -126,6 +126,7 @@ def create_app() -> FastAPI:
                 settings.meetup_window_end.strftime("%H:%M"),
             ),
             close_grace_minutes=settings.close_grace_minutes,
+            observer_rating_weight=settings.observer_rating_weight,
             participation_lookback_days=settings.participation_lookback_days,
             allow_registration=settings.allow_registration,
             allowed_email_domains=settings.allowed_email_domains,

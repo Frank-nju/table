@@ -585,6 +585,7 @@ class PublicConfig(BaseModel):
     meetup_weekday: int
     meetup_window: tuple[str, str]
     close_grace_minutes: int
+    observer_rating_weight: int
     participation_lookback_days: int
     allow_registration: bool
     allowed_email_domains: list[str]

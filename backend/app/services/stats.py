@@ -286,16 +286,20 @@ def group_health(db: Session, lookback_days: int = 30) -> list[GroupHealth]:
 
 
 def reviewer_watch(db: Session) -> list[ReviewerWatchEntry]:
+    """Reviewers of closed sessions: who still owes a write-up, who is rated low, who has no feedback."""
     agg = aggregates(db)
     missing: Counter[int] = Counter()
+    submitted: Counter[int] = Counter()
     reviews: Counter[int] = Counter()
-    for user_id, doc_url, closed_at, kind in db.execute(
-        select(Signup.user_id, Signup.review_doc_url, Activity.closed_at, Activity.kind)
+    for user_id, doc_url, kind in db.execute(
+        select(Signup.user_id, Signup.review_doc_url, Activity.kind)
         .join(Activity)
-        .where(Signup.role == SignupRole.REVIEWER)
+        .where(Signup.role == SignupRole.REVIEWER, Activity.closed_at.is_not(None))
     ):
         reviews[user_id] += 1
-        if closed_at is not None and not doc_url and kind == ActivityKind.REGULAR:
+        if doc_url:
+            submitted[user_id] += 1
+        elif kind == ActivityKind.REGULAR:
             missing[user_id] += 1
     users = {u.id: u for u in db.scalars(select(User).where(User.id.in_(list(reviews.keys())), User.is_active))}
     entries = []
@@ -306,7 +310,7 @@ def reviewer_watch(db: Session) -> list[ReviewerWatchEntry]:
             status = "missing_docs"
         elif score is not None and ratings >= 2 and score < 7:
             status = "low_score"
-        elif ratings == 0:
+        elif submitted[uid] and ratings == 0:
             status = "needs_feedback"
         else:
             status = "ok"
