@@ -1,0 +1,58 @@
+# Production-style stack: MySQL, the web app and the background worker.
+#   cp backend/.env.example .env   # then edit SECRET_KEY, passwords, PUBLIC_BASE_URL, SMTP_*
+#   docker compose up -d --build
+#   docker compose exec web python -m app.cli create-admin --email you@example.edu
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cac
+      MYSQL_USER: cac
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      retries: 10
+
+  migrate:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: mysql+pymysql://cac:${MYSQL_PASSWORD}@db:3306/cac?charset=utf8mb4
+    command: ["python", "-m", "app.cli", "migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: mysql+pymysql://cac:${MYSQL_PASSWORD}@db:3306/cac?charset=utf8mb4
+      ENVIRONMENT: production
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: mysql+pymysql://cac:${MYSQL_PASSWORD}@db:3306/cac?charset=utf8mb4
+      ENVIRONMENT: production
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import os
 import sys
 from pathlib import Path
 
@@ -23,12 +24,23 @@ from app.models import User, UserRole
 from app.security import hash_password
 
 
+def _alembic_ini() -> Path:
+    """Find alembic.ini whether the app runs from a checkout or from an installed package."""
+    candidates = [Path(os.environ["ALEMBIC_CONFIG"])] if os.environ.get("ALEMBIC_CONFIG") else []
+    candidates += [Path(__file__).resolve().parent.parent / "alembic.ini", Path.cwd() / "alembic.ini"]
+    for path in candidates:
+        if path.is_file():
+            return path
+    sys.exit("alembic.ini not found; run from the backend directory or set ALEMBIC_CONFIG.")
+
+
 def migrate(_: argparse.Namespace) -> None:
     from alembic import command
     from alembic.config import Config
 
-    cfg = Config(str(Path(__file__).resolve().parent.parent / "alembic.ini"))
-    cfg.set_main_option("script_location", str(Path(__file__).resolve().parent.parent / "migrations"))
+    ini = _alembic_ini()
+    cfg = Config(str(ini))
+    cfg.set_main_option("script_location", str(ini.parent / "migrations"))
     command.upgrade(cfg, "head")
     print("Database is up to date.")
 

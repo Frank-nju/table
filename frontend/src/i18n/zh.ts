@@ -236,6 +236,7 @@ const zh: typeof en = {
     speakersHint: '如果你本人主讲，可以留空。',
     group: '兴趣组',
     noGroup: '不归属兴趣组',
+    chooseGroup: '请选择兴趣组…',
     groupHint: '归属兴趣组的活动会计入该组的活跃度。',
     room: '教室',
     noRoom: '不需要教室',

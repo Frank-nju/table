@@ -235,6 +235,7 @@ export default {
     speakersHint: 'Leave empty if you are the speaker.',
     group: 'Interest group',
     noGroup: 'No group',
+    chooseGroup: 'Choose a group…',
     groupHint: 'Sessions filed under a group count towards its activity.',
     room: 'Room',
     noRoom: 'No room needed',

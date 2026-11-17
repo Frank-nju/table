@@ -15,7 +15,7 @@ import pytest
 
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-long-enough-for-hs256")
-os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
+os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL") or "sqlite:///:memory:"
 os.environ.setdefault("PUBLIC_BASE_URL", "https://cac.example.edu")
 os.environ.setdefault("FRONTEND_DIST", "/nonexistent")
 os.environ.setdefault("RUN_SCHEDULER", "false")

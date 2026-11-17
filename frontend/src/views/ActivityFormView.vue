@@ -79,7 +79,10 @@ const meetupHint = computed(() =>
     end: cfg.value.meetup_window[1],
   }),
 )
-const groupOptions = computed(() => (session.isAdmin ? groups.value : groups.value.filter((g) => g.is_member)))
+const memberGroups = computed(() => groups.value.filter((g) => g.is_member))
+const groupOptions = computed(() => (session.isAdmin ? groups.value : memberGroups.value))
+// Mirrors the server rule: members of any group file regular sessions under one of their groups.
+const groupRequired = computed(() => form.kind === 'regular' && memberGroups.value.length > 0 && !editing.value)
 
 watch(
   () => form.kind,
@@ -166,6 +169,13 @@ function payload(): ActivityInput {
   return { ...form, speaker_ids: speakers.value.map((s) => s.id), title: form.title.trim() || 'Untitled' }
 }
 
+// Group problems are shown on the group field; everything else in the schedule box.
+const scheduleErrors = computed(() => check.value?.errors.filter((e) => !e.code.startsWith('group_')) ?? [])
+const groupError = computed(() => {
+  const issue = check.value?.errors.find((e) => e.code.startsWith('group_'))
+  return fieldErrors.value.group_id ?? (issue ? errors.message(new ApiError(400, issue.code, issue.message)) : undefined)
+})
+
 function warningText(w: Issue): string {
   const key = `form.warn.${w.code}`
   return te(key) ? t(key, { title: w.activity_title ?? '' }) : w.message
@@ -186,6 +196,7 @@ function validate(): boolean {
   if (!form.title.trim()) e.title = t('errors.validation_error')
   if (!form.date) e.date = t('errors.validation_error')
   if (!form.start_time || !form.end_time) e.time = t('errors.validation_error')
+  if (groupRequired.value && !form.group_id) e.group_id = t('errors.group_required')
   if (form.video_url && !/^https?:\/\//i.test(form.video_url)) e.video_url = 'https://…'
   fieldErrors.value = e
   return !Object.keys(e).length
@@ -308,9 +319,10 @@ const maxDate = computed(() => toIsoDate(new Date(Date.now() + 365 * 86_400_000)
         <UiField v-slot="{ id }" :label="t('form.speakers')" :hint="t('form.speakersHint')">
           <UserPicker v-model="speakers" :input-id="id" />
         </UiField>
-        <UiField v-if="form.kind === 'regular' && groupOptions.length" v-slot="{ id }" :label="t('form.group')" :hint="t('form.groupHint')" :error="fieldErrors.group_id">
+        <UiField v-if="form.kind === 'regular' && groupOptions.length" v-slot="{ id }" :label="t('form.group')" :hint="t('form.groupHint')" :error="groupError">
           <select :id="id" v-model="form.group_id" class="select">
-            <option :value="null">{{ t('form.noGroup') }}</option>
+            <option v-if="groupRequired" :value="null" disabled>{{ t('form.chooseGroup') }}</option>
+            <option v-else :value="null">{{ t('form.noGroup') }}</option>
             <option v-for="g in groupOptions" :key="g.id" :value="g.id">{{ g.name }}</option>
           </select>
         </UiField>
@@ -341,9 +353,9 @@ const maxDate = computed(() => toIsoDate(new Date(Date.now() + 365 * 86_400_000)
         <div class="check" aria-live="polite">
           <p v-if="checking" class="status muted"><Loader2 :size="16" class="spin" />{{ t('form.checking') }}</p>
           <template v-else-if="check">
-            <p v-for="e in check.errors" :key="e.code + e.activity_id" class="status error"><XCircle :size="16" />{{ errors.message(new ApiError(400, e.code, e.message)) }}<RouterLink v-if="e.activity_id" :to="`/activities/${e.activity_id}`" target="_blank">↗</RouterLink></p>
+            <p v-for="e in scheduleErrors" :key="e.code + e.activity_id" class="status error"><XCircle :size="16" />{{ errors.message(new ApiError(400, e.code, e.message)) }}<RouterLink v-if="e.activity_id" :to="`/activities/${e.activity_id}`" target="_blank">↗</RouterLink></p>
             <p v-for="w in check.warnings" :key="w.code + w.activity_id" class="status warn"><AlertTriangle :size="16" />{{ warningText(w) }}</p>
-            <p v-if="!check.errors.length && !check.warnings.length" class="status ok"><CheckCircle2 :size="16" />{{ t('form.allClear') }}</p>
+            <p v-if="!scheduleErrors.length && !check.warnings.length" class="status ok"><CheckCircle2 :size="16" />{{ t('form.allClear') }}</p>
           </template>
         </div>
       </section>

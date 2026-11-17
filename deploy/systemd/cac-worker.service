@@ -1,0 +1,21 @@
+[Unit]
+Description=CAC Share Sessions (email & reminders worker)
+After=network.target cac-web.service
+
+[Service]
+Type=simple
+User=cac
+Group=cac
+WorkingDirectory=/opt/cac/backend
+EnvironmentFile=/etc/cac/cac.env
+ExecStart=/opt/cac/backend/.venv/bin/python -m app.worker
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/cac/backend/data
+
+[Install]
+WantedBy=multi-user.target
