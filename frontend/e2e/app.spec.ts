@@ -5,7 +5,7 @@ const PASSWORD = 'password123'
 async function signIn(page: Page, email: string) {
   await page.goto('/login')
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(PASSWORD)
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page).toHaveURL('/')
   // Several demo members prefer Chinese; these tests assert on English copy.
@@ -26,7 +26,7 @@ test('guests can browse sessions and switch language', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Learn by sharing' })).toBeVisible()
   await expect(page.getByText('Ownership in Rust, Visually')).toBeVisible()
-  await page.getByRole('tab', { name: 'Past' }).click()
+  await page.getByRole('radio', { name: 'Past' }).check()
   await expect(page.getByText('Raft: Understandable Consensus')).toBeVisible()
   await page.getByTitle('Language').click()
   await expect(page.getByRole('heading', { name: '在分享中学习' })).toBeVisible()
@@ -36,7 +36,7 @@ test('a new member registers and schedules a session, confirming a clash', async
   await page.goto('/register')
   await page.getByLabel('Your name').fill('Test Organiser')
   await page.getByLabel('Email').fill('organiser@example.edu')
-  await page.getByLabel('Password').fill('a long enough password')
+  await page.getByLabel('Password', { exact: true }).fill('a long enough password')
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByRole('heading', { name: 'Hi Test Organiser' })).toBeVisible()
 
@@ -145,12 +145,12 @@ test('admins manage rooms and see the dashboard', async ({ page }) => {
   await signIn(page, 'admin@example.edu')
   await page.goto('/admin')
   await expect(page.getByRole('heading', { name: 'Participation watch' })).toBeVisible()
-  await page.getByRole('tab', { name: 'Rooms' }).click()
+  await page.getByRole('radio', { name: 'Rooms' }).check()
   await page.getByRole('button', { name: 'Add room' }).click()
   await page.getByRole('dialog').getByLabel('Name').fill('Library Seminar Room')
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click()
-  await expect(page.getByText('Library Seminar Room')).toBeVisible()
-  await page.getByRole('tab', { name: 'Export' }).click()
+  await expect(page.locator('#main').getByText('Library Seminar Room')).toBeVisible()
+  await page.getByRole('radio', { name: 'Export' }).check()
   await expect(page.getByRole('link', { name: 'Sessions (CSV)' })).toHaveAttribute('href', /export\/activities\.csv/)
 })
 
@@ -160,6 +160,63 @@ test('members cannot reach the admin area', async ({ page }) => {
   await expect(page).toHaveURL('/')
   const res = await page.request.get('/api/admin/dashboard')
   expect(res.status()).toBe(403)
+})
+
+test('native dialog, light-dismiss account panel and focus on navigation', async ({ page }) => {
+  await signIn(page, 'he.jing@example.edu')
+  // The account panel is a popover: it opens from its button and Escape dismisses it.
+  await page.getByRole('button', { name: /^Account:/ }).click()
+  const panel = page.getByRole('navigation', { name: /^Account:/ })
+  await expect(panel).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(panel).toBeHidden()
+
+  // Client-side navigation lands focus on the new page's heading.
+  await page.getByRole('link', { name: 'Groups' }).first().click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Interest groups' })).toBeFocused()
+
+  // Confirmations are native modal dialogs: Escape closes them and nothing happens.
+  await openActivity(page, 'Prototyping in Figma in 60 Minutes')
+  await page.getByLabel('What will you focus on?').fill('Variants')
+  await page.getByRole('button', { name: 'Sign up', exact: true }).click()
+  await page.getByRole('button', { name: 'Cancel my signup' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Cancel your signup?' })
+  await expect(dialog).toBeVisible()
+  expect(await dialog.evaluate((el) => el.tagName === 'DIALOG' && el.matches(':modal'))).toBe(true)
+  await expect(dialog.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused() // the safe action
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(page.getByText('You’re signed up as Reviewer')).toBeVisible()
+})
+
+test('theme override lives in Settings and survives a reload without a flash', async ({ page }) => {
+  await signIn(page, 'maya.patel@example.edu')
+  await page.goto('/settings')
+  await page.getByRole('radio', { name: 'Dark' }).check()
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'dark')
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('dark')
+  await page.reload()
+  // Applied by the inline script in <head>, before the app boots.
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'dark')
+  await page.getByRole('radio', { name: /^System/ }).check()
+  await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute('content', 'light dark')
+})
+
+test('Enter that confirms an IME candidate does not pick a person', async ({ page }) => {
+  await signIn(page, 'xu.ran@example.edu')
+  await page.goto('/groups/new')
+  const input = page.getByLabel('Founding members')
+  await input.fill('Guo')
+  await expect(page.getByRole('option', { name: 'Guo Ming' })).toBeVisible()
+  // Simulate the Enter that confirms a pinyin candidate. (Chrome ignores keyCode in the constructor, so the
+  // Safari keyCode-229 variant is covered by the unit test instead.)
+  await input.evaluate((el) =>
+    el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true })),
+  )
+  await page.waitForTimeout(300)
+  await expect(page.locator('.chip')).toHaveCount(0)
+  await input.press('Enter') // a real Enter still selects
+  await expect(page.locator('.chip', { hasText: 'Guo Ming' })).toBeVisible()
 })
 
 test.describe('mobile', () => {

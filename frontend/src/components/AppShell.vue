@@ -1,27 +1,11 @@
 <script setup lang="ts">
-import {
-  CalendarDays,
-  ChevronDown,
-  Languages,
-  LayoutDashboard,
-  LogOut,
-  Monitor,
-  Moon,
-  Plus,
-  Settings,
-  Shield,
-  Star,
-  Sun,
-  Trophy,
-  User,
-  Users,
-} from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { CalendarDays, ChevronDown, Languages, LayoutDashboard, LogOut, Plus, Settings, Shield, Star, Trophy, User, Users } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { setLocale, type AppLocale } from '@/i18n'
 import { api } from '@/api/client'
-import { useSession, type Theme } from '@/stores/session'
+import { useSession } from '@/stores/session'
 import { useUi } from '@/stores/ui'
 import UiAvatar from './ui/UiAvatar.vue'
 import UiButton from './ui/UiButton.vue'
@@ -31,8 +15,11 @@ const ui = useUi()
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
-const menuOpen = ref(false)
-const menuRoot = ref<HTMLElement | null>(null)
+const menu = ref<HTMLElement | null>(null)
+
+function closeMenu() {
+  if (menu.value?.matches(':popover-open, .\\:popover-open')) menu.value.hidePopover()
+}
 
 const nav = computed(() => [
   { to: '/', label: t('nav.explore'), icon: CalendarDays, match: (p: string) => p === '/' || p.startsWith('/activities') },
@@ -42,12 +29,6 @@ const nav = computed(() => [
     ? [{ to: '/me', label: t('nav.me'), icon: LayoutDashboard, match: (p: string) => p.startsWith('/me') || p.startsWith('/reviews') }]
     : []),
 ])
-
-const themes: { value: Theme; icon: typeof Sun; label: string }[] = [
-  { value: 'system', icon: Monitor, label: 'settings.themeSystem' },
-  { value: 'light', icon: Sun, label: 'settings.themeLight' },
-  { value: 'dark', icon: Moon, label: 'settings.themeDark' },
-]
 
 async function switchLocale() {
   const next: AppLocale = locale.value === 'zh' ? 'en' : 'zh'
@@ -62,27 +43,14 @@ async function switchLocale() {
 }
 
 async function signOut() {
-  menuOpen.value = false
+  closeMenu()
   await session.signOut()
   ui.toast(t('auth.signedOut'), 'info')
   router.push('/')
 }
 
-function onDocClick(e: MouseEvent) {
-  if (menuRoot.value && !menuRoot.value.contains(e.target as Node)) menuOpen.value = false
-}
-function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') menuOpen.value = false
-}
-onMounted(() => {
-  document.addEventListener('click', onDocClick)
-  document.addEventListener('keydown', onKey)
-})
-onBeforeUnmount(() => {
-  document.removeEventListener('click', onDocClick)
-  document.removeEventListener('keydown', onKey)
-})
-watch(() => route.fullPath, () => (menuOpen.value = false))
+// The popover light-dismisses itself; it only needs closing when a link inside it navigates.
+watch(() => route.fullPath, closeMenu)
 </script>
 
 <template>
@@ -108,44 +76,30 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
         <UiButton v-if="session.isSignedIn" to="/activities/new" variant="primary" size="sm" class="new-btn">
           <Plus :size="16" />{{ t('nav.newActivity') }}
         </UiButton>
-        <div v-if="session.me" ref="menuRoot" class="menu-root">
-          <button class="account" type="button" :aria-expanded="menuOpen" aria-haspopup="menu" @click.stop="menuOpen = !menuOpen">
+        <template v-if="session.me">
+          <!-- A popover panel of links and buttons users Tab through, not an ARIA menu. -->
+          <button class="account" type="button" popovertarget="account-panel" :aria-label="t('nav.account', { name: session.me.name })">
             <UiAvatar :name="session.me.name" :size="30" />
-            <ChevronDown :size="14" class="chev" />
+            <ChevronDown :size="14" class="chev" aria-hidden="true" />
           </button>
-          <Transition name="fade">
-            <div v-if="menuOpen" class="menu" role="menu">
-              <div class="menu-head">
-                <strong class="truncate">{{ session.me.name }}</strong>
-                <span class="subtle truncate">{{ session.me.email }}</span>
-              </div>
-              <RouterLink role="menuitem" to="/me" class="item"><LayoutDashboard :size="16" />{{ t('nav.me') }}</RouterLink>
-              <RouterLink role="menuitem" to="/reviews" class="item"><Star :size="16" />{{ t('nav.reviews') }}</RouterLink>
-              <RouterLink role="menuitem" :to="`/people/${session.me.id}`" class="item"><User :size="16" />{{ t('nav.profile') }}</RouterLink>
-              <RouterLink role="menuitem" to="/settings" class="item"><Settings :size="16" />{{ t('nav.settings') }}</RouterLink>
-              <RouterLink v-if="session.isAdmin" role="menuitem" to="/admin" class="item"><Shield :size="16" />{{ t('nav.admin') }}</RouterLink>
-              <div class="sep" />
-              <button role="menuitem" type="button" class="item" @click="switchLocale">
-                <Languages :size="16" />{{ locale === 'zh' ? 'English' : '中文' }}
-              </button>
-              <div class="theme-row" role="group" :aria-label="t('common.theme')">
-                <button
-                  v-for="th in themes"
-                  :key="th.value"
-                  type="button"
-                  class="theme-btn"
-                  :aria-pressed="session.theme === th.value"
-                  :title="t(th.label)"
-                  @click="session.setTheme(th.value)"
-                >
-                  <component :is="th.icon" :size="15" /><span class="sr-only">{{ t(th.label) }}</span>
-                </button>
-              </div>
-              <div class="sep" />
-              <button role="menuitem" type="button" class="item" @click="signOut"><LogOut :size="16" />{{ t('common.signOut') }}</button>
+          <nav id="account-panel" ref="menu" popover="auto" class="menu" :aria-label="t('nav.account', { name: session.me.name })">
+            <div class="menu-head">
+              <strong class="truncate">{{ session.me.name }}</strong>
+              <span class="subtle truncate">{{ session.me.email }}</span>
             </div>
-          </Transition>
-        </div>
+            <RouterLink to="/me" class="item"><LayoutDashboard :size="16" aria-hidden="true" />{{ t('nav.me') }}</RouterLink>
+            <RouterLink to="/reviews" class="item"><Star :size="16" aria-hidden="true" />{{ t('nav.reviews') }}</RouterLink>
+            <RouterLink :to="`/people/${session.me.id}`" class="item"><User :size="16" aria-hidden="true" />{{ t('nav.profile') }}</RouterLink>
+            <RouterLink to="/settings" class="item"><Settings :size="16" aria-hidden="true" />{{ t('nav.settings') }}</RouterLink>
+            <RouterLink v-if="session.isAdmin" to="/admin" class="item"><Shield :size="16" aria-hidden="true" />{{ t('nav.admin') }}</RouterLink>
+            <div class="sep" />
+            <button type="button" class="item" :lang="locale === 'zh' ? 'en' : 'zh-CN'" @click="switchLocale">
+              <Languages :size="16" aria-hidden="true" />{{ locale === 'zh' ? 'English' : '中文' }}
+            </button>
+            <div class="sep" />
+            <button type="button" class="item" @click="signOut"><LogOut :size="16" aria-hidden="true" />{{ t('common.signOut') }}</button>
+          </nav>
+        </template>
         <template v-else-if="session.ready">
           <button type="button" class="lang" :title="t('common.language')" @click="switchLocale">
             <Languages :size="16" /><span>{{ locale === 'zh' ? 'EN' : '中' }}</span>
@@ -156,7 +110,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
     </div>
   </header>
 
-  <main id="main" class="main"><slot /></main>
+  <main id="main" class="main" tabindex="-1"><slot /></main>
 
   <nav class="tabbar" :aria-label="t('nav.menu')">
     <RouterLink to="/" class="tab" :class="{ active: route.path === '/' }"><CalendarDays :size="20" /><span>{{ t('nav.explore') }}</span></RouterLink>
@@ -186,6 +140,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   top: 8px;
 }
 .header {
+  view-transition-name: site-header; /* stays put while the page underneath cross-fades */
   position: sticky;
   top: 0;
   z-index: 50;
@@ -257,7 +212,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 32px;
+  min-block-size: 2rem;
   padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -266,9 +221,6 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   cursor: pointer;
   font-weight: 600;
   font-size: 0.8rem;
-}
-.menu-root {
-  position: relative;
 }
 .account {
   display: flex;
@@ -285,16 +237,51 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   background: var(--surface-2);
 }
 .menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  width: 250px;
+  inline-size: 15.5rem;
+  padding: 0.375rem;
   background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  padding: 6px;
-  z-index: 60;
+}
+/* Tether to the trigger where anchor positioning exists (implicit anchor from popovertarget)... */
+@supports (position-area: block-end) {
+  .menu {
+    inset: auto;
+    margin: 0.5rem 0 0;
+    position-area: block-end span-inline-start;
+    position-try-fallbacks: flip-block, flip-inline;
+  }
+}
+/* ...otherwise pin it under the header's right edge, where the trigger always sits. */
+@supports not (position-area: block-end) {
+  .menu {
+    position: fixed;
+    inset: calc(var(--header-h) + 0.25rem) 1rem auto auto;
+    margin: 0;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .menu {
+    opacity: 0;
+    translate: 0 -0.25rem;
+    transition:
+      opacity 0.15s,
+      translate 0.15s,
+      display 0.15s,
+      overlay 0.15s;
+    transition-behavior: allow-discrete;
+  }
+  .menu:is(:popover-open, .\:popover-open) {
+    opacity: 1;
+    translate: 0 0;
+    transition-duration: 0.1s;
+    @starting-style {
+      opacity: 0;
+      translate: 0 -0.25rem;
+    }
+  }
 }
 .menu-head {
   display: flex;
@@ -324,26 +311,10 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   background: var(--border);
   margin: 6px 4px;
 }
-.theme-row {
-  display: flex;
-  gap: 4px;
-  padding: 4px 10px;
-}
-.theme-btn {
-  flex: 1;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text-2);
-  cursor: pointer;
-}
-.theme-btn[aria-pressed='true'] {
-  border-color: var(--accent);
-  color: var(--accent-text);
-  background: var(--accent-soft);
+.main:focus,
+.main :deep(h1:focus) {
+  outline: none;
+  box-shadow: none;
 }
 .main {
   padding: 24px 0 calc(96px + env(safe-area-inset-bottom));
@@ -393,7 +364,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   color: var(--on-accent);
   box-shadow: var(--shadow);
 }
-@media (min-width: 860px) {
+@media (min-width: 53.75em) {
   .nav {
     display: flex;
   }

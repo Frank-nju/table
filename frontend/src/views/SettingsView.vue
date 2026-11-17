@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, ApiError } from '@/api/client'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiField from '@/components/ui/UiField.vue'
+import UiSegmented from '@/components/ui/UiSegmented.vue'
+import UiPasswordInput from '@/components/ui/UiPasswordInput.vue'
 import { useErrors } from '@/composables/useErrors'
 import { setLocale } from '@/i18n'
 import { useSession, type Theme } from '@/stores/session'
@@ -37,10 +39,6 @@ async function saveProfile() {
 }
 
 async function changePassword() {
-  if (pw.next.length < 8) {
-    fieldErrors.value = { new_password: t('auth.passwordHint') }
-    return
-  }
   pwBusy.value = true
   try {
     await api.auth.changePassword(pw.current, pw.next)
@@ -54,11 +52,22 @@ async function changePassword() {
   }
 }
 
-const themes: { value: Theme; label: string }[] = [
-  { value: 'system', label: 'settings.themeSystem' },
-  { value: 'light', label: 'settings.themeLight' },
-  { value: 'dark', label: 'settings.themeDark' },
-]
+// "System" says what it currently resolves to, and must update if the OS switches while the page is open.
+const systemQuery = window.matchMedia('(prefers-color-scheme: dark)')
+const systemDark = ref(systemQuery.matches)
+const onSystemChange = (e: MediaQueryListEvent) => (systemDark.value = e.matches)
+systemQuery.addEventListener('change', onSystemChange)
+onBeforeUnmount(() => systemQuery.removeEventListener('change', onSystemChange))
+
+const themes = computed<{ value: Theme; label: string }[]>(() => [
+  {
+    value: 'system',
+    label: t('settings.themeSystemCurrent', { scheme: t(systemDark.value ? 'settings.themeDark' : 'settings.themeLight') }),
+  },
+  { value: 'light', label: t('settings.themeLight') },
+  { value: 'dark', label: t('settings.themeDark') },
+])
+const theme = computed({ get: () => session.theme, set: (v: Theme) => session.setTheme(v) })
 </script>
 
 <template>
@@ -69,13 +78,13 @@ const themes: { value: Theme; label: string }[] = [
         <h2 class="sec">{{ t('settings.profile') }}</h2>
         <div class="form-grid">
           <UiField v-slot="{ id, invalid }" :label="t('settings.name')" :error="fieldErrors.name">
-            <input :id="id" v-model="profile.name" class="input" maxlength="64" required :aria-invalid="invalid" />
+            <input :id="id" v-model="profile.name" class="input" autocomplete="name" maxlength="64" required :aria-invalid="invalid" />
           </UiField>
           <UiField v-slot="{ id }" :label="t('settings.email')" :hint="t('settings.emailHint')">
             <input :id="id" :value="me.email ?? ''" class="input" disabled />
           </UiField>
           <UiField v-slot="{ id }" :label="t('settings.phone')" optional>
-            <input :id="id" v-model="profile.phone" class="input" type="tel" maxlength="32" />
+            <input :id="id" v-model="profile.phone" class="input" type="tel" autocomplete="tel" maxlength="32" />
           </UiField>
           <UiField v-slot="{ id }" :label="t('settings.language')">
             <select :id="id" v-model="profile.locale" class="select">
@@ -92,21 +101,17 @@ const themes: { value: Theme; label: string }[] = [
 
       <section class="card card-pad stack" style="--gap: 12px">
         <h2 class="sec">{{ t('settings.appearance') }}</h2>
-        <div class="row">
-          <UiButton v-for="th in themes" :key="th.value" :variant="session.theme === th.value ? 'subtle' : 'secondary'" size="sm" @click="session.setTheme(th.value)">
-            {{ t(th.label) }}
-          </UiButton>
-        </div>
+        <UiSegmented v-model="theme" :options="themes" :label="t('settings.appearance')" />
       </section>
 
       <form class="card card-pad stack" style="--gap: 16px" @submit.prevent="changePassword">
         <h2 class="sec">{{ t('settings.password') }}</h2>
         <div class="form-grid">
           <UiField v-slot="{ id }" :label="t('settings.currentPassword')">
-            <input :id="id" v-model="pw.current" class="input" type="password" autocomplete="current-password" required />
+            <UiPasswordInput :id="id" v-model="pw.current" autocomplete="current-password" required />
           </UiField>
           <UiField v-slot="{ id, invalid }" :label="t('settings.newPassword')" :hint="t('auth.passwordHint')" :error="fieldErrors.new_password">
-            <input :id="id" v-model="pw.next" class="input" type="password" autocomplete="new-password" minlength="8" required :aria-invalid="invalid" />
+            <UiPasswordInput :id="id" v-model="pw.next" autocomplete="new-password" minlength="8" required :invalid="invalid" />
           </UiField>
         </div>
         <div><UiButton type="submit" :loading="pwBusy">{{ t('settings.changePassword') }}</UiButton></div>

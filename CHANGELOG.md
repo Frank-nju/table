@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.1.0] — 2026-11 — Platform-native UI
+
+Applied [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance) across the frontend.
+
+- **Dialogs** are native `<dialog>` modals. The hand-written focus trap, Esc handling and body scroll lock are gone, and dialogs show their errors inline instead of behind the backdrop.
+- **Menus and notifications** use the Popover API with anchor positioning. The account panel no longer claims `role="menu"` without the keyboard behaviour that role promises.
+- **Notifications** live in a labelled region announced with `ariaNotify()`. Errors stay until dismissed, and nothing is shown behind an open modal.
+- **Filters and view switches** are native radio groups instead of ARIA tabs that had no tab panels.
+- **Theme:** colours are defined once with `light-dark()`. The light/dark choice moved to Settings (System / Light / Dark) and is applied before first paint by an inline script that the Content-Security-Policy allows by hash.
+- **Chinese input:** the people picker no longer selects someone when Enter confirms a pinyin candidate.
+- **Accessibility:** focus moves to the new page heading after navigation. Fields link their errors only while they're shown, and focus goes to the first invalid field after a failed submit. Session cards use a single, stretched title link.
+- **Forms:** native validation with `:user-invalid`, a "Show password" toggle, `spellcheck="false"` on emails, and auto-growing text areas.
+- **Text scaling:** sizes are in `rem`, breakpoints are in `em`, and nothing with text has a fixed height. The `text-scale` meta opt-in is set, and copy-link feedback appears on the button itself.
+
 ## [3.0.0] — 2026-11 — Complete rebuild
 
 A ground-up rewrite. See [docs/UPGRADING.md](docs/UPGRADING.md) to move existing data across.

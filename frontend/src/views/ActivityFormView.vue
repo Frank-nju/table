@@ -10,6 +10,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
+import { focusFirstInvalid } from '@/composables/focusFirstInvalid'
 import { useErrors } from '@/composables/useErrors'
 import { useSession } from '@/stores/session'
 import { useUi } from '@/stores/ui'
@@ -29,6 +30,7 @@ const saving = ref(false)
 const groups = ref<Group[]>([])
 const speakers = ref<Person[]>([])
 const fieldErrors = ref<Record<string, string>>({})
+const formEl = ref<HTMLFormElement | null>(null)
 
 const form = reactive<ActivityInput>({
   title: '',
@@ -199,6 +201,7 @@ function validate(): boolean {
   if (groupRequired.value && !form.group_id) e.group_id = t('errors.group_required')
   if (form.video_url && !/^https?:\/\//i.test(form.video_url)) e.video_url = 'https://…'
   fieldErrors.value = e
+  if (Object.keys(e).length) void focusFirstInvalid(formEl.value)
   return !Object.keys(e).length
 }
 
@@ -231,7 +234,7 @@ async function save(acknowledge = false) {
       confirmWarnings.value = e.issues.warnings
     } else if (e instanceof ApiError && e.code === 'validation_error') {
       fieldErrors.value = e.fields
-      errors.report(e)
+      void focusFirstInvalid(formEl.value)
     } else {
       if (e instanceof ApiError && e.issues.errors.length) check.value = e.issues
       errors.report(e)
@@ -291,7 +294,7 @@ const maxDate = computed(() => toIsoDate(new Date(Date.now() + 365 * 86_400_000)
 
     <div v-if="loading" class="card card-pad"><UiSkeleton :lines="8" /></div>
 
-    <form v-else class="stack" style="--gap: 20px" novalidate @submit.prevent="save()">
+    <form v-else ref="formEl" class="stack" style="--gap: 20px" @submit.prevent="save()">
       <!-- Type -->
       <section class="card card-pad">
         <fieldset class="kinds">
@@ -311,7 +314,7 @@ const maxDate = computed(() => toIsoDate(new Date(Date.now() + 365 * 86_400_000)
       <section class="card card-pad stack" style="--gap: 16px">
         <h2 class="h">{{ t('form.details') }}</h2>
         <UiField v-slot="{ id, invalid }" :label="t('form.title')" :error="fieldErrors.title">
-          <input :id="id" v-model="form.title" class="input" maxlength="200" :placeholder="t('form.titlePlaceholder')" :aria-invalid="invalid" />
+          <input :id="id" v-model="form.title" class="input" maxlength="200" required :placeholder="t('form.titlePlaceholder')" :aria-invalid="invalid" />
         </UiField>
         <UiField v-slot="{ id }" :label="t('form.description')" optional>
           <textarea :id="id" v-model="form.description" class="textarea" rows="4" maxlength="5000" :placeholder="t('form.descriptionPlaceholder')" />
@@ -484,7 +487,7 @@ const maxDate = computed(() => toIsoDate(new Date(Date.now() + 365 * 86_400_000)
   gap: 12px;
   grid-template-columns: 2fr 1fr 1fr;
 }
-@media (max-width: 560px) {
+@media (max-width: 35em) {
   .when {
     grid-template-columns: 1fr 1fr;
   }
@@ -591,7 +594,7 @@ const maxDate = computed(() => toIsoDate(new Date(Date.now() + 365 * 86_400_000)
   padding: 12px 0;
   background: linear-gradient(transparent, var(--bg) 30%);
 }
-@media (min-width: 860px) {
+@media (min-width: 53.75em) {
   .actions {
     bottom: 0;
   }

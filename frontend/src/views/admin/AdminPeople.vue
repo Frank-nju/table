@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Copy, UserPlus } from 'lucide-vue-next'
+import { UserPlus } from 'lucide-vue-next'
 import { onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '@/api/client'
 import type { AdminUser } from '@/api/types'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiCopyButton from '@/components/ui/UiCopyButton.vue'
 import UiField from '@/components/ui/UiField.vue'
 import UiModal from '@/components/ui/UiModal.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
@@ -23,6 +24,7 @@ const q = ref('')
 const adding = ref(false)
 const newUser = reactive({ name: '', email: '' })
 const link = ref<{ name: string; url: string } | null>(null)
+const dialogError = ref('')
 
 async function load() {
   try {
@@ -51,11 +53,20 @@ const emailEdit = ref<{ user: AdminUser; value: string } | null>(null)
 async function saveEmail() {
   if (!emailEdit.value) return
   const { user, value } = emailEdit.value
-  if (value.trim() && value.trim() !== user.email) await update(user, { email: value.trim() })
+  dialogError.value = ''
+  if (value.trim() && value.trim() !== user.email) {
+    try {
+      Object.assign(user, await api.admin.updateUser(user.id, { email: value.trim() }))
+    } catch (e) {
+      dialogError.value = errors.message(e)
+      return
+    }
+  }
   emailEdit.value = null
 }
 
 async function create() {
+  dialogError.value = ''
   try {
     await api.admin.createUser({ name: newUser.name.trim(), email: newUser.email.trim() || null })
     ui.toast(t('admin.people.created'))
@@ -64,7 +75,7 @@ async function create() {
     newUser.email = ''
     await load()
   } catch (e) {
-    errors.report(e)
+    dialogError.value = errors.message(e)
   }
 }
 
@@ -76,11 +87,6 @@ async function makeLink(u: AdminUser) {
   }
 }
 
-async function copyLink() {
-  if (!link.value) return
-  await navigator.clipboard.writeText(link.value.url).catch(() => {})
-  ui.toast(t('common.copied'), 'info')
-}
 </script>
 
 <template>
@@ -142,7 +148,7 @@ async function copyLink() {
       </table>
     </div>
 
-    <UiModal :open="adding" :title="t('admin.people.addTitle')" @close="adding = false">
+    <UiModal :open="adding" :title="t('admin.people.addTitle')" :error="dialogError" @close="adding = false; dialogError = ''">
       <form id="add-user" class="stack" style="--gap: 14px" @submit.prevent="create">
         <p class="muted small">{{ t('admin.people.addHint') }}</p>
         <UiField v-slot="{ id }" :label="t('admin.people.name')">
@@ -158,7 +164,7 @@ async function copyLink() {
       </template>
     </UiModal>
 
-    <UiModal :open="!!emailEdit" :title="t('admin.people.editEmail')" width="420px" @close="emailEdit = null">
+    <UiModal :open="!!emailEdit" :title="t('admin.people.editEmail')" width="26rem" :error="dialogError" @close="emailEdit = null; dialogError = ''">
       <form v-if="emailEdit" id="email-form" @submit.prevent="saveEmail">
         <UiField v-slot="{ id }" :label="emailEdit.user.name">
           <input :id="id" v-model="emailEdit.value" class="input" type="email" required />
@@ -174,7 +180,7 @@ async function copyLink() {
       <p class="muted small">{{ t('admin.people.linkBody') }}</p>
       <div class="linkbox">
         <code>{{ link?.url }}</code>
-        <UiButton size="sm" @click="copyLink"><Copy :size="14" />{{ t('common.copy') }}</UiButton>
+        <UiCopyButton v-if="link" :text="link.url" :label="t('common.copy')" :copied-label="t('common.copied')" />
       </div>
     </UiModal>
   </section>

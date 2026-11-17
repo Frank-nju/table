@@ -22,7 +22,7 @@ defineProps<{ title: string; subtitle?: string }>()
 .auth {
   padding: 32px;
 }
-@media (max-width: 480px) {
+@media (max-width: 30em) {
   .auth {
     padding: 22px 18px;
   }

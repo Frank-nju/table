@@ -166,7 +166,7 @@ const toggleArchive = () =>
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
-@media (min-width: 900px) {
+@media (min-width: 56.25em) {
   .layout {
     grid-template-columns: minmax(0, 1fr) 340px;
   }

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import UiTabs from '@/components/ui/UiTabs.vue'
+import UiSegmented from '@/components/ui/UiSegmented.vue'
 import AdminContributions from './AdminContributions.vue'
 import AdminExport from './AdminExport.vue'
 import AdminOverview from './AdminOverview.vue'
@@ -24,7 +24,7 @@ const views = { overview: AdminOverview, people: AdminPeople, rooms: AdminRooms,
   <div class="container">
     <header class="head">
       <h1>{{ t('admin.title') }}</h1>
-      <UiTabs v-model="tab" :tabs="tabs" :label="t('admin.title')" />
+      <UiSegmented v-model="tab" :options="tabs" :label="t('admin.title')" />
     </header>
     <KeepAlive><component :is="views[tab]" /></KeepAlive>
   </div>

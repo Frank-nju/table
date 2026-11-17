@@ -7,6 +7,9 @@ import { useSession } from './stores/session'
 import './styles/main.css'
 
 async function start() {
+  if (!Object.hasOwn(HTMLElement.prototype, 'popover')) {
+    await import('@oddbird/popover-polyfill')
+  }
   const app = createApp(App)
   app.use(createPinia())
   app.use(i18n)

@@ -46,8 +46,9 @@ const tag = computed(() => (props.to ? 'RouterLink' : props.href ? 'a' : 'button
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
+  padding-block: 0.375rem;
   cursor: pointer;
   text-decoration: none !important;
   transition:
@@ -63,18 +64,18 @@ const tag = computed(() => (props.to ? 'RouterLink' : props.href ? 'a' : 'button
   cursor: not-allowed;
 }
 .btn-sm {
-  height: 32px;
-  padding: 0 12px;
+  min-block-size: 2rem;
+  padding-inline: 0.75rem;
   font-size: 0.85rem;
 }
 .btn-md {
-  height: 40px;
-  padding: 0 16px;
+  min-block-size: 2.5rem;
+  padding-inline: 1rem;
   font-size: 0.92rem;
 }
 .btn-lg {
-  height: 46px;
-  padding: 0 22px;
+  min-block-size: 2.875rem;
+  padding-inline: 1.375rem;
   font-size: 1rem;
 }
 .btn-block {

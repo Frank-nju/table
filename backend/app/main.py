@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import logging
+import mimetypes
+import re
 import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -160,6 +164,7 @@ def _mount_frontend(app: FastAPI, dist: Path) -> None:
     """Serve the built single-page app, falling back to index.html for client-side routes."""
     if not dist.is_absolute():
         dist = (Path(__file__).resolve().parent.parent / dist).resolve()
+    mimetypes.add_type("application/manifest+json", ".webmanifest")
     index = dist / "index.html"
     if not index.exists():
         log.info("Frontend build not found at %s; serving the API only", dist)
@@ -167,9 +172,16 @@ def _mount_frontend(app: FastAPI, dist: Path) -> None:
     if (dist / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
 
+    # index.html carries one tiny inline script that applies the saved colour scheme before first paint.
+    # Allow exactly the inline scripts it contains, by hash, rather than 'unsafe-inline'.
+    inline_hashes = " ".join(
+        "'sha256-" + base64.b64encode(hashlib.sha256(body.encode()).digest()).decode() + "'"
+        for body in re.findall(r"<script>(.*?)</script>", index.read_text(encoding="utf-8"), flags=re.S)
+    )
     csp = (
-        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; "
-        "connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; "
+        f"script-src 'self' {inline_hashes}; connect-src 'self'; manifest-src 'self'; "
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     )
 
     @app.get("/{path:path}", include_in_schema=False)

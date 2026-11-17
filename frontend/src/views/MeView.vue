@@ -144,7 +144,7 @@ async function decline(id: number) {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
-@media (min-width: 980px) {
+@media (min-width: 61.25em) {
   .layout {
     grid-template-columns: minmax(0, 1fr) 360px;
   }

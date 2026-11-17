@@ -23,6 +23,7 @@ const slots = ref<RoomSlot[]>([])
 const editing = ref<Partial<Room> | null>(null)
 const slotForm = reactive({ room_id: 0, date: '', start_time: '14:00', end_time: '18:00', repeat_weeks: 1 })
 const slotOpen = ref(false)
+const dialogError = ref('')
 const today = computed(() => todayIn(session.config?.timezone ?? 'UTC'))
 const grid = computed(() => session.config?.time_grid ?? [])
 
@@ -47,6 +48,7 @@ async function saveRoom() {
   const r = editing.value
   if (!r?.name?.trim()) return
   const body = { name: r.name.trim(), capacity: r.capacity || null, notes: r.notes ?? '', is_active: r.is_active ?? true }
+  dialogError.value = ''
   try {
     if (r.id) await api.admin.updateRoom(r.id, body)
     else await api.admin.createRoom(body)
@@ -54,7 +56,7 @@ async function saveRoom() {
     ui.toast(t('common.changesSaved'))
     await load()
   } catch (e) {
-    errors.report(e)
+    dialogError.value = errors.message(e)
   }
 }
 
@@ -75,13 +77,14 @@ function openSlot(room?: Room) {
 }
 
 async function addSlots() {
+  dialogError.value = ''
   try {
     const created = await api.admin.addSlots({ ...slotForm })
     ui.toast(t('admin.rooms.slotsAdded', created.length))
     slotOpen.value = false
     await load()
   } catch (e) {
-    errors.report(e)
+    dialogError.value = errors.message(e)
   }
 }
 
@@ -136,7 +139,7 @@ async function removeSlot(s: RoomSlot) {
       </div>
     </section>
 
-    <UiModal :open="!!editing" :title="editing?.id ? t('admin.rooms.edit') : t('admin.rooms.add')" @close="editing = null">
+    <UiModal :open="!!editing" :title="editing?.id ? t('admin.rooms.edit') : t('admin.rooms.add')" :error="dialogError" @close="editing = null; dialogError = ''">
       <form v-if="editing" id="room-form" class="stack" style="--gap: 14px" @submit.prevent="saveRoom">
         <UiField v-slot="{ id }" :label="t('admin.rooms.name')">
           <input :id="id" v-model="editing.name" class="input" required maxlength="80" />
@@ -157,7 +160,7 @@ async function removeSlot(s: RoomSlot) {
       </template>
     </UiModal>
 
-    <UiModal :open="slotOpen" :title="t('admin.rooms.addSlot')" @close="slotOpen = false">
+    <UiModal :open="slotOpen" :title="t('admin.rooms.addSlot')" :error="dialogError" @close="slotOpen = false; dialogError = ''">
       <form id="slot-form" class="stack" style="--gap: 14px" @submit.prevent="addSlots">
         <UiField v-slot="{ id }" :label="t('form.room')">
           <select :id="id" v-model="slotForm.room_id" class="select">
@@ -200,7 +203,7 @@ async function removeSlot(s: RoomSlot) {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
-@media (min-width: 960px) {
+@media (min-width: 60em) {
   .grid {
     grid-template-columns: 380px minmax(0, 1fr);
   }

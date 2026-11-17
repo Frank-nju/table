@@ -35,7 +35,7 @@ export function useErrors() {
   }
 
   function report(err: unknown): void {
-    ui.toast(message(err), 'error', 6000)
+    ui.toast(message(err), 'error')
   }
 
   return { message, report, weekdayName }

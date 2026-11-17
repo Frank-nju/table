@@ -51,6 +51,20 @@ deploy/     systemd units, nginx config, install script
 
 The backend serves the built frontend, so production is a single web process plus one worker. Sessions use an httpOnly cookie, and passwords are hashed with Argon2. Every write that has a capacity limit (reviewer spots, room bookings) takes a row lock, so it stays correct across multiple workers.
 
+## Browser support
+
+The UI is built on native platform features rather than JavaScript re-implementations, following [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance). The rule: [Baseline](https://web.dev/baseline) *widely available* features are used freely, and anything newer ships with a fallback.
+
+| Feature | Used for | Fallback |
+|---|---|---|
+| `<dialog>` + `showModal()` | every modal: focus containment, Esc, focus return | (widely available) |
+| Popover API | account panel, session menu, notifications | `@oddbird/popover-polyfill`, loaded only when missing |
+| Anchor positioning | tethering popovers to their buttons | `@supports`-gated, with a fixed position otherwise |
+| `closedby="any"` | click outside to close dialogs | small pointer handler where unsupported (Safari) |
+| `light-dark()` + `color-scheme` | one set of colour tokens for both themes | `@supports not` block driven by `prefers-color-scheme` |
+| `ariaNotify()` | announcing notifications | a polite live region |
+| `field-sizing`, `text-wrap`, view transitions | auto-growing text areas, nicer wrapping, page cross-fades | progressive enhancement: ignored where unsupported |
+
 ## Running it locally
 
 You'll need Python 3.11+ and Node.js 20+.

@@ -2,7 +2,7 @@
 import { Clock, MapPin, Users as UsersIcon } from 'lucide-vue-next'
 import { computed } from 'vue'
 import type { Activity } from '@/api/types'
-import { dateParts } from '@/utils/format'
+import { dateParts, formatDate } from '@/utils/format'
 import StateBadge from './StateBadge.vue'
 import UiBadge from './ui/UiBadge.vue'
 
@@ -13,7 +13,9 @@ const c = computed(() => props.activity.counts)
 </script>
 
 <template>
-  <RouterLink :to="`/activities/${activity.id}`" class="card activity" :class="{ meetup: activity.kind === 'meetup', compact, past: activity.state === 'closed' }">
+  <!-- The title is the card's only link; ::after stretches its hit area over the whole card,
+       so screen readers hear the title as the link name instead of the entire card. -->
+  <article class="card activity" :class="{ meetup: activity.kind === 'meetup', compact, past: activity.state === 'closed' }">
     <div v-if="showDate" class="date" aria-hidden="true">
       <span class="month">{{ parts.month }}</span>
       <span class="day">{{ parts.day }}</span>
@@ -25,52 +27,71 @@ const c = computed(() => props.activity.counts)
         <UiBadge v-if="activity.viewer.signup_role" tone="success">{{ $t('signup.youreIn', { role: $t(`role.${activity.viewer.signup_role}`) }) }}</UiBadge>
         <UiBadge v-else-if="activity.viewer.pending_invite_id" tone="accent" dot>{{ $t('inviteStatus.pending') }}</UiBadge>
       </div>
-      <h3 class="title">{{ activity.title }}</h3>
+      <h3 class="title">
+        <RouterLink :to="`/activities/${activity.id}`" class="card-link">{{ activity.title }}</RouterLink>
+      </h3>
       <p class="meta">
-        <span class="sr-only">{{ activity.date }}</span>
-        <span><Clock :size="14" />{{ activity.start_time }}–{{ activity.end_time }}</span>
-        <span v-if="place"><MapPin :size="14" />{{ place }}</span>
-        <span v-if="activity.group" class="group"><UsersIcon :size="14" />{{ activity.group.name }}</span>
+        <span class="sr-only">{{ formatDate(activity.date, 'long') }}, </span>
+        <span><Clock :size="14" aria-hidden="true" />{{ activity.start_time }}–{{ activity.end_time }}</span>
+        <span v-if="place"><MapPin :size="14" aria-hidden="true" />{{ place }}</span>
+        <span v-if="activity.group" class="group"><UsersIcon :size="14" aria-hidden="true" />{{ activity.group.name }}</span>
       </p>
       <div v-if="!compact" class="bottom">
-        <span class="speakers truncate">{{ activity.speakers.map((s) => s.name).join(', ') }}</span>
+        <span class="speakers">{{ activity.speakers.map((s) => s.name).join(', ') }}</span>
         <span class="counts">
           <template v-if="c.reviewer_limit !== null">
             <span class="spots" :class="{ full: c.reviewer_spots_left === 0 }">{{ $t('activity.reviewerSpots', { taken: c.reviewers, limit: c.reviewer_limit }) }}</span>
           </template>
           <span v-else>{{ $t('activity.participants', c.participants) }}</span>
-          <span class="dot">·</span>
+          <span class="dot" aria-hidden="true">·</span>
           <span>{{ $t('activity.observers', c.observers) }}</span>
         </span>
       </div>
     </div>
-  </RouterLink>
+  </article>
 </template>
 
 <style scoped>
 .activity {
+  position: relative;
   display: flex;
-  gap: 16px;
-  padding: 16px;
-  color: inherit;
-  text-decoration: none !important;
+  gap: 1rem;
+  padding: 1rem;
+  container-type: inline-size;
   transition:
     border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
-  position: relative;
+    box-shadow 0.15s;
 }
-.activity:hover {
+.activity:hover,
+.activity:has(.card-link:focus-visible) {
   border-color: var(--border-strong);
   box-shadow: var(--shadow);
+}
+.card-link {
+  color: inherit;
+  text-decoration: none;
+}
+.card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.card-link:focus-visible {
+  box-shadow: none;
+}
+.activity:has(.card-link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .activity.past {
   opacity: 0.86;
 }
 .date {
   flex: none;
+  align-self: flex-start;
   width: 56px;
-  height: 64px;
+  min-block-size: 4rem;
   border-radius: 12px;
   background: var(--accent-soft);
   color: var(--accent-text);
@@ -141,7 +162,8 @@ const c = computed(() => props.activity.counts)
 .speakers {
   color: var(--text-2);
   font-weight: 550;
-  min-width: 0;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
 }
 .counts {
   flex: none;
@@ -155,14 +177,10 @@ const c = computed(() => props.activity.counts)
 .spots.full {
   color: var(--text-3);
 }
-@media (max-width: 520px) {
-  .activity {
-    gap: 12px;
-    padding: 14px;
-  }
+@container (max-width: 30rem) {
   .date {
-    width: 48px;
-    height: 58px;
+    width: 3rem;
+    min-block-size: 3.625rem;
   }
   .bottom {
     flex-direction: column;

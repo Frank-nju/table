@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import AuthCard from '@/components/AuthCard.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiField from '@/components/ui/UiField.vue'
+import UiPasswordInput from '@/components/ui/UiPasswordInput.vue'
 import { useErrors } from '@/composables/useErrors'
 import { useSession } from '@/stores/session'
 import { useUi } from '@/stores/ui'
@@ -45,12 +46,12 @@ async function submit() {
 
 <template>
   <AuthCard :title="t('auth.loginTitle')" :subtitle="t('auth.loginSubtitle')">
-    <form class="stack" style="--gap: 16px" novalidate @submit.prevent="submit">
+    <form class="stack" style="--gap: 16px" @submit.prevent="submit">
       <UiField v-slot="{ id }" :label="t('auth.email')">
-        <input :id="id" v-model.trim="email" class="input" type="email" autocomplete="email" required autofocus />
+        <input :id="id" v-model.trim="email" class="input" type="email" autocomplete="email" spellcheck="false" required autofocus />
       </UiField>
       <UiField v-slot="{ id }" :label="t('auth.password')">
-        <input :id="id" v-model="password" class="input" type="password" autocomplete="current-password" required />
+        <UiPasswordInput :id="id" v-model="password" autocomplete="current-password" required />
       </UiField>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <UiButton type="submit" variant="primary" size="lg" block :loading="busy">{{ t('common.signIn') }}</UiButton>

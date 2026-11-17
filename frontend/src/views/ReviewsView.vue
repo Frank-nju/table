@@ -102,7 +102,7 @@ function rated() {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
-@media (max-width: 560px) {
+@media (max-width: 35em) {
   .item {
     flex-wrap: wrap;
   }

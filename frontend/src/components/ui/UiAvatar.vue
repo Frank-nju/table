@@ -38,14 +38,10 @@ const hue = computed(() => {
   background: hsl(var(--h) 45% 88%);
   color: hsl(var(--h) 45% 26%);
 }
-:root[data-theme='dark'] .avatar {
-  background: hsl(var(--h) 30% 24%);
-  color: hsl(var(--h) 50% 82%);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .avatar {
-    background: hsl(var(--h) 30% 24%);
-    color: hsl(var(--h) 50% 82%);
+@supports (color: light-dark(#000, #fff)) {
+  .avatar {
+    background: light-dark(hsl(var(--h) 45% 88%), hsl(var(--h) 30% 24%));
+    color: light-dark(hsl(var(--h) 45% 26%), hsl(var(--h) 50% 82%));
   }
 }
 </style>

@@ -11,7 +11,7 @@ import UiAvatar from '@/components/ui/UiAvatar.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
-import UiTabs from '@/components/ui/UiTabs.vue'
+import UiSegmented from '@/components/ui/UiSegmented.vue'
 import { useErrors } from '@/composables/useErrors'
 import { useSession } from '@/stores/session'
 import { addDays, formatDate, todayIn } from '@/utils/format'
@@ -173,7 +173,7 @@ onMounted(async () => {
       <section class="main-col" aria-labelledby="sessions-heading">
         <h2 id="sessions-heading" class="sr-only">{{ t('nav.explore') }}</h2>
         <div class="toolbar">
-          <UiTabs v-model="tab" :tabs="tabs" :label="t('nav.explore')" />
+          <UiSegmented v-model="tab" :options="tabs" :label="t('nav.explore')" />
           <div class="filters">
             <label class="search">
               <Search :size="16" />
@@ -299,7 +299,7 @@ onMounted(async () => {
   gap: 24px;
   grid-template-columns: minmax(0, 1fr);
 }
-@media (min-width: 1000px) {
+@media (min-width: 62.5em) {
   .layout {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
@@ -320,8 +320,9 @@ onMounted(async () => {
   flex: 1 1 140px;
   max-width: 220px;
 }
-@media (max-width: 600px) {
-  .search {
+@media (max-width: 37.5em) {
+  /* Search gets its own row; the two dropdowns share the next one. */
+  .filters .search {
     flex-basis: 100%;
   }
   .filters .select {
@@ -395,7 +396,7 @@ onMounted(async () => {
 .rank.top {
   color: var(--meetup);
 }
-@media (max-width: 600px) {
+@media (max-width: 37.5em) {
   .stats {
     width: 100%;
     justify-content: space-between;

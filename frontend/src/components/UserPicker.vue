@@ -3,6 +3,7 @@ import { X } from 'lucide-vue-next'
 import { computed, ref, useId, watch } from 'vue'
 import { api } from '@/api/client'
 import type { Ref as Person } from '@/api/types'
+import { isComposing } from '@/utils/ime'
 import UiAvatar from './ui/UiAvatar.vue'
 
 const props = withDefaults(defineProps<{ multiple?: boolean; exclude?: number[]; placeholder?: string; inputId?: string; invalid?: boolean }>(), {
@@ -45,6 +46,8 @@ function remove(id: number) {
 }
 
 function onKey(e: KeyboardEvent) {
+  // Enter, arrows and Backspace drive the input method while it is composing (e.g. pinyin).
+  if (isComposing(e)) return
   if (e.key === 'ArrowDown') {
     open.value = true
     active.value = Math.min(active.value + 1, visible.value.length - 1)
@@ -142,7 +145,7 @@ async function onFocus() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  min-block-size: 1.75rem;
   padding: 0 4px 0 4px;
   border-radius: 999px;
   background: var(--surface-2);
@@ -171,7 +174,7 @@ async function onFocus() {
   border: 0;
   outline: none;
   background: transparent;
-  height: 28px;
+  min-block-size: 1.75rem;
   padding: 0 4px;
 }
 .q:focus-visible {

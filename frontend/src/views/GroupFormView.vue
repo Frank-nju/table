@@ -7,6 +7,7 @@ import type { Ref as Person } from '@/api/types'
 import UserPicker from '@/components/UserPicker.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiField from '@/components/ui/UiField.vue'
+import { focusFirstInvalid } from '@/composables/focusFirstInvalid'
 import { useErrors } from '@/composables/useErrors'
 import { useSession } from '@/stores/session'
 import { useUi } from '@/stores/ui'
@@ -20,6 +21,7 @@ const form = reactive({ name: '', goal: '', time_boundary: '', plan: '', descrip
 const members = ref<Person[]>([])
 const fieldErrors = ref<Record<string, string>>({})
 const busy = ref(false)
+const formEl = ref<HTMLFormElement | null>(null)
 
 async function submit() {
   fieldErrors.value = {}
@@ -32,6 +34,7 @@ async function submit() {
     if (e instanceof ApiError && e.code === 'validation_error') fieldErrors.value = e.fields
     else if (e instanceof ApiError && e.code === 'group_too_small') fieldErrors.value = { member_ids: errors.message(e) }
     else errors.report(e)
+    void focusFirstInvalid(formEl.value)
   } finally {
     busy.value = false
   }
@@ -41,7 +44,7 @@ async function submit() {
 <template>
   <div class="container narrow">
     <h1 class="title">{{ t('groups.createTitle') }}</h1>
-    <form class="card card-pad stack" style="--gap: 16px" novalidate @submit.prevent="submit">
+    <form ref="formEl" class="card card-pad stack" style="--gap: 16px" @submit.prevent="submit">
       <UiField v-slot="{ id, invalid }" :label="t('groups.name')" :error="fieldErrors.name">
         <input :id="id" v-model="form.name" class="input" maxlength="80" required :aria-invalid="invalid" />
       </UiField>

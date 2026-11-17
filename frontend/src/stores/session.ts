@@ -5,21 +5,23 @@ import type { Me, PublicConfig } from '@/api/types'
 import { setLocale } from '@/i18n'
 
 export type Theme = 'system' | 'light' | 'dark'
-const THEME_KEY = 'cac.theme'
+// Must match the inline script in index.html, which applies the stored scheme before first paint.
+const THEME_KEY = 'color-scheme'
 
 function readTheme(): Theme {
   try {
     const v = localStorage.getItem(THEME_KEY)
     if (v === 'light' || v === 'dark') return v
   } catch {
-    /* ignore */
+    /* storage unavailable: follow the system */
   }
   return 'system'
 }
 
+/** The override lives in <meta name="color-scheme">; CSS maps it onto the color-scheme property. */
 function applyTheme(theme: Theme): void {
-  if (theme === 'system') delete document.documentElement.dataset.theme
-  else document.documentElement.dataset.theme = theme
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]')
+  if (meta) meta.content = theme === 'system' ? 'light dark' : theme
 }
 
 export const useSession = defineStore('session', () => {
@@ -29,6 +31,12 @@ export const useSession = defineStore('session', () => {
   const pendingInvites = ref(0)
   const theme = ref<Theme>(readTheme())
   applyTheme(theme.value)
+  // Keep tabs in sync when the setting changes in another one.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== THEME_KEY) return
+    theme.value = readTheme()
+    applyTheme(theme.value)
+  })
 
   const isAdmin = computed(() => me.value?.role === 'admin')
   const isSignedIn = computed(() => me.value !== null)
@@ -69,9 +77,11 @@ export const useSession = defineStore('session', () => {
     theme.value = value
     applyTheme(value)
     try {
-      localStorage.setItem(THEME_KEY, value)
+      // "System" is the absence of an override, so remove the entry rather than storing it.
+      if (value === 'system') localStorage.removeItem(THEME_KEY)
+      else localStorage.setItem(THEME_KEY, value)
     } catch {
-      /* ignore */
+      /* the theme still applies for this visit */
     }
   }
 

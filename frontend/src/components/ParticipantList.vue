@@ -230,7 +230,7 @@ async function remove(s: Signup) {
   font-size: 1rem;
   line-height: 1;
 }
-@media (max-width: 520px) {
+@media (max-width: 32.5em) {
   .person {
     flex-direction: column;
   }

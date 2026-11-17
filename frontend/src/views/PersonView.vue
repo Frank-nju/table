@@ -119,7 +119,7 @@ onMounted(async () => {
   color: var(--text-3);
   font-weight: 600;
 }
-@media (max-width: 520px) {
+@media (max-width: 32.5em) {
   .head {
     flex-direction: column;
     align-items: flex-start;

@@ -17,25 +17,28 @@ const errors = useErrors()
 const score = ref<number | null>(null)
 const comment = ref('')
 const busy = ref(false)
+const error = ref('')
 
 watch(
   () => props.signup,
   (s) => {
     score.value = s?.my_score ?? null
     comment.value = ''
+    error.value = ''
   },
 )
 
 async function submit() {
   if (!props.signup || !score.value) return
   busy.value = true
+  error.value = ''
   try {
     const updated = await api.signups.rate(props.signup.id, score.value, comment.value)
     ui.toast(t('activity.rated'))
     emit('rated', updated)
     emit('close')
   } catch (e) {
-    errors.report(e)
+    error.value = errors.message(e)
   } finally {
     busy.value = false
   }
@@ -43,7 +46,7 @@ async function submit() {
 </script>
 
 <template>
-  <UiModal :open="!!signup" :title="t('activity.rateTitle', { name: signup?.user.name ?? '' })" @close="emit('close')">
+  <UiModal :open="!!signup" :title="t('activity.rateTitle', { name: signup?.user.name ?? '' })" :error="error" @close="emit('close')">
     <form id="rate-form" class="stack" style="--gap: 16px" @submit.prevent="submit">
       <p class="muted small">{{ t('activity.rateHint') }}</p>
       <div class="scale" role="radiogroup" :aria-label="t('activity.rate')">
@@ -97,7 +100,7 @@ async function submit() {
   color: var(--on-accent);
   transform: scale(1.06);
 }
-@media (max-width: 420px) {
+@media (max-width: 26.25em) {
   .scale {
     grid-template-columns: repeat(5, 1fr);
   }

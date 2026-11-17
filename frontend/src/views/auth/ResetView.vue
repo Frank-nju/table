@@ -6,6 +6,7 @@ import { api } from '@/api/client'
 import AuthCard from '@/components/AuthCard.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiField from '@/components/ui/UiField.vue'
+import UiPasswordInput from '@/components/ui/UiPasswordInput.vue'
 import { useErrors } from '@/composables/useErrors'
 import { useSession } from '@/stores/session'
 import { useUi } from '@/stores/ui'
@@ -21,10 +22,6 @@ const busy = ref(false)
 const error = ref('')
 
 async function submit() {
-  if (password.value.length < 8) {
-    error.value = t('auth.passwordHint')
-    return
-  }
   busy.value = true
   error.value = ''
   try {
@@ -44,7 +41,7 @@ async function submit() {
   <AuthCard :title="t('auth.resetTitle')">
     <form class="stack" style="--gap: 16px" @submit.prevent="submit">
       <UiField v-slot="{ id }" :label="t('settings.newPassword')" :hint="t('auth.passwordHint')">
-        <input :id="id" v-model="password" class="input" type="password" autocomplete="new-password" minlength="8" required autofocus />
+        <UiPasswordInput :id="id" v-model="password" autocomplete="new-password" minlength="8" required autofocus />
       </UiField>
       <p v-if="error" class="error" role="alert">
         {{ error }} <RouterLink v-if="error === t('errors.invalid_token')" to="/forgot-password">{{ t('auth.sendLink') }}</RouterLink>

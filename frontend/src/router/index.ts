@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useSession } from '@/stores/session'
 
@@ -58,6 +59,45 @@ router.beforeEach((to) => {
   if (to.meta.admin && !session.isAdmin) return { name: 'explore' }
   if (to.meta.guest && session.isSignedIn) return { name: 'explore' }
   return true
+})
+
+// ----- Page changes: a short cross-fade, then move focus into the new page -----
+
+let initialNavigation = true
+let finishTransition: (() => void) | null = null
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+router.beforeResolve((to, from) => {
+  if (initialNavigation || to.path === from.path || reducedMotion.matches || !('startViewTransition' in document)) return true
+  // Snapshot the old page, let the navigation render, then animate to the new one.
+  return new Promise<boolean>((resolve) => {
+    const transition = document.startViewTransition(
+      () =>
+        new Promise<void>((done) => {
+          finishTransition = done
+          resolve(true)
+        }),
+    )
+    transition.finished.catch(() => {})
+  })
+})
+
+router.afterEach((to, from, failure) => {
+  void nextTick(() => {
+    finishTransition?.()
+    finishTransition = null
+    if (initialNavigation) {
+      initialNavigation = false
+      return
+    }
+    if (failure || to.path === from.path) return // filters update the query only; keep focus where it is
+    // A client-side navigation doesn't move focus, so screen-reader and keyboard users would stay on the
+    // old link. Land them on the new page's heading, or on <main> while the page is still loading.
+    const target = document.querySelector<HTMLElement>('#main h1') ?? document.querySelector<HTMLElement>('#main')
+    if (!target) return
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1')
+    target.focus({ preventScroll: true })
+  })
 })
 
 export default router

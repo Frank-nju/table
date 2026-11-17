@@ -14,8 +14,8 @@ withDefaults(
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 22px;
-  padding: 0 8px;
+  min-block-size: 1.375rem;
+  padding: 0.125rem 0.5rem;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;

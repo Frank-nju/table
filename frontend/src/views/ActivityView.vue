@@ -4,7 +4,6 @@ import {
   CalendarCheck,
   CalendarPlus,
   Clock,
-  Link2,
   MapPin,
   MoreHorizontal,
   Pencil,
@@ -25,6 +24,7 @@ import StateBadge from '@/components/StateBadge.vue'
 import UiAvatar from '@/components/ui/UiAvatar.vue'
 import UiBadge from '@/components/ui/UiBadge.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiCopyButton from '@/components/ui/UiCopyButton.vue'
 import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
 import { useErrors } from '@/composables/useErrors'
@@ -43,7 +43,7 @@ const activity = ref<ActivityDetail | null>(null)
 const notFound = ref(false)
 const loading = ref(true)
 const closing = ref(false)
-const showManage = ref(false)
+const manageMenu = ref<HTMLElement | null>(null)
 
 async function load() {
   try {
@@ -62,16 +62,8 @@ const a = computed(() => activity.value)
 const isSpeaker = computed(() => !!session.me && !!a.value?.speakers.some((s) => s.id === session.me!.id))
 const canInvite = computed(() => !!a.value && a.value.state !== 'closed' && (a.value.viewer.can_manage || isSpeaker.value))
 const canClose = computed(() => !!a.value?.viewer.can_manage && (a.value.state === 'live' || a.value.state === 'awaiting_close'))
+const pageUrl = computed(() => window.location.origin + `/activities/${props.id}`)
 const place = computed(() => a.value?.room?.name || a.value?.location || '')
-
-async function copyLink() {
-  try {
-    await navigator.clipboard.writeText(window.location.href)
-    ui.toast(t('activity.linkCopied'), 'info')
-  } catch {
-    /* clipboard unavailable */
-  }
-}
 
 async function close() {
   if (!a.value) return
@@ -131,13 +123,11 @@ async function remove() {
               <CalendarCheck :size="16" />{{ t('activity.closeActivity') }}
             </UiButton>
             <UiButton v-if="a.state !== 'closed'" :to="`/activities/${a.id}/edit`" size="sm"><Pencil :size="15" />{{ t('common.edit') }}</UiButton>
-            <div class="more-wrap">
-              <UiButton size="sm" variant="ghost" :aria-label="t('activity.manage')" :aria-expanded="showManage" @click="showManage = !showManage">
-                <MoreHorizontal :size="16" />
-              </UiButton>
-              <div v-if="showManage" class="more-menu" @click="showManage = false">
-                <button type="button" class="danger" @click="remove"><Trash2 :size="15" />{{ t('common.delete') }}</button>
-              </div>
+            <UiButton size="sm" variant="ghost" popovertarget="manage-panel" :aria-label="t('activity.manage')">
+              <MoreHorizontal :size="16" aria-hidden="true" />
+            </UiButton>
+            <div id="manage-panel" ref="manageMenu" popover="auto" class="more-menu">
+              <button type="button" class="danger" @click="manageMenu?.hidePopover(); remove()"><Trash2 :size="15" aria-hidden="true" />{{ t('common.delete') }}</button>
             </div>
           </div>
         </div>
@@ -186,7 +176,7 @@ async function remove() {
           <UiButton v-if="a.video_url" :href="a.video_url" size="sm" variant="subtle" target="_blank" rel="noopener noreferrer">
             <Video :size="15" />{{ t('activity.online') }}
           </UiButton>
-          <UiButton size="sm" variant="ghost" @click="copyLink"><Link2 :size="15" />{{ t('activity.share') }}</UiButton>
+          <UiCopyButton :text="pageUrl" :label="t('activity.share')" :copied-label="t('common.copied')" />
           <UiBadge v-if="a.state === 'closed' && a.closed_on_time !== null" :tone="a.closed_on_time ? 'success' : 'warning'" class="closed-badge">
             {{ a.closed_on_time ? t('activity.closedOnTime') : t('activity.closedLate') }}
             <template v-if="a.closed_at"> · {{ formatDateTime(a.closed_at, session.config?.timezone ?? 'UTC') }}</template>
@@ -251,20 +241,22 @@ async function remove() {
   gap: 6px;
   align-items: center;
 }
-.more-wrap {
-  position: relative;
-}
 .more-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 10;
   background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg);
   padding: 4px;
-  min-width: 160px;
+  min-inline-size: 10rem;
+}
+@supports (position-area: block-end) {
+  .more-menu {
+    inset: auto;
+    margin: 0.25rem 0 0;
+    position-area: block-end span-inline-start;
+    position-try-fallbacks: flip-block, flip-inline;
+  }
 }
 .more-menu button {
   width: 100%;
@@ -345,7 +337,7 @@ a.speaker:hover {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
-@media (min-width: 960px) {
+@media (min-width: 60em) {
   .layout {
     grid-template-columns: minmax(0, 1fr) 360px;
   }
@@ -354,7 +346,7 @@ a.speaker:hover {
     top: calc(var(--header-h) + 16px);
   }
 }
-@media (max-width: 959px) {
+@media (max-width: 59.9375em) {
   .side {
     order: -1;
   }

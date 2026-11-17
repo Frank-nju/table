@@ -36,7 +36,7 @@ async function submit() {
     <p v-if="sent" class="notice success" role="status">{{ t('auth.linkSent', { email }) }}</p>
     <form v-else class="stack" style="--gap: 16px" @submit.prevent="submit">
       <UiField v-slot="{ id }" :label="t('auth.email')">
-        <input :id="id" v-model.trim="email" class="input" type="email" autocomplete="email" required autofocus />
+        <input :id="id" v-model.trim="email" class="input" type="email" autocomplete="email" spellcheck="false" required autofocus />
       </UiField>
       <p v-if="error" class="notice danger" role="alert">{{ error }}</p>
       <UiButton type="submit" variant="primary" size="lg" block :loading="busy">{{ t('auth.sendLink') }}</UiButton>

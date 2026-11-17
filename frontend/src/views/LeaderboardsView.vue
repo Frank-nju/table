@@ -6,7 +6,7 @@ import { api } from '@/api/client'
 import type { Leaderboards } from '@/api/types'
 import UiAvatar from '@/components/ui/UiAvatar.vue'
 import UiSkeleton from '@/components/ui/UiSkeleton.vue'
-import UiTabs from '@/components/ui/UiTabs.vue'
+import UiSegmented from '@/components/ui/UiSegmented.vue'
 import { useErrors } from '@/composables/useErrors'
 import { useSession } from '@/stores/session'
 import { percent, score } from '@/utils/format'
@@ -57,9 +57,10 @@ const boards = computed(() => {
         <h1>{{ t('leaderboards.title') }}</h1>
         <p class="muted">{{ t('leaderboards.subtitle') }}</p>
       </div>
-      <UiTabs
+      <UiSegmented
         v-model="window_"
-        :tabs="[
+        :label="t('leaderboards.title')"
+        :options="[
           { value: 'all', label: t('leaderboards.allTime') },
           { value: '90', label: t('leaderboards.last90') },
           { value: '30', label: t('leaderboards.last30') },
@@ -122,7 +123,7 @@ const boards = computed(() => {
 }
 .rank {
   width: 24px;
-  height: 24px;
+  min-block-size: 1.5rem;
   border-radius: 50%;
   display: grid;
   place-items: center;

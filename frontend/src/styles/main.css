@@ -1,101 +1,202 @@
-/* ---------- Design tokens ---------- */
+/* ---------- Design tokens ----------
+   Each colour is defined once as a light/dark pair and resolved with light-dark(), which follows the
+   computed color-scheme. The theme override in Settings only changes <meta name="color-scheme">;
+   the :has() rules below map it onto the color-scheme property. */
 :root {
-  --bg: #f5f6f3;
-  --surface: #ffffff;
-  --surface-2: #eff2ee;
-  --surface-3: #e6eae5;
-  --border: #dfe4de;
-  --border-strong: #c7cfc6;
-  --text: #152120;
-  --text-2: #475553;
-  --text-3: #6f7d7a;
-  --accent: #0e7490;
-  --accent-hover: #0b5f77;
-  --accent-soft: #e2f1f4;
-  --accent-text: #0b5568;
-  --on-accent: #ffffff;
-  --meetup: #a1530a;
-  --meetup-soft: #fcf0de;
-  --success: #17803d;
-  --success-soft: #e4f4e9;
-  --warning: #a1530a;
-  --warning-soft: #fcf0de;
-  --danger: #b42318;
-  --danger-soft: #fdecea;
-  --live: #d92d20;
+  --bg-l: #f5f6f3;
+  --bg-d: #0b1315;
+  --surface-l: #ffffff;
+  --surface-d: #111b1e;
+  --surface-2-l: #eff2ee;
+  --surface-2-d: #162327;
+  --surface-3-l: #e6eae5;
+  --surface-3-d: #1d2d32;
+  --border-l: #dfe4de;
+  --border-d: #22343a;
+  --border-strong-l: #c7cfc6;
+  --border-strong-d: #2f474e;
+  --text-l: #152120;
+  --text-d: #e5eeed;
+  --text-2-l: #475553;
+  --text-2-d: #a8b7b6;
+  --text-3-l: #66736f;
+  --text-3-d: #8a9a99;
+  --accent-l: #0e7490;
+  --accent-d: #2ab7cf;
+  --accent-hover-l: #0b5f77;
+  --accent-hover-d: #4cc7dc;
+  --accent-soft-l: #e2f1f4;
+  --accent-soft-d: #0f2d35;
+  --accent-text-l: #0b5568;
+  --accent-text-d: #7fd8e8;
+  --on-accent-l: #ffffff;
+  --on-accent-d: #04222a;
+  --meetup-l: #9a4f09;
+  --meetup-d: #f0a54a;
+  --meetup-soft-l: #fcf0de;
+  --meetup-soft-d: #33240f;
+  --success-l: #17803d;
+  --success-d: #4ccb7b;
+  --success-soft-l: #e4f4e9;
+  --success-soft-d: #11291b;
+  --warning-l: #9a4f09;
+  --warning-d: #f0a54a;
+  --warning-soft-l: #fcf0de;
+  --warning-soft-d: #33240f;
+  --danger-l: #b42318;
+  --danger-d: #f2756a;
+  --danger-soft-l: #fdecea;
+  --danger-soft-d: #361613;
+  --live-l: #d92d20;
+  --live-d: #ff6b5e;
+  --shadow-1-l: rgb(16 24 24 / 0.06);
+  --shadow-1-d: rgb(0 0 0 / 0.3);
+  --shadow-2-l: rgb(16 24 24 / 0.06);
+  --shadow-2-d: rgb(0 0 0 / 0.25);
+  --shadow-3-l: rgb(16 24 24 / 0.18);
+  --shadow-3-d: rgb(0 0 0 / 0.5);
+
+  --bg: light-dark(var(--bg-l), var(--bg-d));
+  --surface: light-dark(var(--surface-l), var(--surface-d));
+  --surface-2: light-dark(var(--surface-2-l), var(--surface-2-d));
+  --surface-3: light-dark(var(--surface-3-l), var(--surface-3-d));
+  --border: light-dark(var(--border-l), var(--border-d));
+  --border-strong: light-dark(var(--border-strong-l), var(--border-strong-d));
+  --text: light-dark(var(--text-l), var(--text-d));
+  --text-2: light-dark(var(--text-2-l), var(--text-2-d));
+  --text-3: light-dark(var(--text-3-l), var(--text-3-d));
+  --accent: light-dark(var(--accent-l), var(--accent-d));
+  --accent-hover: light-dark(var(--accent-hover-l), var(--accent-hover-d));
+  --accent-soft: light-dark(var(--accent-soft-l), var(--accent-soft-d));
+  --accent-text: light-dark(var(--accent-text-l), var(--accent-text-d));
+  --on-accent: light-dark(var(--on-accent-l), var(--on-accent-d));
+  --meetup: light-dark(var(--meetup-l), var(--meetup-d));
+  --meetup-soft: light-dark(var(--meetup-soft-l), var(--meetup-soft-d));
+  --success: light-dark(var(--success-l), var(--success-d));
+  --success-soft: light-dark(var(--success-soft-l), var(--success-soft-d));
+  --warning: light-dark(var(--warning-l), var(--warning-d));
+  --warning-soft: light-dark(var(--warning-soft-l), var(--warning-soft-d));
+  --danger: light-dark(var(--danger-l), var(--danger-d));
+  --danger-soft: light-dark(var(--danger-soft-l), var(--danger-soft-d));
+  --live: light-dark(var(--live-l), var(--live-d));
+  --shadow-1: light-dark(var(--shadow-1-l), var(--shadow-1-d));
+  --shadow-2: light-dark(var(--shadow-2-l), var(--shadow-2-d));
+  --shadow-3: light-dark(var(--shadow-3-l), var(--shadow-3-d));
+
   --focus: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
-  --shadow-sm: 0 1px 2px rgb(16 24 24 / 0.06);
-  --shadow: 0 1px 2px rgb(16 24 24 / 0.05), 0 4px 16px rgb(16 24 24 / 0.06);
-  --shadow-lg: 0 12px 40px rgb(16 24 24 / 0.18);
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px var(--shadow-1);
+  --shadow: 0 1px 2px var(--shadow-1), 0 4px 16px var(--shadow-2);
+  --shadow-lg: 0 12px 40px var(--shadow-3);
+  --radius-sm: 0.5rem;
+  --radius: 0.75rem;
+  --radius-lg: 1rem;
   --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --header-h: 60px;
-  --content-w: 1160px;
-  color-scheme: light;
-}
+  --header-h: 3.75rem;
+  --content-w: 72.5rem;
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #0b1315;
-    --surface: #111b1e;
-    --surface-2: #162327;
-    --surface-3: #1d2d32;
-    --border: #22343a;
-    --border-strong: #2f474e;
-    --text: #e5eeed;
-    --text-2: #a8b7b6;
-    --text-3: #7d8e8d;
-    --accent: #2ab7cf;
-    --accent-hover: #4cc7dc;
-    --accent-soft: #0f2d35;
-    --accent-text: #7fd8e8;
-    --on-accent: #04222a;
-    --meetup: #f0a54a;
-    --meetup-soft: #33240f;
-    --success: #4ccb7b;
-    --success-soft: #11291b;
-    --warning: #f0a54a;
-    --warning-soft: #33240f;
-    --danger: #f2756a;
-    --danger-soft: #361613;
-    --live: #ff6b5e;
-    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
-    --shadow-lg: 0 12px 40px rgb(0 0 0 / 0.5);
+  /* The base must stay "light dark"; only the meta override pins one scheme. */
+  color-scheme: light dark;
+  &:has(> head > meta[name='color-scheme'][content='dark']) {
     color-scheme: dark;
   }
+  &:has(> head > meta[name='color-scheme'][content='light']) {
+    color-scheme: light;
+  }
+  accent-color: var(--accent);
+  /* The thumb keeps at least 3:1 contrast against the track in both schemes. */
+  scrollbar-color: light-dark(#8c9895, #5d7176) transparent;
 }
 
-:root[data-theme='dark'] {
-  --bg: #0b1315;
-  --surface: #111b1e;
-  --surface-2: #162327;
-  --surface-3: #1d2d32;
-  --border: #22343a;
-  --border-strong: #2f474e;
-  --text: #e5eeed;
-  --text-2: #a8b7b6;
-  --text-3: #7d8e8d;
-  --accent: #2ab7cf;
-  --accent-hover: #4cc7dc;
-  --accent-soft: #0f2d35;
-  --accent-text: #7fd8e8;
-  --on-accent: #04222a;
-  --meetup: #f0a54a;
-  --meetup-soft: #33240f;
-  --success: #4ccb7b;
-  --success-soft: #11291b;
-  --warning: #f0a54a;
-  --warning-soft: #33240f;
-  --danger: #f2756a;
-  --danger-soft: #361613;
-  --live: #ff6b5e;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
-  --shadow-lg: 0 12px 40px rgb(0 0 0 / 0.5);
-  color-scheme: dark;
+/* Fallback for browsers without light-dark(): the same pairs, switched by media query and the meta override. */
+@supports not (color: light-dark(#000, #fff)) {
+  :root {
+    --bg: var(--bg-l);
+    --surface: var(--surface-l);
+    --surface-2: var(--surface-2-l);
+    --surface-3: var(--surface-3-l);
+    --border: var(--border-l);
+    --border-strong: var(--border-strong-l);
+    --text: var(--text-l);
+    --text-2: var(--text-2-l);
+    --text-3: var(--text-3-l);
+    --accent: var(--accent-l);
+    --accent-hover: var(--accent-hover-l);
+    --accent-soft: var(--accent-soft-l);
+    --accent-text: var(--accent-text-l);
+    --on-accent: var(--on-accent-l);
+    --meetup: var(--meetup-l);
+    --meetup-soft: var(--meetup-soft-l);
+    --success: var(--success-l);
+    --success-soft: var(--success-soft-l);
+    --warning: var(--warning-l);
+    --warning-soft: var(--warning-soft-l);
+    --danger: var(--danger-l);
+    --danger-soft: var(--danger-soft-l);
+    --live: var(--live-l);
+    --shadow-1: var(--shadow-1-l);
+    --shadow-2: var(--shadow-2-l);
+    --shadow-3: var(--shadow-3-l);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(:has(> head > meta[name='color-scheme'][content='light'])) {
+    --bg: var(--bg-d);
+    --surface: var(--surface-d);
+    --surface-2: var(--surface-2-d);
+    --surface-3: var(--surface-3-d);
+    --border: var(--border-d);
+    --border-strong: var(--border-strong-d);
+    --text: var(--text-d);
+    --text-2: var(--text-2-d);
+    --text-3: var(--text-3-d);
+    --accent: var(--accent-d);
+    --accent-hover: var(--accent-hover-d);
+    --accent-soft: var(--accent-soft-d);
+    --accent-text: var(--accent-text-d);
+    --on-accent: var(--on-accent-d);
+    --meetup: var(--meetup-d);
+    --meetup-soft: var(--meetup-soft-d);
+    --success: var(--success-d);
+    --success-soft: var(--success-soft-d);
+    --warning: var(--warning-d);
+    --warning-soft: var(--warning-soft-d);
+    --danger: var(--danger-d);
+    --danger-soft: var(--danger-soft-d);
+    --live: var(--live-d);
+    --shadow-1: var(--shadow-1-d);
+    --shadow-2: var(--shadow-2-d);
+    --shadow-3: var(--shadow-3-d);
+    }
+  }
+  :root:has(> head > meta[name='color-scheme'][content='dark']) {
+    --bg: var(--bg-d);
+    --surface: var(--surface-d);
+    --surface-2: var(--surface-2-d);
+    --surface-3: var(--surface-3-d);
+    --border: var(--border-d);
+    --border-strong: var(--border-strong-d);
+    --text: var(--text-d);
+    --text-2: var(--text-2-d);
+    --text-3: var(--text-3-d);
+    --accent: var(--accent-d);
+    --accent-hover: var(--accent-hover-d);
+    --accent-soft: var(--accent-soft-d);
+    --accent-text: var(--accent-text-d);
+    --on-accent: var(--on-accent-d);
+    --meetup: var(--meetup-d);
+    --meetup-soft: var(--meetup-soft-d);
+    --success: var(--success-d);
+    --success-soft: var(--success-soft-d);
+    --warning: var(--warning-d);
+    --warning-soft: var(--warning-soft-d);
+    --danger: var(--danger-d);
+    --danger-soft: var(--danger-soft-d);
+    --live: var(--live-d);
+    --shadow-1: var(--shadow-1-d);
+    --shadow-2: var(--shadow-2-d);
+    --shadow-3: var(--shadow-3-d);
+  }
 }
 
 /* ---------- Base ---------- */
@@ -115,7 +216,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 15px;
+  font-size: 0.9375rem;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -139,8 +240,19 @@ h2 {
 h3 {
   font-size: 1rem;
 }
+/* Balanced wrapping only on short headings; the algorithm is too costly for long text. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
 p {
   margin: 0;
+}
+p,
+li,
+dd {
+  text-wrap: pretty;
 }
 a {
   color: var(--accent-text);
@@ -177,7 +289,7 @@ textarea {
   margin: 0 auto;
   padding: 0 16px;
 }
-@media (min-width: 720px) {
+@media (min-width: 45em) {
   .container {
     padding: 0 24px;
   }
@@ -237,6 +349,7 @@ textarea {
 .prewrap {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  max-inline-size: 75ch;
 }
 
 /* ---------- Surfaces ---------- */
@@ -249,7 +362,7 @@ textarea {
 .card-pad {
   padding: 20px;
 }
-@media (max-width: 560px) {
+@media (max-width: 35em) {
   .card-pad {
     padding: 16px;
   }
@@ -276,7 +389,7 @@ textarea {
 .select,
 .textarea {
   width: 100%;
-  min-height: 40px;
+  min-block-size: 2.5rem;
   padding: 8px 12px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -296,14 +409,22 @@ textarea {
   border-color: var(--accent);
   box-shadow: var(--focus);
 }
+/* :user-invalid only matches after the person has interacted with the field (or tried to submit),
+   so required fields aren't shown as errors on page load. aria-invalid covers server-side errors. */
+.input:user-invalid,
+.select:user-invalid,
+.textarea:user-invalid,
 .input[aria-invalid='true'],
 .select[aria-invalid='true'],
 .textarea[aria-invalid='true'] {
   border-color: var(--danger);
 }
 .textarea {
-  min-height: 96px;
+  min-block-size: 6rem;
+  max-block-size: 24rem;
   resize: vertical;
+  /* Grow with the text where supported; elsewhere the min size and resize handle still apply. */
+  field-sizing: content;
 }
 .select {
   appearance: none;
@@ -401,6 +522,12 @@ textarea {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.16s;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
