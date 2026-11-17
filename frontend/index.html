@@ -2,12 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="text-scale" content="scale" />
+    <meta name="color-scheme" content="light dark" />
+    <script>try{document.querySelector('meta[name="color-scheme"]').content=localStorage.getItem("color-scheme")??"light dark"}catch(e){}</script>
+    <meta name="theme-color" content="#0e7490" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1315" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Share sessions, reviews and interest groups for the CAC community." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>CAC Share Sessions</title>
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

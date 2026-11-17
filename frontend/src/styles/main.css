@@ -1,0 +1,539 @@
+/* ---------- Design tokens ----------
+   Each colour is defined once as a light/dark pair and resolved with light-dark(), which follows the
+   computed color-scheme. The theme override in Settings only changes <meta name="color-scheme">;
+   the :has() rules below map it onto the color-scheme property. */
+:root {
+  --bg-l: #f5f6f3;
+  --bg-d: #0b1315;
+  --surface-l: #ffffff;
+  --surface-d: #111b1e;
+  --surface-2-l: #eff2ee;
+  --surface-2-d: #162327;
+  --surface-3-l: #e6eae5;
+  --surface-3-d: #1d2d32;
+  --border-l: #dfe4de;
+  --border-d: #22343a;
+  --border-strong-l: #c7cfc6;
+  --border-strong-d: #2f474e;
+  --text-l: #152120;
+  --text-d: #e5eeed;
+  --text-2-l: #475553;
+  --text-2-d: #a8b7b6;
+  --text-3-l: #66736f;
+  --text-3-d: #8a9a99;
+  --accent-l: #0e7490;
+  --accent-d: #2ab7cf;
+  --accent-hover-l: #0b5f77;
+  --accent-hover-d: #4cc7dc;
+  --accent-soft-l: #e2f1f4;
+  --accent-soft-d: #0f2d35;
+  --accent-text-l: #0b5568;
+  --accent-text-d: #7fd8e8;
+  --on-accent-l: #ffffff;
+  --on-accent-d: #04222a;
+  --meetup-l: #9a4f09;
+  --meetup-d: #f0a54a;
+  --meetup-soft-l: #fcf0de;
+  --meetup-soft-d: #33240f;
+  --success-l: #17803d;
+  --success-d: #4ccb7b;
+  --success-soft-l: #e4f4e9;
+  --success-soft-d: #11291b;
+  --warning-l: #9a4f09;
+  --warning-d: #f0a54a;
+  --warning-soft-l: #fcf0de;
+  --warning-soft-d: #33240f;
+  --danger-l: #b42318;
+  --danger-d: #f2756a;
+  --danger-soft-l: #fdecea;
+  --danger-soft-d: #361613;
+  --live-l: #d92d20;
+  --live-d: #ff6b5e;
+  --shadow-1-l: rgb(16 24 24 / 0.06);
+  --shadow-1-d: rgb(0 0 0 / 0.3);
+  --shadow-2-l: rgb(16 24 24 / 0.06);
+  --shadow-2-d: rgb(0 0 0 / 0.25);
+  --shadow-3-l: rgb(16 24 24 / 0.18);
+  --shadow-3-d: rgb(0 0 0 / 0.5);
+
+  --bg: light-dark(var(--bg-l), var(--bg-d));
+  --surface: light-dark(var(--surface-l), var(--surface-d));
+  --surface-2: light-dark(var(--surface-2-l), var(--surface-2-d));
+  --surface-3: light-dark(var(--surface-3-l), var(--surface-3-d));
+  --border: light-dark(var(--border-l), var(--border-d));
+  --border-strong: light-dark(var(--border-strong-l), var(--border-strong-d));
+  --text: light-dark(var(--text-l), var(--text-d));
+  --text-2: light-dark(var(--text-2-l), var(--text-2-d));
+  --text-3: light-dark(var(--text-3-l), var(--text-3-d));
+  --accent: light-dark(var(--accent-l), var(--accent-d));
+  --accent-hover: light-dark(var(--accent-hover-l), var(--accent-hover-d));
+  --accent-soft: light-dark(var(--accent-soft-l), var(--accent-soft-d));
+  --accent-text: light-dark(var(--accent-text-l), var(--accent-text-d));
+  --on-accent: light-dark(var(--on-accent-l), var(--on-accent-d));
+  --meetup: light-dark(var(--meetup-l), var(--meetup-d));
+  --meetup-soft: light-dark(var(--meetup-soft-l), var(--meetup-soft-d));
+  --success: light-dark(var(--success-l), var(--success-d));
+  --success-soft: light-dark(var(--success-soft-l), var(--success-soft-d));
+  --warning: light-dark(var(--warning-l), var(--warning-d));
+  --warning-soft: light-dark(var(--warning-soft-l), var(--warning-soft-d));
+  --danger: light-dark(var(--danger-l), var(--danger-d));
+  --danger-soft: light-dark(var(--danger-soft-l), var(--danger-soft-d));
+  --live: light-dark(var(--live-l), var(--live-d));
+  --shadow-1: light-dark(var(--shadow-1-l), var(--shadow-1-d));
+  --shadow-2: light-dark(var(--shadow-2-l), var(--shadow-2-d));
+  --shadow-3: light-dark(var(--shadow-3-l), var(--shadow-3-d));
+
+  --focus: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+  --shadow-sm: 0 1px 2px var(--shadow-1);
+  --shadow: 0 1px 2px var(--shadow-1), 0 4px 16px var(--shadow-2);
+  --shadow-lg: 0 12px 40px var(--shadow-3);
+  --radius-sm: 0.5rem;
+  --radius: 0.75rem;
+  --radius-lg: 1rem;
+  --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --header-h: 3.75rem;
+  --content-w: 72.5rem;
+
+  /* The base must stay "light dark"; only the meta override pins one scheme. */
+  color-scheme: light dark;
+  &:has(> head > meta[name='color-scheme'][content='dark']) {
+    color-scheme: dark;
+  }
+  &:has(> head > meta[name='color-scheme'][content='light']) {
+    color-scheme: light;
+  }
+  accent-color: var(--accent);
+  /* The thumb keeps at least 3:1 contrast against the track in both schemes. */
+  scrollbar-color: light-dark(#8c9895, #5d7176) transparent;
+}
+
+/* Fallback for browsers without light-dark(): the same pairs, switched by media query and the meta override. */
+@supports not (color: light-dark(#000, #fff)) {
+  :root {
+    --bg: var(--bg-l);
+    --surface: var(--surface-l);
+    --surface-2: var(--surface-2-l);
+    --surface-3: var(--surface-3-l);
+    --border: var(--border-l);
+    --border-strong: var(--border-strong-l);
+    --text: var(--text-l);
+    --text-2: var(--text-2-l);
+    --text-3: var(--text-3-l);
+    --accent: var(--accent-l);
+    --accent-hover: var(--accent-hover-l);
+    --accent-soft: var(--accent-soft-l);
+    --accent-text: var(--accent-text-l);
+    --on-accent: var(--on-accent-l);
+    --meetup: var(--meetup-l);
+    --meetup-soft: var(--meetup-soft-l);
+    --success: var(--success-l);
+    --success-soft: var(--success-soft-l);
+    --warning: var(--warning-l);
+    --warning-soft: var(--warning-soft-l);
+    --danger: var(--danger-l);
+    --danger-soft: var(--danger-soft-l);
+    --live: var(--live-l);
+    --shadow-1: var(--shadow-1-l);
+    --shadow-2: var(--shadow-2-l);
+    --shadow-3: var(--shadow-3-l);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not(:has(> head > meta[name='color-scheme'][content='light'])) {
+    --bg: var(--bg-d);
+    --surface: var(--surface-d);
+    --surface-2: var(--surface-2-d);
+    --surface-3: var(--surface-3-d);
+    --border: var(--border-d);
+    --border-strong: var(--border-strong-d);
+    --text: var(--text-d);
+    --text-2: var(--text-2-d);
+    --text-3: var(--text-3-d);
+    --accent: var(--accent-d);
+    --accent-hover: var(--accent-hover-d);
+    --accent-soft: var(--accent-soft-d);
+    --accent-text: var(--accent-text-d);
+    --on-accent: var(--on-accent-d);
+    --meetup: var(--meetup-d);
+    --meetup-soft: var(--meetup-soft-d);
+    --success: var(--success-d);
+    --success-soft: var(--success-soft-d);
+    --warning: var(--warning-d);
+    --warning-soft: var(--warning-soft-d);
+    --danger: var(--danger-d);
+    --danger-soft: var(--danger-soft-d);
+    --live: var(--live-d);
+    --shadow-1: var(--shadow-1-d);
+    --shadow-2: var(--shadow-2-d);
+    --shadow-3: var(--shadow-3-d);
+    }
+  }
+  :root:has(> head > meta[name='color-scheme'][content='dark']) {
+    --bg: var(--bg-d);
+    --surface: var(--surface-d);
+    --surface-2: var(--surface-2-d);
+    --surface-3: var(--surface-3-d);
+    --border: var(--border-d);
+    --border-strong: var(--border-strong-d);
+    --text: var(--text-d);
+    --text-2: var(--text-2-d);
+    --text-3: var(--text-3-d);
+    --accent: var(--accent-d);
+    --accent-hover: var(--accent-hover-d);
+    --accent-soft: var(--accent-soft-d);
+    --accent-text: var(--accent-text-d);
+    --on-accent: var(--on-accent-d);
+    --meetup: var(--meetup-d);
+    --meetup-soft: var(--meetup-soft-d);
+    --success: var(--success-d);
+    --success-soft: var(--success-soft-d);
+    --warning: var(--warning-d);
+    --warning-soft: var(--warning-soft-d);
+    --danger: var(--danger-d);
+    --danger-soft: var(--danger-soft-d);
+    --live: var(--live-d);
+    --shadow-1: var(--shadow-1-d);
+    --shadow-2: var(--shadow-2-d);
+    --shadow-3: var(--shadow-3-d);
+  }
+}
+
+/* ---------- Base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 650;
+}
+h1 {
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+}
+h2 {
+  font-size: 1.2rem;
+}
+h3 {
+  font-size: 1rem;
+}
+/* Balanced wrapping only on short headings; the algorithm is too costly for long text. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  margin: 0;
+}
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+a {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+img,
+svg {
+  display: block;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 6px;
+}
+::selection {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ---------- Layout helpers ---------- */
+.container {
+  width: 100%;
+  max-width: var(--content-w);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+@media (min-width: 45em) {
+  .container {
+    padding: 0 24px;
+  }
+}
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap, 12px);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap, 8px);
+  flex-wrap: wrap;
+}
+.spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.grid-2 {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+}
+.muted {
+  color: var(--text-2);
+}
+.subtle {
+  color: var(--text-3);
+  font-size: 0.875rem;
+}
+.small {
+  font-size: 0.875rem;
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.prewrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-inline-size: 75ch;
+}
+
+/* ---------- Surfaces ---------- */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.card-pad {
+  padding: 20px;
+}
+@media (max-width: 35em) {
+  .card-pad {
+    padding: 16px;
+  }
+}
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.section-title h2 {
+  font-size: 1.05rem;
+}
+.divider {
+  height: 1px;
+  background: var(--border);
+  border: 0;
+  margin: 16px 0;
+}
+
+/* ---------- Forms ---------- */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  min-block-size: 2.5rem;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-3);
+}
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus);
+}
+/* :user-invalid only matches after the person has interacted with the field (or tried to submit),
+   so required fields aren't shown as errors on page load. aria-invalid covers server-side errors. */
+.input:user-invalid,
+.select:user-invalid,
+.textarea:user-invalid,
+.input[aria-invalid='true'],
+.select[aria-invalid='true'],
+.textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.textarea {
+  min-block-size: 6rem;
+  max-block-size: 24rem;
+  resize: vertical;
+  /* Grow with the text where supported; elsewhere the min size and resize handle still apply. */
+  field-sizing: content;
+}
+.select {
+  appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23778' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+
+/* ---------- Lists & tables ---------- */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.list > li + li {
+  border-top: 1px solid var(--border);
+}
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-2);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.kbd {
+  font-family: var(--mono);
+  font-size: 0.8em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+/* ---------- Motion ---------- */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200px 0;
+  }
+  to {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.18s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.16s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "CAC Share Sessions",
+  "short_name": "CAC Sessions",
+  "description": "Share sessions, reviews and interest groups for the CAC community.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f6f3",
+  "theme_color": "#0e7490",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

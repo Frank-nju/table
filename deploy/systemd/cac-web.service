@@ -1,0 +1,26 @@
+[Unit]
+Description=CAC Share Sessions (web)
+After=network.target mysql.service postgresql.service
+
+[Service]
+Type=notify
+User=cac
+Group=cac
+WorkingDirectory=/opt/cac/backend
+EnvironmentFile=/etc/cac/cac.env
+Environment=FRONTEND_DIST=/opt/cac/frontend/dist
+ExecStartPre=/opt/cac/backend/.venv/bin/python -m app.cli migrate
+ExecStart=/opt/cac/backend/.venv/bin/gunicorn -c gunicorn.conf.py app.asgi:app
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=3
+KillMode=mixed
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/cac/backend/data
+
+[Install]
+WantedBy=multi-user.target

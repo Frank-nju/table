@@ -1,7 +1,21 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
+.coverage
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+# Local data & secrets
 .env
+backend/data/
+*.db
 *.log
-member_roster.txt
-member_roster.local.txt
